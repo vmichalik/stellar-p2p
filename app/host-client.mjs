@@ -1,6 +1,7 @@
 // Browser-only transport; transaction validation and signing policy stay on the
 // host. The pinned Freighter 6.0.1 UMD is served by /vendor/freighter-api.js.
-export const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
+import { NETWORKS, resolveNetwork, deploymentIdentity } from './network.mjs';
+export const TESTNET_PASSPHRASE = NETWORKS.testnet.passphrase;
 const ACTIONS = new Set([
   'connectWallet',
   'getOrder',
@@ -14,7 +15,22 @@ const ACTIONS = new Set([
   'reconcileReceipt',
   'resolve',
 ]);
+const RECEIVING_FAILURES = new Set([
+  'RECEIVING_ACCOUNT_MISSING',
+  'RECEIVING_TRUSTLINE_MISSING',
+  'RECEIVING_ASSET_UNAUTHORIZED',
+  'RECEIVING_CAPACITY_INSUFFICIENT',
+  'RECEIVING_READ_STALE',
+  'RECEIVING_READ_UNAVAILABLE',
+  'RECEIVING_ACCOUNT_INVALID',
+  'RECEIVING_ASSET_MISMATCH',
+  'RECEIVING_LEDGER_MISMATCH',
+  'RECEIVING_CAPACITY_INVALID',
+  'ISSUER_ACCOUNT_UNSUPPORTED',
+  'ASSET_IDENTITY_REQUIRED',
+]);
 const SAFE_FAILURES = new Set([
+  ...RECEIVING_FAILURES,
   'ACTION_UNAVAILABLE',
   'HOST_NOT_CONFIGURED',
   'PAYMENT_VERIFICATION_UNAVAILABLE',
@@ -22,6 +38,8 @@ const SAFE_FAILURES = new Set([
   'CATALOG_LIMIT',
   'DEPLOYMENT_UNAVAILABLE',
   'TESTNET_SUBMISSION_NOT_AUTHORIZED',
+  'MAINNET_SUBMISSION_NOT_AUTHORIZED',
+  'SUBMISSION_NOT_AUTHORIZED',
   'TRANSACTION_PREPARATION_RETRYABLE',
   'WALLET_REJECTED',
   'TRANSACTION_FAILED',
@@ -46,6 +64,7 @@ const SAFE_FAILURES = new Set([
   'RESOLUTION_NOT_AVAILABLE',
 ]);
 const PUBLIC_ERRORS = new Set([
+  'DEPLOYMENT_CHANGED',
   ...SAFE_FAILURES,
   'AUTHENTICATION_REQUIRED',
   'CHALLENGE_REJECTED',
@@ -93,7 +112,10 @@ export class HostClientError extends Error {
     this.operationId = operationId;
     this.outcome = outcome;
     this.status = status;
-    this.retryable = code === 'TRANSACTION_PREPARATION_RETRYABLE' || code === 'WALLET_REJECTED';
+    this.retryable =
+      RECEIVING_FAILURES.has(code) ||
+      code === 'TRANSACTION_PREPARATION_RETRYABLE' ||
+      code === 'WALLET_REJECTED';
   }
 }
 const fail = (code) => {
@@ -103,8 +125,85 @@ const check = (condition, code) => {
   if (!condition) fail(code);
 };
 
+/** Bind a browser-visible domain without any RPC URL or private host setting. */
+export function readDeploymentDomain(value) {
+  let network;
+  try {
+    network = resolveNetwork(value);
+  } catch {
+    fail('HOST_DEPLOYMENT_INVALID');
+  }
+  check(
+    plain(value) &&
+      [value.contract, value.token].every(
+        (address) => typeof address === 'string' && /^C[A-Z2-7]{55}$/.test(address),
+      ),
+    'HOST_DEPLOYMENT_INVALID',
+  );
+  const domain = {
+    network: network.name,
+    networkPassphrase: network.passphrase,
+    contract: value.contract,
+    token: value.token,
+  };
+  domain.deploymentId = deploymentIdentity(domain);
+  check(
+    value.deploymentId === undefined || value.deploymentId === domain.deploymentId,
+    'HOST_DEPLOYMENT_INVALID',
+  );
+  return domain;
+}
+const domainMatches = (value, id) => {
+  try {
+    return readDeploymentDomain(value).deploymentId === id;
+  } catch {
+    return false;
+  }
+};
+export function readDeployment(value) {
+  const domain = readDeploymentDomain(value);
+  check(value.tokenDecimals === 7, 'HOST_DEPLOYMENT_INVALID');
+  const label =
+    value.tokenLabel ?? value.tokenSymbol ?? (domain.network === 'testnet' ? 'Test token' : null);
+  check(
+    typeof label === 'string' &&
+      label.length > 0 &&
+      label.length <= 80 &&
+      !/[\x00-\x1f]/.test(label),
+    'HOST_DEPLOYMENT_INVALID',
+  );
+  let asset;
+  if (value.asset !== undefined && value.asset !== null) {
+    check(
+      plain(value.asset) &&
+        typeof value.asset.code === 'string' &&
+        /^[A-Za-z0-9]{1,12}$/.test(value.asset.code) &&
+        validAccount(value.asset.issuer),
+      'HOST_DEPLOYMENT_INVALID',
+    );
+    asset = { code: value.asset.code, issuer: value.asset.issuer };
+  }
+  check(domain.network !== 'mainnet' || asset, 'HOST_DEPLOYMENT_INVALID');
+  check(
+    value.tokenSymbol === undefined ||
+      (typeof value.tokenSymbol === 'string' &&
+        value.tokenSymbol.length > 0 &&
+        value.tokenSymbol.length <= 20),
+    'HOST_DEPLOYMENT_INVALID',
+  );
+  return {
+    ...domain,
+    tokenDecimals: 7,
+    tokenLabel: label,
+    ...(value.tokenSymbol ? { tokenSymbol: value.tokenSymbol } : {}),
+    ...(asset ? { asset } : {}),
+  };
+}
+
 /** Public recovery terms only. No signature material is kept in the view. */
-export function readRecoveryRequest(value) {
+export function readRecoveryRequest(value, deployment) {
+  const domain = readDeploymentDomain(value);
+  check(!deployment || domain.deploymentId === deployment.deploymentId, 'RECOVERY_REQUEST_INVALID');
   const uint = (number, bits) =>
     typeof number === 'string' &&
     /^(0|[1-9][0-9]*)$/.test(number) &&
@@ -114,7 +213,6 @@ export function readRecoveryRequest(value) {
     plain(value) &&
       validId(value.requestId) &&
       uint(value.orderId, 64) &&
-      value.networkPassphrase === TESTNET_PASSPHRASE &&
       [value.contract, value.token].every(
         (address) => typeof address === 'string' && /^C[A-Z2-7]{55}$/.test(address),
       ) &&
@@ -138,27 +236,30 @@ export function readRecoveryRequest(value) {
       ['queued', 'claimed'].includes(value.status),
     'RECOVERY_REQUEST_INVALID',
   );
-  return Object.fromEntries(
-    [
-      'requestId',
-      'orderId',
-      'networkPassphrase',
-      'contract',
-      'token',
-      'buyer',
-      'seller',
-      'tokenAmount',
-      'buyerTokens',
-      'sellerTokens',
-      'orderState',
-      'expirationLedger',
-      'expiresAt',
-      'fiatMinor',
-      'currency',
-      'rail',
-      'status',
-    ].map((key) => [key, value[key]]),
-  );
+  return {
+    ...domain,
+    ...Object.fromEntries(
+      [
+        'requestId',
+        'orderId',
+        'networkPassphrase',
+        'contract',
+        'token',
+        'buyer',
+        'seller',
+        'tokenAmount',
+        'buyerTokens',
+        'sellerTokens',
+        'orderState',
+        'expirationLedger',
+        'expiresAt',
+        'fiatMinor',
+        'currency',
+        'rail',
+        'status',
+      ].map((key) => [key, value[key]]),
+    ),
+  };
 }
 
 function canonicalBase64(value, requiredBytes = null) {
@@ -228,7 +329,8 @@ export function createHostClient({
     active = null,
     walletBusy = false,
     last = null,
-    sessionEpoch = 0;
+    sessionEpoch = 0,
+    configuredDeployment = null;
   const walletRequests = new Map();
   const recoveryClaims = new Set();
 
@@ -237,6 +339,8 @@ export function createHostClient({
     check(clock() < ctx.deadline, 'CLIENT_TIMEOUT');
     check(location.origin === origin, 'CLIENT_ORIGIN_CHANGED');
     if (ctx.account) check(current?.account === ctx.account, 'WALLET_ACCOUNT_CHANGED');
+    if (ctx.deploymentId)
+      check(configuredDeployment?.deploymentId === ctx.deploymentId, 'CLIENT_DEPLOYMENT_CHANGED');
   }
   function wait(promise, ctx) {
     try {
@@ -318,6 +422,10 @@ export function createHostClient({
   }
   async function wallet(method, args, ctx) {
     guard(ctx);
+    const prompts = ['requestAccess', 'signMessage', 'signTransaction', 'signAuthEntry'].includes(
+      method,
+    );
+    if (prompts) await ensureDeployment(ctx);
     check(!walletBusy, 'WALLET_REQUEST_IN_PROGRESS');
     check(typeof freighter?.[method] === 'function', 'WALLET_UNAVAILABLE');
     walletBusy = true;
@@ -339,6 +447,7 @@ export function createHostClient({
       throw error instanceof HostClientError ? error : new HostClientError('WALLET_UNAVAILABLE');
     }
     guard(ctx);
+    if (prompts) await ensureDeployment(ctx);
     if (result?.error) {
       // Pinned 6.0.1 source map: FreighterApiDeclinedError.code === -4.
       // Only an explicit returned transaction-signing refusal permits retry.
@@ -358,32 +467,56 @@ export function createHostClient({
     const selected = await wallet('getAddress', [], ctx);
     check(selected.address === account, 'WALLET_ACCOUNT_CHANGED');
     const network = await wallet('getNetworkDetails', [], ctx);
-    check(network.networkPassphrase === TESTNET_PASSPHRASE, 'WALLET_NETWORK_CHANGED');
+    check(network.networkPassphrase === ctx.networkPassphrase, 'WALLET_NETWORK_CHANGED');
+  }
+  async function readView(ctx = {}) {
+    const raw = await request('/api/view', { ctx });
+    check(plain(raw) && typeof raw.configured === 'boolean', 'HOST_RESPONSE_INVALID');
+    const next = raw.configured ? readDeployment(raw.deployment) : null;
+    check(raw.configured || raw.deployment === null, 'HOST_DEPLOYMENT_INVALID');
+    const expected = ctx.deploymentId ?? current?.deploymentId;
+    check(!expected || next?.deploymentId === expected, 'CLIENT_DEPLOYMENT_CHANGED');
+    configuredDeployment = next;
+    return { ...raw, deployment: next };
+  }
+  async function ensureDeployment(ctx) {
+    const expected =
+      ctx.deploymentId ?? current?.deploymentId ?? configuredDeployment?.deploymentId;
+    const raw = await readView({ ...ctx, deploymentId: expected });
+    check(raw.configured, 'HOST_NOT_CONFIGURED');
+    const unavailable = raw.unavailableReasons ?? [];
+    check(Array.isArray(unavailable), 'HOST_RESPONSE_INVALID');
+    check(
+      !unavailable.some((code) => ['CHAIN_UNAVAILABLE', 'DEPLOYMENT_UNAVAILABLE'].includes(code)),
+      'CLIENT_CHAIN_UNAVAILABLE',
+    );
+    Object.assign(ctx, readDeploymentDomain(raw.deployment));
+    return raw.deployment;
   }
   function sessionValue(value) {
+    const domain = readDeploymentDomain(value);
     check(
       validAccount(value?.account) &&
-        value.networkPassphrase === TESTNET_PASSPHRASE &&
+        value.deploymentId === domain.deploymentId &&
+        domain.deploymentId === configuredDeployment?.deploymentId &&
         Number.isSafeInteger(value.expiresAt) &&
         value.expiresAt > clock(),
       'HOST_SESSION_INVALID',
     );
-    return {
-      account: value.account,
-      networkPassphrase: TESTNET_PASSPHRASE,
-      expiresAt: value.expiresAt,
-    };
+    return { account: value.account, ...domain, expiresAt: value.expiresAt };
   }
   async function session({ signal, deadline } = {}) {
     const epoch = sessionEpoch;
     try {
+      await readView({ signal, deadline });
+      if (!configuredDeployment) return null;
       const value = sessionValue(await request('/api/session', { ctx: { signal, deadline } }));
       check(epoch === sessionEpoch, 'CLIENT_SESSION_CHANGED');
       current = value;
     } catch (error) {
       check(epoch === sessionEpoch, 'CLIENT_SESSION_CHANGED');
-      if (error.status === 401) current = null;
-      else throw error;
+      current = null;
+      if (error.status !== 401) throw error;
     }
     return current && { ...current };
   }
@@ -406,6 +539,9 @@ export function createHostClient({
     return exclusive(options, async (ctx) => {
       const epoch = ++sessionEpoch;
       current = null;
+      await ensureDeployment(ctx);
+      const selectedNetwork = await wallet('getNetworkDetails', [], ctx);
+      check(selectedNetwork.networkPassphrase === ctx.networkPassphrase, 'WALLET_NETWORK_CHANGED');
       const access = await wallet('requestAccess', [], ctx);
       check(validAccount(access.address), 'WALLET_RESPONSE_INVALID');
       const account = access.address;
@@ -417,17 +553,18 @@ export function createHostClient({
       });
       check(
         validId(challenge.challengeId) &&
-          challenge.networkPassphrase === TESTNET_PASSPHRASE &&
+          domainMatches(challenge, ctx.deploymentId) &&
+          challenge.deploymentId === ctx.deploymentId &&
           Number.isSafeInteger(challenge.expiresAt) &&
           challenge.expiresAt > clock() &&
           challenge.expiresAt <= clock() + 300_000,
         'HOST_CHALLENGE_INVALID',
       );
-      const expected = `Pactlane wallet session\nOrigin: ${origin}\nNetwork: ${TESTNET_PASSPHRASE}\nAccount: ${account}\nNonce: ${challenge.challengeId}\nExpires: ${challenge.expiresAt}\nThis authenticates this browser session only. It does not authorize a transaction.`;
+      const expected = `Pactlane wallet session\nOrigin: ${origin}\nNetwork: ${ctx.networkPassphrase}\nDeployment: ${ctx.deploymentId}\nContract: ${ctx.contract}\nToken: ${ctx.token}\nAccount: ${account}\nNonce: ${challenge.challengeId}\nExpires: ${challenge.expiresAt}\nThis authenticates this browser session only. It does not authorize a transaction.`;
       check(challenge.message === expected, 'HOST_CHALLENGE_INVALID');
       const signed = await wallet(
         'signMessage',
-        [challenge.message, { address: account, networkPassphrase: TESTNET_PASSPHRASE }],
+        [challenge.message, { address: account, networkPassphrase: ctx.networkPassphrase }],
         ctx,
       );
       check(signed.signerAddress === account, 'WALLET_ACCOUNT_CHANGED');
@@ -475,9 +612,18 @@ export function createHostClient({
     try {
       if (incoming.method === 'sign') {
         check(
-          exactKeys(incoming.args, ['transactionXdr', 'account', 'networkPassphrase']) &&
+          exactKeys(incoming.args, [
+            'transactionXdr',
+            'account',
+            'network',
+            'networkPassphrase',
+            'contract',
+            'token',
+            'deploymentId',
+          ]) &&
             incoming.args.account === ctx.account &&
-            incoming.args.networkPassphrase === TESTNET_PASSPHRASE,
+            domainMatches(incoming.args, ctx.deploymentId) &&
+            incoming.args.deploymentId === ctx.deploymentId,
           'WALLET_REQUEST_INVALID',
         );
         const transactionXdr = canonicalBase64(incoming.args.transactionXdr);
@@ -488,7 +634,7 @@ export function createHostClient({
             transactionXdr,
             {
               address: ctx.account,
-              networkPassphrase: TESTNET_PASSPHRASE,
+              networkPassphrase: ctx.networkPassphrase,
             },
           ],
           ctx,
@@ -505,8 +651,8 @@ export function createHostClient({
         }[incoming.method];
         const reply = await wallet(method, [], ctx);
         if (incoming.method === 'network') {
-          check(reply.networkPassphrase === TESTNET_PASSPHRASE, 'WALLET_NETWORK_CHANGED');
-          result = TESTNET_PASSPHRASE;
+          check(reply.networkPassphrase === ctx.networkPassphrase, 'WALLET_NETWORK_CHANGED');
+          result = ctx.networkPassphrase;
         } else {
           check(reply.address === ctx.account, 'WALLET_ACCOUNT_CHANGED');
           result = ctx.account;
@@ -574,7 +720,9 @@ export function createHostClient({
         if (!current || current.expiresAt <= clock())
           await session({ signal: ctx.signal, deadline: ctx.deadline });
         check(current, 'AUTHENTICATION_REQUIRED');
+        Object.assign(ctx, readDeploymentDomain(current));
         ctx.account = current.account;
+        await ensureDeployment(ctx);
         await sameWallet(ctx.account, ctx);
         if (!id) {
           guard(ctx);
@@ -641,7 +789,10 @@ export function createHostClient({
       if (!current || current.expiresAt <= clock())
         await session({ signal: ctx.signal, deadline: ctx.deadline });
       check(current?.account === expected.seller, 'WALLET_ACCOUNT_CHANGED');
+      Object.assign(ctx, readDeploymentDomain(current));
       ctx.account = current.account;
+      check(expected.deploymentId === ctx.deploymentId, 'RECOVERY_REQUEST_INVALID');
+      await ensureDeployment(ctx);
       await sameWallet(ctx.account, ctx);
       check(!recoveryClaims.has(expected.requestId), 'RECOVERY_REQUEST_ALREADY_CLAIMED');
       check(recoveryClaims.size < maxRememberedWalletRequests, 'CLIENT_REQUEST_CAPACITY');
@@ -681,7 +832,7 @@ export function createHostClient({
           // signature. The host reconstructs and verifies the signed entry.
           const signed = await wallet(
             'signAuthEntry',
-            [preimageXdr, { address: ctx.account, networkPassphrase: TESTNET_PASSPHRASE }],
+            [preimageXdr, { address: ctx.account, networkPassphrase: ctx.networkPassphrase }],
             ctx,
           );
           check(signed.signerAddress === ctx.account, 'WALLET_ACCOUNT_CHANGED');
@@ -734,13 +885,14 @@ export function createHostClient({
       sessionEpoch++;
       active?.controller.abort();
       current = null;
+      configuredDeployment = null;
       try {
         await request('/api/session', { method: 'DELETE' });
       } catch (error) {
         if (error.status !== 401) throw error;
       }
     },
-    view: ({ signal } = {}) => request('/api/view', { ctx: { signal } }),
+    view: ({ signal } = {}) => readView({ signal }),
     command(action, args, options) {
       check(ACTIONS.has(action) && plain(args), 'ACTION_UNAVAILABLE');
       return operate(action, args, null, options);

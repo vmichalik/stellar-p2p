@@ -1,17 +1,25 @@
 import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { chmodSync, mkdirSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import {
   Address,
   BASE_FEE,
   Contract,
-  Networks,
   StrKey,
   TransactionBuilder,
   rpc,
   scValToNative,
 } from '@stellar/stellar-sdk';
+import {
+  validateDeployment,
+  assertRpcNetwork,
+  publicDeployment,
+  submissionAllowed,
+  requireSubmission,
+  actionKey,
+} from './deployment-config.mjs';
+import { bindStorageDeployment } from './storage-deployment.mjs';
 import { ReplayStore } from '../policy/src/index.mjs';
 import { createChainReader } from './chain-reader.mjs';
 import { createChainReconciler } from './chain-reconciler.mjs';
@@ -66,6 +74,7 @@ export function createHostRuntime({
   deployment,
   deploymentLedger,
   storageDirectory,
+  replayStorePath,
   orderIds = [],
   sellerDrafts = [],
   offerReader,
@@ -76,26 +85,29 @@ export function createHostRuntime({
 } = {}) {
   if (!deployment)
     return {
+      deployment: null,
       readView: async () => unconfiguredView(),
       createServices: () => {
         throw Error('HOST_NOT_CONFIGURED');
       },
       close() {},
     };
-  const cfg = structuredClone(deployment),
+  const cfg = validateDeployment(deployment),
     drafts = structuredClone(sellerDrafts);
-  check(
-    cfg.networkPassphrase === Networks.TESTNET &&
-      cfg.tokenDecimals === 7 &&
-      typeof cfg.maxFeeStroops === 'string' &&
-      /^[1-9][0-9]{0,9}$/.test(cfg.maxFeeStroops) &&
-      BigInt(cfg.maxFeeStroops) <= 4294967295n,
-    'INVALID_DEPLOYMENT',
-  );
   check(
     typeof storageDirectory === 'string' && isAbsolute(storageDirectory),
     'PRIVATE_STORAGE_REQUIRED',
   );
+  check(
+    replayStorePath === undefined ||
+      (typeof replayStorePath === 'string' && isAbsolute(replayStorePath)),
+    'SHARED_REPLAY_STORE_REQUIRED',
+  );
+  check(
+    (cfg.network !== 'mainnet' && !policyFor) || replayStorePath,
+    'SHARED_REPLAY_STORE_REQUIRED',
+  );
+  const paymentStorePath = resolve(replayStorePath ?? join(storageDirectory, 'payments.sqlite'));
   check(
     Array.isArray(orderIds) &&
       orderIds.length <= 64 &&
@@ -164,14 +176,15 @@ export function createHostRuntime({
   };
   try {
     mkdirSync(storageDirectory, { recursive: true, mode: 0o700 });
-    store = new ReplayStore(join(storageDirectory, 'payments.sqlite'));
+    bindStorageDeployment(storageDirectory, cfg, paymentStorePath);
+    store = new ReplayStore(paymentStorePath);
     journal = new TransactionJournal(join(storageDirectory, 'transactions.sqlite'));
     catalog = new DatabaseSync(join(storageDirectory, 'orders.sqlite'));
     chmodSync(join(storageDirectory, 'orders.sqlite'), 0o600);
     catalog.exec(
       'PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000; CREATE TABLE IF NOT EXISTS known_orders(domain TEXT NOT NULL, id TEXT NOT NULL, PRIMARY KEY(domain,id)); CREATE TABLE IF NOT EXISTS fund_slots(domain TEXT NOT NULL, terms_hash TEXT NOT NULL, order_id TEXT, PRIMARY KEY(domain,terms_hash)); CREATE TABLE IF NOT EXISTS confirmed_receipts(domain TEXT NOT NULL, order_id TEXT NOT NULL, state TEXT NOT NULL, metadata TEXT NOT NULL, PRIMARY KEY(domain,order_id));',
     );
-    const domainKey = `${cfg.networkPassphrase}:${cfg.contract}`;
+    const domainKey = cfg.deploymentId;
     const atomic = (run) => {
       catalog.exec('BEGIN IMMEDIATE');
       try {
@@ -249,7 +262,13 @@ export function createHostRuntime({
         : order;
     };
     orderIds.forEach((orderId) => remember(orderId));
-    const reconciler = createChainReconciler({ domain, deploymentLedger, server: remote, store });
+    const reconciler = createChainReconciler({
+      domain,
+      deployment: cfg,
+      deploymentLedger,
+      server: remote,
+      store,
+    });
     const reader = createChainReader({
       deployment: cfg,
       server: remote,
@@ -311,14 +330,11 @@ export function createHostRuntime({
     }
     async function readBalance(account) {
       const network = await remote.getNetwork();
-      check(
-        network.passphrase === Networks.TESTNET && Number(network.protocolVersion) >= 29,
-        'RPC_NETWORK_MISMATCH',
-      );
+      assertRpcNetwork(cfg, network);
       const source = await remote.getAccount(account);
       const tx = new TransactionBuilder(source, {
         fee: BASE_FEE,
-        networkPassphrase: Networks.TESTNET,
+        networkPassphrase: cfg.networkPassphrase,
       })
         .addOperation(new Contract(cfg.token).call('balance', new Address(account).toScVal()))
         .setTimeout(60)
@@ -335,6 +351,7 @@ export function createHostRuntime({
       return { tokenAtoms: value.toString() };
     }
     return Object.freeze({
+      deployment: publicDeployment(cfg),
       recovery,
       async readView({ account = null } = {}) {
         const reasons = ['PAYMENT_VERIFICATION_UNAVAILABLE'];
@@ -359,13 +376,7 @@ export function createHostRuntime({
         const orders = values.map((value) => value.order);
         return {
           configured: true,
-          deployment: {
-            networkPassphrase: cfg.networkPassphrase,
-            contract: cfg.contract,
-            token: cfg.token,
-            tokenDecimals: 7,
-            tokenLabel: cfg.tokenLabel ?? 'Test token',
-          },
+          deployment: publicDeployment(cfg),
           serverTime: now,
           offers: orders
             .filter(
@@ -406,15 +417,26 @@ export function createHostRuntime({
           unavailableReasons: reasons,
           readiness: {
             paymentProof: false,
-            submission: submissionEnabled,
-            recovery: submissionEnabled,
+            submission:
+              submissionAllowed(cfg, submissionEnabled) && !reasons.includes('CHAIN_UNAVAILABLE'),
+            recovery:
+              submissionAllowed(cfg, submissionEnabled) && !reasons.includes('CHAIN_UNAVAILABLE'),
           },
         };
       },
       async createServices({ wallet, account, sessionId, getOperationDeadline }) {
         check(!closed && StrKey.isValidEd25519PublicKey(account), 'AUTHENTICATION_REQUIRED');
         const policy = policyFor
-          ? await policyFor({ account, domain, ledgerReader: reader, store, reconciler })
+          ? await policyFor({
+              account,
+              domain,
+              network: cfg.network,
+              token: cfg.token,
+              deployment: cfg,
+              ledgerReader: reader,
+              store,
+              reconciler,
+            })
           : {
               readStatus: async (orderId) => ({ orderId, status: 'unavailable' }),
               readAuthorization: async () => {
@@ -440,6 +462,7 @@ export function createHostRuntime({
           instructions: reader.instructionsFor(account),
           recovery: { seller: sellerPort, validForLedgers: 24 },
           submissionEnabled,
+          clock,
         });
         return Object.freeze({
           ...services,
@@ -468,6 +491,9 @@ export function createHostRuntime({
           async beginPayment() {
             throw Error('PAYMENT_VERIFICATION_UNAVAILABLE');
           },
+          async getPaymentInstructions() {
+            throw Error('PAYMENT_VERIFICATION_UNAVAILABLE');
+          },
           async release(orderId, authorization) {
             await preflight();
             const result = await services.release(orderId, authorization);
@@ -476,11 +502,11 @@ export function createHostRuntime({
             return result;
           },
           async resolve(orderId, buyerTokens) {
-            check(submissionEnabled, 'TESTNET_SUBMISSION_NOT_AUTHORIZED');
+            requireSubmission(cfg, submissionEnabled);
             check(typeof getOperationDeadline === 'function' && sessionId, 'RECOVERY_UNAVAILABLE');
             await preflight();
             id(orderId);
-            const prior = journal.get(`${cfg.contract}:resolve:${orderId}`);
+            const prior = journal.get(actionKey(cfg, 'resolve', orderId));
             // Reconciliation of an existing attempt must not ask the seller for
             // a new approval, including when the order is already Resolved.
             recoveryPort =

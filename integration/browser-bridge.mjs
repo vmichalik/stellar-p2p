@@ -1,7 +1,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomBytes } from 'node:crypto';
-import { Keypair, Networks, StrKey } from '@stellar/stellar-sdk';
+import { Asset, Keypair, StrKey } from '@stellar/stellar-sdk';
 import { RECOVERY_ERROR_CODES } from './recovery-broker.mjs';
+import { readDeployment, readDeploymentDomain } from '../app/host-client.mjs';
 
 // Transport only: services still enforce chain authorization, deployment identity,
 // policy acceptance and durable reconciliation. A session is not a chain signature.
@@ -87,24 +88,51 @@ function publicOrder(value) {
     locked_at: uint(value.locked_at),
   };
 }
-function publicTransaction(value) {
+function publicDeployment(value) {
+  let result;
+  try {
+    result = readDeployment(value);
+  } catch {
+    fail('DEPLOYMENT_INVALID');
+  }
   check(
-    object(value) && value.networkPassphrase === Networks.TESTNET && value.status === 'confirmed',
+    StrKey.isValidContract(result.contract) && StrKey.isValidContract(result.token),
+    'DEPLOYMENT_INVALID',
+  );
+  if (result.asset) {
+    account(result.asset.issuer);
+    check(
+      new Asset(result.asset.code, result.asset.issuer).contractId(result.networkPassphrase) ===
+        result.token,
+      'DEPLOYMENT_INVALID',
+    );
+  }
+  return result;
+}
+function publicTransaction(value, deployment) {
+  check(
+    object(value) &&
+      deployment &&
+      value.networkPassphrase === deployment.networkPassphrase &&
+      value.contract === deployment.contract &&
+      value.status === 'confirmed',
   );
   check(StrKey.isValidContract(value.contract));
   return {
     hash: hex(value.hash, 32),
-    networkPassphrase: Networks.TESTNET,
+    networkPassphrase: deployment.networkPassphrase,
     contract: value.contract,
     ledger: uint(value.ledger),
     status: 'confirmed',
   };
 }
-function publicRecovery(value, owner) {
+function publicRecovery(value, owner, deployment) {
+  const domain = readDeploymentDomain(value);
+  check(deployment && domain.deploymentId === deployment.deploymentId, 'RECOVERY_REQUEST_MISMATCH');
   check(object(value) && value.seller === owner && value.buyer !== owner);
   check(typeof value.requestId === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value.requestId));
   check(
-    value.networkPassphrase === Networks.TESTNET &&
+    value.networkPassphrase === deployment.networkPassphrase &&
       StrKey.isValidContract(value.contract) &&
       StrKey.isValidContract(value.token),
   );
@@ -128,7 +156,7 @@ function publicRecovery(value, owner) {
   return {
     requestId: value.requestId,
     orderId: uint(value.orderId),
-    networkPassphrase: Networks.TESTNET,
+    ...domain,
     contract: value.contract,
     token: value.token,
     buyer: account(value.buyer),
@@ -145,10 +173,10 @@ function publicRecovery(value, owner) {
     status: value.status,
   };
 }
-function publicResult(action, result, owner, args) {
+function publicResult(action, result, owner, args, deployment) {
   if (action === 'connectWallet') {
-    check(result?.account === owner && result.networkPassphrase === Networks.TESTNET);
-    return { account: owner, networkPassphrase: Networks.TESTNET };
+    check(result?.account === owner && result.networkPassphrase === deployment.networkPassphrase);
+    return { account: owner, ...readDeploymentDomain(deployment) };
   }
   if (action === 'getOrder') {
     check(result?.id === args.orderId);
@@ -176,13 +204,16 @@ function publicResult(action, result, owner, args) {
       orderState: result.orderState,
       buyerReceivedAtoms: uint(result.buyerReceivedAtoms, 127),
       sellerReturnedAtoms: uint(result.sellerReturnedAtoms, 127),
-      transaction: publicTransaction(result.transaction),
+      transaction: publicTransaction(result.transaction, deployment),
     };
   }
   check(action === 'fund' || result?.order?.id === args.orderId);
-  return { order: publicOrder(result?.order), transaction: publicTransaction(result?.transaction) };
+  return {
+    order: publicOrder(result?.order),
+    transaction: publicTransaction(result?.transaction, deployment),
+  };
 }
-function command(body, owner) {
+function command(body, owner, deployment) {
   keys(body, ['action', 'args']);
   const { action, args } = body;
   if (action === 'connectWallet') {
@@ -227,12 +258,24 @@ function command(body, owner) {
     keys(args, ['orderId', 'transaction']);
     uint(args.orderId);
     keys(args.transaction, ['hash', 'networkPassphrase', 'contract', 'ledger', 'status']);
-    return [action, args, [args.orderId, publicTransaction(args.transaction)]];
+    return [action, args, [args.orderId, publicTransaction(args.transaction, deployment)]];
   }
   // No generic method invocation, proof-launch shortcut or unilateral recovery.
   fail('ACTION_UNAVAILABLE');
 }
 const SERVICE_ERRORS = new Set([
+  'RECEIVING_ACCOUNT_MISSING',
+  'RECEIVING_TRUSTLINE_MISSING',
+  'RECEIVING_ASSET_UNAUTHORIZED',
+  'RECEIVING_CAPACITY_INSUFFICIENT',
+  'RECEIVING_READ_STALE',
+  'RECEIVING_READ_UNAVAILABLE',
+  'RECEIVING_ACCOUNT_INVALID',
+  'RECEIVING_ASSET_MISMATCH',
+  'RECEIVING_LEDGER_MISMATCH',
+  'RECEIVING_CAPACITY_INVALID',
+  'ISSUER_ACCOUNT_UNSUPPORTED',
+  'ASSET_IDENTITY_REQUIRED',
   ...RECOVERY_ERROR_CODES,
   'TRANSACTION_PREPARATION_RETRYABLE',
   'WALLET_REJECTED',
@@ -243,6 +286,9 @@ const SERVICE_ERRORS = new Set([
   'CATALOG_LIMIT',
   'DEPLOYMENT_UNAVAILABLE',
   'TESTNET_SUBMISSION_NOT_AUTHORIZED',
+  'MAINNET_SUBMISSION_NOT_AUTHORIZED',
+  'SUBMISSION_NOT_AUTHORIZED',
+  'DEPLOYMENT_CHANGED',
   'TRANSACTION_PENDING_RECONCILIATION',
   'TRANSACTION_SUBMISSION_UNCERTAIN',
   'TRANSACTION_FAILED',
@@ -273,6 +319,7 @@ const serviceError = (error) =>
  */
 export function createBrowserBridge({
   publicOrigin,
+  deployment = null,
   createServices,
   readView,
   recovery,
@@ -288,6 +335,8 @@ export function createBrowserBridge({
   maxOperationsPerSession = 16,
   maxBodyBytes = 131_072,
 } = {}) {
+  const activeDeployment = deployment === null ? null : Object.freeze(publicDeployment(deployment));
+  const domain = activeDeployment && Object.freeze(readDeploymentDomain(activeDeployment));
   const origin = new URL(publicOrigin);
   check(origin.origin === publicOrigin && !origin.username && !origin.password, 'INVALID_ORIGIN');
   const secure = origin.protocol === 'https:';
@@ -369,6 +418,7 @@ export function createBrowserBridge({
   function authenticated(request) {
     const session = sessions.get(cookies(request).get(sessionCookie));
     check(session && session.expiresAt > clock(), 'AUTHENTICATION_REQUIRED', 401);
+    check(domain && session.deploymentId === domain.deploymentId, 'DEPLOYMENT_CHANGED', 409);
     return session;
   }
   function walletFor(session) {
@@ -378,6 +428,8 @@ export function createBrowserBridge({
         return Promise.reject(new BridgeError('SESSION_EXPIRED'));
       if (!job || job.session !== session || job.status !== 'running')
         return Promise.reject(new BridgeError('OPERATION_ENDED'));
+      if (session.deploymentId !== domain?.deploymentId)
+        return Promise.reject(new BridgeError('DEPLOYMENT_CHANGED'));
       if (job.pending) return Promise.reject(new BridgeError('WALLET_REQUEST_ALREADY_PENDING'));
       return new Promise((resolve, reject) => {
         const request = { id: token(), method, args, resolve, reject };
@@ -399,7 +451,7 @@ export function createBrowserBridge({
         return call('sign', {
           transactionXdr,
           account: session.account,
-          networkPassphrase: Networks.TESTNET,
+          ...domain,
         });
       },
     });
@@ -439,6 +491,7 @@ export function createBrowserBridge({
             wallet: walletFor(session),
             account: session.account,
             sessionId: session.id,
+            deployment: activeDeployment,
             getOperationDeadline: () => context.getStore()?.deadline,
           }),
         );
@@ -446,7 +499,7 @@ export function createBrowserBridge({
         check(job.status === 'running', 'OPERATION_ENDED');
         check(typeof services?.[action] === 'function', 'ACTION_UNAVAILABLE');
         const result = await services[action](...parameters);
-        return publicResult(action, result, session.account, args);
+        return publicResult(action, result, session.account, args, activeDeployment);
       })
       .then(
         (value) => {
@@ -539,24 +592,14 @@ export function createBrowserBridge({
         check(Array.isArray(input) && input.length <= 64, 'VIEW_UNAVAILABLE', 503);
         return input;
       };
-      const viewDeployment =
-        value.deployment === null
-          ? null
-          : {
-              networkPassphrase: value.deployment.networkPassphrase,
-              contract: address(value.deployment.contract),
-              token: address(value.deployment.token),
-              tokenDecimals: value.deployment.tokenDecimals,
-              tokenLabel: text(value.deployment.tokenLabel, 40),
-            };
-      check(
-        !viewDeployment ||
-          (viewDeployment.networkPassphrase === Networks.TESTNET &&
-            viewDeployment.tokenDecimals === 7 &&
-            StrKey.isValidContract(viewDeployment.contract) &&
-            StrKey.isValidContract(viewDeployment.token)),
-      );
+      const viewDeployment = value.deployment === null ? null : publicDeployment(value.deployment);
       check(value.configured === (viewDeployment !== null));
+      check(
+        value.configured === Boolean(activeDeployment) &&
+          viewDeployment?.deploymentId === activeDeployment?.deploymentId,
+        'DEPLOYMENT_CHANGED',
+        409,
+      );
       const offers = collection(value.offers).map((offer) => {
         check(offer.currency === 'EUR' && offer.rail === 'revolut');
         return {
@@ -576,7 +619,12 @@ export function createBrowserBridge({
         return {
           ...order,
           ...(item.lastConfirmedTransaction
-            ? { lastConfirmedTransaction: publicTransaction(item.lastConfirmedTransaction) }
+            ? {
+                lastConfirmedTransaction: publicTransaction(
+                  item.lastConfirmedTransaction,
+                  activeDeployment,
+                ),
+              }
             : {}),
         };
       });
@@ -589,7 +637,7 @@ export function createBrowserBridge({
         recovery && viewer
           ? collection(await recovery.list(viewer.id))
               .filter((item) => item.seller === owner)
-              .map((item) => publicRecovery(item, owner))
+              .map((item) => publicRecovery(item, owner, activeDeployment))
           : [];
       if (viewer)
         check(
@@ -625,6 +673,7 @@ export function createBrowserBridge({
       const body = await readJson(request);
       keys(body, ['account']);
       account(body.account);
+      check(domain, 'HOST_NOT_CONFIGURED', 503);
       check(!closed, 'BRIDGE_CLOSED', 503);
       const oldCookie = cookies(request).get(preauthCookie);
       for (const [id, item] of challenges) if (item.browser === oldCookie) removeChallenge(id);
@@ -632,14 +681,14 @@ export function createBrowserBridge({
       const id = token(),
         browser = token(),
         expiresAt = clock() + challengeTtlMs;
-      const message = `Pactlane wallet session\nOrigin: ${publicOrigin}\nNetwork: ${Networks.TESTNET}\nAccount: ${body.account}\nNonce: ${id}\nExpires: ${expiresAt}\nThis authenticates this browser session only. It does not authorize a transaction.`;
-      const challenge = { account: body.account, browser, expiresAt, message };
+      const message = `Pactlane wallet session\nOrigin: ${publicOrigin}\nNetwork: ${domain.networkPassphrase}\nDeployment: ${domain.deploymentId}\nContract: ${domain.contract}\nToken: ${domain.token}\nAccount: ${body.account}\nNonce: ${id}\nExpires: ${expiresAt}\nThis authenticates this browser session only. It does not authorize a transaction.`;
+      const challenge = { account: body.account, browser, expiresAt, message, ...domain };
       challenge.timer = timer(() => removeChallenge(id), challengeTtlMs);
       challenges.set(id, challenge);
       respond(
         response,
         200,
-        { challengeId: id, message, expiresAt, networkPassphrase: Networks.TESTNET },
+        { challengeId: id, message, expiresAt, ...domain },
         cookie(preauthCookie, browser, challengeTtlMs),
       );
       return;
@@ -652,7 +701,8 @@ export function createBrowserBridge({
       check(
         challenge &&
           challenge.browser === cookies(request).get(preauthCookie) &&
-          challenge.expiresAt > clock(),
+          challenge.expiresAt > clock() &&
+          challenge.deploymentId === domain?.deploymentId,
         'CHALLENGE_REJECTED',
         401,
       );
@@ -676,6 +726,7 @@ export function createBrowserBridge({
       const session = {
         id: token(),
         account: challenge.account,
+        ...domain,
         expiresAt: clock() + sessionTtlMs,
         jobs: new Map(),
         active: null,
@@ -684,6 +735,7 @@ export function createBrowserBridge({
         id: session.id,
         account: session.account,
         expiresAt: session.expiresAt,
+        ...domain,
       });
       session.timer = timer(() => expire(session), sessionTtlMs);
       sessions.set(session.id, session);
@@ -692,7 +744,7 @@ export function createBrowserBridge({
         200,
         {
           account: session.account,
-          networkPassphrase: Networks.TESTNET,
+          ...domain,
           expiresAt: session.expiresAt,
         },
         [cookie(sessionCookie, session.id, sessionTtlMs), cookie(preauthCookie, '', 0)],
@@ -703,7 +755,7 @@ export function createBrowserBridge({
     if (path === '/api/session' && method === 'GET') {
       respond(response, 200, {
         account: session.account,
-        networkPassphrase: Networks.TESTNET,
+        ...domain,
         expiresAt: session.expiresAt,
       });
       return;
@@ -714,7 +766,10 @@ export function createBrowserBridge({
       return;
     }
     if (path === '/api/commands' && method === 'POST') {
-      const operationId = launch(session, command(await readJson(request), session.account));
+      const operationId = launch(
+        session,
+        command(await readJson(request), session.account, activeDeployment),
+      );
       respond(response, 202, { operationId });
       return;
     }
@@ -727,7 +782,7 @@ export function createBrowserBridge({
         if (recoveryRoute[2] === 'claim') {
           keys(body, []);
           const claim = await recovery.claim(session.id, recoveryRoute[1]);
-          const publicRequest = publicRecovery(claim, session.account);
+          const publicRequest = publicRecovery(claim, session.account, activeDeployment);
           check(
             typeof claim.claimToken === 'string' && /^[A-Za-z0-9_-]{43}$/.test(claim.claimToken),
           );
@@ -800,7 +855,7 @@ export function createBrowserBridge({
     else if (pending.method === 'connect' || pending.method === 'selected')
       check(body.result === session.account, 'WALLET_ACCOUNT_MISMATCH');
     else if (pending.method === 'network')
-      check(body.result === Networks.TESTNET, 'WALLET_NETWORK_MISMATCH');
+      check(body.result === domain.networkPassphrase, 'WALLET_NETWORK_MISMATCH');
     else text(body.result, 65_536);
     clearTimeout(pending.timer);
     job.pending = null;

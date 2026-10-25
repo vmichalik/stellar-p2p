@@ -76,6 +76,7 @@ async function fixture(t, overrides = {}) {
     serviceAccounts = [];
   let closes = 0;
   const runtime = {
+    deployment: view(null).deployment,
     readView: async ({ account }) => {
       owners.push(account);
       return view(account);
@@ -152,6 +153,7 @@ test('serves only the live asset allowlist and exact installed Freighter bytes w
     '/live-app.mjs',
     '/live-view-adapter.mjs',
     '/host-client.mjs',
+    '/network.mjs',
     '/styles.css',
     '/live-styles.css',
     '/assets/fonts/manrope.woff2',

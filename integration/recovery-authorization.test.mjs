@@ -14,12 +14,20 @@ import {
   xdr,
 } from '@stellar/stellar-sdk';
 import { prepareRecoveryTransaction } from './recovery-authorization.mjs';
+import { deploymentIdentity } from '../app/network.mjs';
 
 // Disposable test identities only. Every RPC and wallet port stays in-process.
 const buyer = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x66));
 const seller = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x77));
 const stranger = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x78));
 const contract = Address.contract(Buffer.alloc(32, 5)).toString();
+const deployment = {
+  network: 'testnet',
+  networkPassphrase: Networks.TESTNET,
+  contract,
+  token: Address.contract(Buffer.alloc(32, 6)).toString(),
+  tokenDecimals: 7,
+};
 const root = (orderId = 7n, buyerTokens = 100n, subInvocations = []) =>
   new xdr.SorobanAuthorizedInvocation({
     function: xdr.SorobanAuthorizedFunction.sorobanAuthorizedFunctionTypeContractFn(
@@ -61,6 +69,7 @@ const accountEntry = (account, thresholds = [1, 0, 0, 0]) =>
   });
 
 function fixture(options = {}) {
+  const cfg = options.deployment ?? deployment;
   let sequence = 100;
   const calls = { seller: 0, modes: [], signedTransactions: [] };
   const unsigned = addressEntry(options.root, options.nonce);
@@ -70,7 +79,7 @@ function fixture(options = {}) {
   });
   const transaction = new TransactionBuilder(new Account(buyer.publicKey(), '10'), {
     fee: '100',
-    networkPassphrase: Networks.TESTNET,
+    networkPassphrase: options.transactionNetwork ?? cfg.networkPassphrase,
   })
     .addOperation(
       new Contract(contract).call(
@@ -83,7 +92,12 @@ function fixture(options = {}) {
     .build();
   const sellerPort = {
     selected: async () => (options.wrongAccount ? stranger.publicKey() : seller.publicKey()),
-    network: async () => (options.wrongNetwork ? Networks.PUBLIC : Networks.TESTNET),
+    network: async () =>
+      options.wrongNetwork
+        ? cfg.networkPassphrase === Networks.PUBLIC
+          ? Networks.TESTNET
+          : Networks.PUBLIC
+        : cfg.networkPassphrase,
     async signAuthorization(request) {
       calls.seller++;
       calls.request = request;
@@ -125,6 +139,7 @@ function fixture(options = {}) {
     },
   };
   const input = {
+    deployment: cfg,
     transaction,
     server,
     contract,
@@ -279,4 +294,42 @@ test('failed auth enforcement and post-approval envelope mutation never pass val
   const changed = TransactionBuilder.cloneFrom(result.transaction, { fee: '999' }).build();
   changed.sign(buyer);
   await assert.rejects(result.validateSigned(changed), /WALLET_CHANGED_TRANSACTION/);
+});
+
+test('explicit mainnet recovery binds both real SDK signatures to the configured deployment', async () => {
+  const cfg = { ...deployment, network: 'mainnet', networkPassphrase: Networks.PUBLIC };
+  const f = fixture({ deployment: cfg });
+  const result = await prepareRecoveryTransaction(f.input);
+  assert.equal(f.calls.request.network, 'mainnet');
+  assert.equal(f.calls.request.networkPassphrase, Networks.PUBLIC);
+  assert.equal(f.calls.request.token, cfg.token);
+  assert.equal(f.calls.request.deploymentId, deploymentIdentity(cfg));
+  assert.equal(result.transaction.networkPassphrase, Networks.PUBLIC);
+  result.transaction.sign(buyer);
+  await result.validateSigned(result.transaction);
+  const wrongNetwork = TransactionBuilder.fromXDR(result.transaction.toXDR(), Networks.TESTNET);
+  await assert.rejects(result.validateSigned(wrongNetwork), /WALLET_CHANGED_TRANSACTION/);
+  assert.deepEqual(f.calls.modes, ['record', 'enforce', 'enforce']);
+});
+
+test('mainnet rejects implicit selection, wrong deployment, wallet network and testnet signatures', async () => {
+  const cfg = { ...deployment, network: 'mainnet', networkPassphrase: Networks.PUBLIC };
+  for (const options of [
+    { deployment: { ...cfg, network: undefined } },
+    { deployment: { ...cfg, networkPassphrase: Networks.TESTNET } },
+    { deployment: { ...cfg, contract: cfg.token } },
+    { deployment: { ...cfg, token: 'not-a-contract' } },
+    { deployment: cfg, transactionNetwork: Networks.TESTNET },
+    { deployment: cfg, wrongNetwork: true },
+  ]) {
+    const f = fixture(options);
+    await assert.rejects(
+      prepareRecoveryTransaction(f.input),
+      /DEPLOYMENT_INVALID|TRANSACTION_MISMATCH|WALLET_MISMATCH/,
+    );
+    assert.equal(f.calls.seller, 0);
+  }
+  const f = fixture({ deployment: cfg, signNetwork: Networks.TESTNET });
+  await assert.rejects(prepareRecoveryTransaction(f.input), /SIGNATURE_INVALID/);
+  assert.deepEqual(f.calls.modes, ['record']);
 });

@@ -3,7 +3,6 @@ import {
   BASE_FEE,
   Contract,
   Keypair,
-  Networks,
   StrKey,
   TransactionBuilder,
   nativeToScVal,
@@ -11,6 +10,15 @@ import {
   rpc,
   xdr,
 } from '@stellar/stellar-sdk';
+import { resolveNetwork } from '../app/network.mjs';
+import {
+  validateDeployment,
+  assertRpcNetwork,
+  requireSubmission,
+  actionKey,
+} from './deployment-config.mjs';
+import { createChainReader } from './chain-reader.mjs';
+import { assertReceivingReady } from './asset-readiness.mjs';
 import { claimDigest, claimScVal } from '../contracts/escrow/protocol/protocol.mjs';
 import { isDurableTransactionJournal } from './transaction-journal.mjs';
 import { prepareRecoveryTransaction } from './recovery-authorization.mjs';
@@ -61,9 +69,15 @@ const plain = (value) =>
           ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key, plain(item)]))
           : value;
 
-export function freighterWalletPort(api) {
+export function freighterWalletPort(api, deployment = {}) {
+  const configuredNetwork = resolveNetwork(deployment);
   return {
     async connect() {
+      const network = await api.getNetworkDetails();
+      check(
+        !network.error && network.networkPassphrase === configuredNetwork.passphrase,
+        'WALLET_NETWORK_MISMATCH',
+      );
       const result = await api.requestAccess();
       check(
         !result.error && StrKey.isValidEd25519PublicKey(result.address),
@@ -81,9 +95,10 @@ export function freighterWalletPort(api) {
       check(!result.error, 'WALLET_NETWORK_UNAVAILABLE');
       return result.networkPassphrase;
     },
-    async sign(transactionXdr, account) {
+    async sign(transactionXdr, account, networkPassphrase = configuredNetwork.passphrase) {
+      check(networkPassphrase === configuredNetwork.passphrase, 'WALLET_NETWORK_MISMATCH');
       const result = await api.signTransaction(transactionXdr, {
-        networkPassphrase: Networks.TESTNET,
+        networkPassphrase: configuredNetwork.passphrase,
         address: account,
       });
       // Freighter 6.0.1's FreighterApiDeclinedError is specifically code -4.
@@ -96,7 +111,7 @@ export function freighterWalletPort(api) {
   };
 }
 
-/** Testnet-only implementation of the app's confirmed service boundary.
+/** Explicit-network implementation of the app's confirmed service boundary.
  * No default submission permission, signing key, proof-success adapter or journal.
  * Journal hints can block retries; they can never establish chain confirmation.
  */
@@ -110,40 +125,26 @@ export function createStellarServices({
   recovery,
   submissionEnabled = false,
   pollAttempts = 20,
+  clock = () => String(Math.floor(Date.now() / 1000)),
   sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
 }) {
-  const cfg = structuredClone(deployment);
-  check(
-    cfg?.networkPassphrase === Networks.TESTNET && /^https:\/\/[^?#]+$/.test(cfg.rpcUrl),
-    'TESTNET_CONFIGURATION_REQUIRED',
-  );
-  check(
-    StrKey.isValidContract(cfg.contract) &&
-      StrKey.isValidContract(cfg.token) &&
-      cfg.tokenDecimals === 7,
-    'INVALID_DEPLOYMENT',
-  );
-  check(/^[a-f0-9]{64}$/.test(cfg.policySignerPublicKeyHex), 'SIGNER_CONFIGURATION_REQUIRED');
-  check(
-    typeof cfg.maxFeeStroops === 'string' && integer(cfg.maxFeeStroops) > 0n,
-    'FEE_LIMIT_REQUIRED',
-  );
-  const testKeys = [0x11, 0x2a].map((n) =>
-    Buffer.from(Keypair.fromRawEd25519Seed(Buffer.alloc(32, n)).rawPublicKey()).toString('hex'),
-  );
-  check(!testKeys.includes(cfg.policySignerPublicKeyHex), 'PUBLIC_FIXTURE_SIGNER_FORBIDDEN');
+  const cfg = validateDeployment(deployment);
   const remote = server ?? new rpc.Server(cfg.rpcUrl);
+  const deploymentReader = createChainReader({ deployment: cfg, server: remote, clock });
   const accounts = {};
   const inFlight = new Map();
   let readerAccount;
 
   async function network() {
     const n = await remote.getNetwork();
-    check(n.passphrase === Networks.TESTNET && n.protocolVersion >= 29, 'RPC_NETWORK_MISMATCH');
+    assertRpcNetwork(cfg, n);
   }
   async function transaction(method, args, account) {
     const source = await remote.getAccount(account);
-    return new TransactionBuilder(source, { fee: BASE_FEE, networkPassphrase: Networks.TESTNET })
+    return new TransactionBuilder(source, {
+      fee: BASE_FEE,
+      networkPassphrase: cfg.networkPassphrase,
+    })
       .addOperation(new Contract(cfg.contract).call(method, ...args))
       .setTimeout(60)
       .build();
@@ -154,7 +155,7 @@ export function createStellarServices({
     const source = await remote.getAccount(readerAccount);
     const tx = new TransactionBuilder(source, {
       fee: BASE_FEE,
-      networkPassphrase: Networks.TESTNET,
+      networkPassphrase: cfg.networkPassphrase,
     })
       .addOperation(new Contract(contract).call(method, ...args))
       .setTimeout(60)
@@ -173,6 +174,7 @@ export function createStellarServices({
     return { id: orderId, ...result, state };
   }
   async function configuration() {
+    await deploymentReader.readDeployment();
     const result = await view('get_config');
     check(
       result.token === cfg.token && result.signer === cfg.policySignerPublicKeyHex,
@@ -188,7 +190,7 @@ export function createStellarServices({
     );
     const tx = TransactionBuilder.fromXDR(
       typeof reply.envelopeXdr === 'string' ? reply.envelopeXdr : reply.envelopeXdr.toXDR('base64'),
-      Networks.TESTNET,
+      cfg.networkPassphrase,
     );
     check(
       Buffer.from(tx.hash()).toString('hex') === hash && tx.operations.length === 1,
@@ -214,7 +216,7 @@ export function createStellarServices({
       hash,
       ledger: String(reply.ledger),
       status: 'confirmed',
-      networkPassphrase: Networks.TESTNET,
+      networkPassphrase: cfg.networkPassphrase,
       contract: cfg.contract,
     };
   }
@@ -227,8 +229,8 @@ export function createStellarServices({
     }
     throw new Error('TRANSACTION_PENDING_RECONCILIATION');
   }
-  async function send(method, args, expectedAccount, key, prepare) {
-    check(submissionEnabled, 'TESTNET_SUBMISSION_NOT_AUTHORIZED');
+  async function send(method, args, expectedAccount, key, prepare, beforeNew) {
+    requireSubmission(cfg, submissionEnabled);
     check(isDurableTransactionJournal(journal), 'DURABLE_TRANSACTION_JOURNAL_REQUIRED');
     const argumentKey = args.map((argument) => argument.toXDR('base64')).join(':');
     const argumentsHash = createHash('sha256')
@@ -243,11 +245,14 @@ export function createStellarServices({
       check(
         expectedAccount &&
           (await wallet.selected()) === expectedAccount &&
-          (await wallet.network()) === Networks.TESTNET,
+          (await wallet.network()) === cfg.networkPassphrase,
         'WALLET_ACCOUNT_OR_NETWORK_CHANGED',
       );
       await network();
       await configuration();
+      // Legacy keys omitted network/asset. Never silently skip their unknown outcomes.
+      const legacyKey = key.slice(cfg.deploymentId.length + 1);
+      check(!(await journal.get(`${cfg.contract}:${legacyKey}`)), 'LEGACY_JOURNAL_REVIEW_REQUIRED');
       const prior = await journal.get(key);
       if (prior && prior.state !== 'retryable') {
         check(
@@ -258,6 +263,7 @@ export function createStellarServices({
         const reply = await waitFor(prior.hash);
         return { reply, transaction: checkEnvelope(reply, prior.hash, method, args) };
       }
+      if (beforeNew) await beforeNew();
       // Reservation ownership and every later transition survive process restart.
       // Only this live owner can prove preparation failed without a buyer envelope.
       const attempt = await journal.reserve(key, { method, argumentsHash });
@@ -282,7 +288,13 @@ export function createStellarServices({
       await journal.markSigning(key, attempt, preparedHash);
       let signedXdr;
       try {
-        signedXdr = await wallet.sign(unsignedXdr, expectedAccount);
+        check(
+          (await wallet.selected()) === expectedAccount &&
+            (await wallet.network()) === cfg.networkPassphrase,
+          'WALLET_ACCOUNT_OR_NETWORK_CHANGED',
+        );
+        await network();
+        signedXdr = await wallet.sign(unsignedXdr, expectedAccount, cfg.networkPassphrase);
       } catch (error) {
         if (error?.code === 'WALLET_REJECTED' || error?.message === 'WALLET_REJECTED')
           await journal.markRetryable(key, attempt, 'WALLET_REJECTED');
@@ -291,7 +303,7 @@ export function createStellarServices({
       // Even a malformed or changed returned envelope is conservatively final
       // for retry purposes. No subsequent validation failure releases this row.
       await journal.markSigned(key, attempt);
-      const signed = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+      const signed = TransactionBuilder.fromXDR(signedXdr, cfg.networkPassphrase);
       check(
         Buffer.from(signed.hash()).equals(Buffer.from(prepared.hash())),
         'WALLET_CHANGED_TRANSACTION',
@@ -302,6 +314,12 @@ export function createStellarServices({
         ),
         'WALLET_SIGNATURE_MISSING',
       );
+      check(
+        (await wallet.selected()) === expectedAccount &&
+          (await wallet.network()) === cfg.networkPassphrase,
+        'WALLET_ACCOUNT_OR_NETWORK_CHANGED',
+      );
+      await network();
       if (preparation.validateSigned) await preparation.validateSigned(signed);
       const hash = Buffer.from(signed.hash()).toString('hex');
       // Persist the hash BEFORE submission. Unknown outcomes stay blocked across
@@ -324,13 +342,14 @@ export function createStellarServices({
       inFlight.delete(key);
     }
   }
-  async function writeOrder(method, orderId, args, account, prepare) {
+  async function writeOrder(method, orderId, args, account, prepare, beforeNew) {
     const result = await send(
       method,
       args,
       account,
-      `${cfg.contract}:${method}:${orderId}`,
+      actionKey(cfg, method, orderId),
       prepare,
+      beforeNew,
     );
     return { order: await order(orderId), transaction: result.transaction };
   }
@@ -340,16 +359,19 @@ export function createStellarServices({
     deployment: Object.freeze(cfg),
     async connectWallet(party) {
       check(['buyer', 'seller'].includes(party), 'INVALID_PARTY');
+      await network();
+      await deploymentReader.readDeployment();
       const account = await wallet.connect();
       check(
-        StrKey.isValidEd25519PublicKey(account) && (await wallet.network()) === Networks.TESTNET,
+        StrKey.isValidEd25519PublicKey(account) &&
+          (await wallet.network()) === cfg.networkPassphrase,
         'WALLET_NETWORK_MISMATCH',
       );
       await network();
       readerAccount = account;
       accounts[party] = account;
       await configuration();
-      return { account, networkPassphrase: Networks.TESTNET };
+      return { account, networkPassphrase: cfg.networkPassphrase };
     },
     getOrder: order,
     async fund(terms) {
@@ -372,7 +394,7 @@ export function createStellarServices({
         'fund',
         [encoded],
         accounts.seller,
-        `${cfg.contract}:fund:${encoded.toXDR('base64')}`,
+        actionKey(cfg, 'fund', encoded.toXDR('base64')),
       );
       check(result.reply.returnValue, 'FUNDED_ORDER_ID_MISSING');
       const id = String(scValToNative(result.reply.returnValue));
@@ -380,12 +402,47 @@ export function createStellarServices({
     },
     async reserve(orderId, buyer) {
       check(buyer === accounts.buyer, 'BUYER_WALLET_MISMATCH');
-      return writeOrder('reserve', orderId, [u64(orderId), addr(buyer)], accounts.buyer);
+      return writeOrder(
+        'reserve',
+        orderId,
+        [u64(orderId), addr(buyer)],
+        accounts.buyer,
+        undefined,
+        cfg.asset
+          ? async () => {
+              const current = await order(orderId);
+              await assertReceivingReady({
+                deployment: cfg,
+                server: remote,
+                account: buyer,
+                amount: current.terms.token_amount,
+                clock,
+              });
+            }
+          : undefined,
+      );
     },
     async beginPayment(orderId) {
+      check(cfg.network !== 'mainnet', 'PAYMENT_VERIFICATION_UNAVAILABLE');
       const current = await order(orderId);
       check(current.buyer === accounts.buyer, 'BUYER_WALLET_MISMATCH');
-      const result = await writeOrder('begin_payment', orderId, [u64(orderId)], accounts.buyer);
+      const result = await writeOrder(
+        'begin_payment',
+        orderId,
+        [u64(orderId)],
+        accounts.buyer,
+        undefined,
+        cfg.asset
+          ? () =>
+              assertReceivingReady({
+                deployment: cfg,
+                server: remote,
+                account: current.buyer,
+                amount: current.terms.token_amount,
+                clock,
+              })
+          : undefined,
+      );
       check(
         result.order.state === 'Paying' && integer(result.order.locked_at) > 0n,
         'PAYMENT_LOCK_NOT_CONFIRMED',
@@ -402,6 +459,13 @@ export function createStellarServices({
           BigInt(latest.closeTime) < integer(current.pay_by),
         'PAYMENT_INSTRUCTIONS_LOCKED',
       );
+      await assertReceivingReady({
+        deployment: cfg,
+        server: remote,
+        account: current.buyer,
+        amount: current.terms.token_amount,
+        clock,
+      });
       check(typeof instructions?.read === 'function', 'PAYMENT_DESTINATION_UNAVAILABLE');
       const value = await instructions.read({
         orderId,
@@ -433,12 +497,13 @@ export function createStellarServices({
         approved?.syntheticOnly === false &&
           approved.releaseGate === 'POLICY_ACCEPTED' &&
           approved.domain?.contract === cfg.contract &&
-          approved.domain?.network_passphrase === Networks.TESTNET &&
-          approved.claim?.order_id === orderId,
+          approved.domain?.network_passphrase === cfg.networkPassphrase &&
+          approved.claim?.order_id === orderId &&
+          approved.claim?.token === cfg.token,
         'UNTRUSTED_POLICY_AUTHORIZATION',
       );
       const digest = claimDigest({
-        network_passphrase: Networks.TESTNET,
+        network_passphrase: cfg.networkPassphrase,
         contract: cfg.contract,
         claim: approved.claim,
       });
@@ -451,7 +516,23 @@ export function createStellarServices({
       );
       // Normalize the frozen encoder's ScVal through XDR into this SDK instance.
       const claim = xdr.ScVal.fromXDR(claimScVal(approved.claim).toXDR());
-      return writeOrder('release', orderId, [claim, signature], accounts.buyer);
+      return writeOrder(
+        'release',
+        orderId,
+        [claim, signature],
+        accounts.buyer,
+        undefined,
+        cfg.asset
+          ? () =>
+              assertReceivingReady({
+                deployment: cfg,
+                server: remote,
+                account: approved.claim.buyer,
+                amount: approved.claim.token_amount,
+                clock,
+              })
+          : undefined,
+      );
     },
     async refundExpiredReservation(orderId) {
       const current = await order(orderId);
@@ -471,13 +552,32 @@ export function createStellarServices({
         'INVALID_RESOLUTION_SPLIT',
       );
       const prior = isDurableTransactionJournal(journal)
-        ? await journal.get(`${cfg.contract}:resolve:${orderId}`)
+        ? await journal.get(actionKey(cfg, 'resolve', orderId))
         : null;
       check(
         ['Reserved', 'Paying'].includes(current.state) ||
           (current.state === 'Resolved' && prior?.state !== 'retryable' && prior?.hash),
         'RESOLUTION_NOT_AVAILABLE',
       );
+      if (cfg.asset && (!prior || prior.state === 'retryable')) {
+        if (BigInt(buyerTokens) > 0n)
+          await assertReceivingReady({
+            deployment: cfg,
+            server: remote,
+            account: current.buyer,
+            amount: buyerTokens,
+            clock,
+          });
+        const returned = BigInt(current.terms.token_amount) - BigInt(buyerTokens);
+        if (returned > 0n)
+          await assertReceivingReady({
+            deployment: cfg,
+            server: remote,
+            account: current.terms.seller,
+            amount: returned.toString(),
+            clock,
+          });
+      }
       // Buyer's final envelope signs the exact call plus seller's signed auth.
       // The order-wide journal permits reconciliation, never a second allocation.
       return writeOrder(
@@ -488,6 +588,7 @@ export function createStellarServices({
         (transaction) =>
           prepareRecoveryTransaction({
             transaction,
+            deployment: cfg,
             server: remote,
             contract: cfg.contract,
             orderId,
@@ -501,7 +602,7 @@ export function createStellarServices({
     },
     async reconcileReceipt(orderId, confirmed) {
       check(
-        confirmed.networkPassphrase === Networks.TESTNET &&
+        confirmed.networkPassphrase === cfg.networkPassphrase &&
           confirmed.contract === cfg.contract &&
           /^[a-f0-9]{64}$/.test(confirmed.hash),
         'RECEIPT_DOMAIN_MISMATCH',
@@ -516,7 +617,7 @@ export function createStellarServices({
       );
       const envelope = TransactionBuilder.fromXDR(
         reply.envelopeXdr.toXDR('base64'),
-        Networks.TESTNET,
+        cfg.networkPassphrase,
       );
       check(
         Buffer.from(envelope.hash()).toString('hex') === confirmed.hash &&

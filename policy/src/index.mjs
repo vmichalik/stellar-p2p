@@ -1,4 +1,4 @@
-import { Keypair, StrKey } from '@stellar/stellar-sdk';
+import { Keypair, StrKey, Networks } from '@stellar/stellar-sdk';
 import { makePolicy } from './engine.mjs';
 import { normalizeLiveTlsnPayment } from './evidence.mjs';
 import { requirePolicy, hex32 } from './errors.mjs';
@@ -40,6 +40,8 @@ export function createLivePaymentPolicy(options) {
   requirePolicy(options && typeof options === 'object', 'INVALID_BOOTSTRAP');
   const allowed = [
     'domain',
+    'network',
+    'token',
     'ledgerReader',
     'verifierReader',
     'store',
@@ -60,6 +62,12 @@ export function createLivePaymentPolicy(options) {
   requirePolicy(
     typeof options.verifierReader?.readVerifiedRecord === 'function',
     'VERIFIER_READER_REQUIRED',
+  );
+  const network = options.network ?? 'testnet';
+  requirePolicy(
+    (network === 'testnet' && options.domain?.network_passphrase === Networks.TESTNET) ||
+      (network === 'mainnet' && options.domain?.network_passphrase === Networks.PUBLIC),
+    'INVALID_DOMAIN',
   );
   return makePolicy({
     ...options,

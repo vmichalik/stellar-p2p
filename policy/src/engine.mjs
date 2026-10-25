@@ -20,7 +20,8 @@ const hash = (value) => createHash('sha256').update(value).digest('hex');
 export function escrowDomainKey(domain) {
   exactKeys(domain, ['network_passphrase', 'contract'], 'INVALID_DOMAIN');
   requirePolicy(
-    domain.network_passphrase === Networks.TESTNET && StrKey.isValidContract(domain.contract),
+    [Networks.TESTNET, Networks.PUBLIC].includes(domain.network_passphrase) &&
+      StrKey.isValidContract(domain.contract),
     'INVALID_DOMAIN',
   );
   return hash(
@@ -38,6 +39,7 @@ export function orderBinding(domain, orderId) {
 // constructor. Live and synthetic bootstrap paths use separate normalizers/keys.
 export function makePolicy({
   domain,
+  token,
   ledgerReader,
   loadEvidence,
   normalize,
@@ -51,6 +53,12 @@ export function makePolicy({
 }) {
   const frozenDomain = Object.freeze(structuredClone(domain));
   const domainKey = escrowDomainKey(frozenDomain);
+  // Live callers pin the exact token contract independently of the ledger
+  // adapter. Synthetic fixtures may retain their legacy snapshot-only setup.
+  requirePolicy(
+    (syntheticOnly === true && token === undefined) || StrKey.isValidContract(token),
+    'INVALID_TOKEN',
+  );
   requirePolicy(
     store?.syntheticOnly === syntheticOnly && signer?.syntheticOnly === syntheticOnly,
     'ADAPTER_MODE_MISMATCH',
@@ -95,6 +103,7 @@ export function makePolicy({
     requirePolicy(ledgerTime <= now && now - ledgerTime <= maxAge, 'STALE_LEDGER_SNAPSHOT');
     requirePolicy(result.config?.signer === signer.publicKeyHex, 'SIGNER_CONFIG_MISMATCH');
     requirePolicy(StrKey.isValidContract(result.config.token), 'INVALID_TOKEN');
+    requirePolicy(token === undefined || result.config.token === token, 'TOKEN_CONFIG_MISMATCH');
     return { result, now, ledgerTime };
   }
   function recipient(payment, result) {

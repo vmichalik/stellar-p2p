@@ -1,6 +1,5 @@
-import { readRecoveryRequest } from './host-client.mjs';
+import { readRecoveryRequest, readDeployment, readDeploymentDomain } from './host-client.mjs';
 
-const TESTNET = 'Test SDF Network ; September 2015';
 const STATES = new Set(['Funded', 'Reserved', 'Paying', 'Released', 'Refunded', 'Resolved']);
 const TERMINAL = new Set(['Released', 'Refunded', 'Resolved']);
 const MUTATIONS = new Set([
@@ -70,13 +69,13 @@ const transaction = (value, deployment) => {
   check(
     deployment &&
       value?.status === 'confirmed' &&
-      value.networkPassphrase === TESTNET &&
+      value.networkPassphrase === deployment.networkPassphrase &&
       value.contract === deployment.contract,
     'UNCONFIRMED_TRANSACTION',
   );
   return {
     hash: bytes32(value.hash),
-    networkPassphrase: TESTNET,
+    networkPassphrase: deployment.networkPassphrase,
     contract: value.contract,
     ledger: integer(value.ledger, 64),
     status: 'confirmed',
@@ -125,9 +124,9 @@ export function friendlyError(error) {
     return 'Confirmation is still pending. Check this operation before starting another; closing the wallet does not cancel a submitted transaction.';
   const messages = {
     DEPLOYMENT_NOT_CONFIGURED:
-      'This testnet exchange is not ready yet. Please check back when setup is complete.',
+      'This exchange is not ready yet. Please check back when setup is complete.',
     HOST_NOT_CONFIGURED:
-      'This testnet exchange is not ready yet. Please check back when setup is complete.',
+      'This exchange is not ready yet. Please check back when setup is complete.',
     DEPLOYMENT_UNAVAILABLE:
       'The exchange is unavailable. No transaction was submitted; refresh before trying again.',
     WALLET_REJECTED:
@@ -165,7 +164,39 @@ export function friendlyError(error) {
       'This trade no longer supports this recovery proposal. Refresh its status.',
     CONNECT_WALLET_FIRST: 'Connect your wallet for this side of the trade first.',
     OPERATION_PENDING: 'Finish checking the pending operation before starting another.',
+    RECEIVING_ACCOUNT_MISSING:
+      'The receiving Stellar account does not exist yet. Set up that account before retrying.',
+    RECEIVING_TRUSTLINE_MISSING:
+      'The receiving wallet needs a trustline for this exact asset before retrying.',
+    RECEIVING_ASSET_UNAUTHORIZED:
+      'The issuer has not authorized this receiving trustline. Resolve that before retrying.',
+    RECEIVING_CAPACITY_INSUFFICIENT:
+      'The receiving trustline cannot hold this amount. Check its limit before retrying.',
+    RECEIVING_READ_STALE: 'The receiving-wallet check is stale. Refresh and retry.',
+    RECEIVING_READ_UNAVAILABLE:
+      'The receiving wallet could not be checked. Refresh and retry when the network read is available.',
+    RECEIVING_ACCOUNT_INVALID:
+      'The receiving account could not be validated. Refresh before retrying.',
+    RECEIVING_ASSET_MISMATCH:
+      'The receiving trustline does not match the configured asset. Check the asset code and issuer.',
+    RECEIVING_LEDGER_MISMATCH:
+      'The receiving-wallet reads disagree on the ledger. Refresh before retrying.',
+    RECEIVING_CAPACITY_INVALID:
+      'The receiving trustline capacity could not be validated. Refresh before retrying.',
+    ISSUER_ACCOUNT_UNSUPPORTED:
+      'An issuer account is not supported as the receiving wallet for this trade.',
+    ASSET_IDENTITY_REQUIRED:
+      'This exchange needs an exact asset code and issuer before transactions can proceed.',
     TESTNET_SUBMISSION_NOT_AUTHORIZED: 'Transactions are not enabled for this exchange yet.',
+    MAINNET_SUBMISSION_NOT_AUTHORIZED: 'Mainnet transactions are not enabled for this exchange.',
+    SUBMISSION_NOT_AUTHORIZED: 'Transactions are not enabled for this exchange yet.',
+    CLIENT_CHAIN_UNAVAILABLE:
+      'The exchange could not verify its chain configuration. Refresh before continuing; reconcile any transaction already awaiting confirmation.',
+    CLIENT_DEPLOYMENT_CHANGED:
+      'The exchange network or asset changed. Disconnect and review the new configuration before reconnecting.',
+    DEPLOYMENT_CHANGED:
+      'The exchange configuration changed. Disconnect and reconnect before continuing.',
+    HOST_DEPLOYMENT_INVALID: 'The exchange network or asset configuration could not be verified.',
     PAYMENT_VERIFICATION_UNAVAILABLE:
       'Payment verification is unavailable. Keep your funds in escrow and do not send a bank payment yet.',
     PAYMENT_INSTRUCTIONS_LOCKED:
@@ -177,8 +208,9 @@ export function friendlyError(error) {
     TLSN_PAYMENT_SCHEMA_UNVERIFIED: 'Payment verification is not ready. Your escrow remains held.',
     LIVE_POLICY_UNAVAILABLE: 'Payment verification is unavailable. Your escrow remains held.',
     WALLET_ACCOUNT_OR_NETWORK_CHANGED:
-      'Your wallet changed. Reconnect the correct account on Stellar testnet.',
-    WALLET_NETWORK_MISMATCH: 'Select Stellar testnet in your wallet, then reconnect.',
+      'Your wallet changed. Reconnect the correct account on the configured Stellar network.',
+    WALLET_NETWORK_MISMATCH:
+      'Select the configured Stellar network in your wallet, then reconnect.',
     WALLET_UNAVAILABLE: 'Open Freighter on this device to connect your wallet.',
     RECEIPT_UNAVAILABLE:
       'The transfer receipt is not available yet. Refresh the trade to check again.',
@@ -203,22 +235,8 @@ function cleanView(raw, expectedAccount) {
     'INVALID_HOST_RESPONSE',
   );
   check((raw.account ?? null) === expectedAccount, 'SESSION_CHANGED');
-  const deployment = raw.configured
-    ? {
-        networkPassphrase: raw.deployment?.networkPassphrase,
-        contract: contract(raw.deployment?.contract),
-        token: contract(raw.deployment?.token),
-        tokenDecimals: raw.deployment?.tokenDecimals,
-        tokenLabel:
-          typeof raw.deployment?.tokenLabel === 'string'
-            ? raw.deployment.tokenLabel.slice(0, 40)
-            : 'Test token',
-      }
-    : null;
-  check(
-    !deployment || (deployment.networkPassphrase === TESTNET && deployment.tokenDecimals === 7),
-    'INVALID_HOST_RESPONSE',
-  );
+  const deployment = raw.configured ? readDeployment(raw.deployment) : null;
+  check(raw.configured || raw.deployment === null, 'INVALID_HOST_RESPONSE');
   const ownerOrders = raw.ownerOrders.map((value) => {
     const result = order(value);
     check(
@@ -252,7 +270,7 @@ function cleanView(raw, expectedAccount) {
     return { id: value.id, publicTerms };
   });
   const recoveryRequests = (raw.recoveryRequests ?? []).map((value) => {
-    const request = readRecoveryRequest(value);
+    const request = readRecoveryRequest(value, deployment);
     const existing = ownerOrders.find((entry) => entry.id === request.orderId);
     check(
       existing &&
@@ -301,7 +319,8 @@ function cleanView(raw, expectedAccount) {
 export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
   let epoch = 0,
     readVersion = 0,
-    readAt = clock();
+    readAt = clock(),
+    sessionDeployment = null;
   let state = {
     status: 'loading',
     account: null,
@@ -331,7 +350,13 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
     check(state.view?.configured, 'DEPLOYMENT_NOT_CONFIGURED');
     check(state.status === 'ready', 'INVALID_HOST_RESPONSE');
     if (party) check(state.account && state.roles.includes(party), 'CONNECT_WALLET_FIRST');
-    if (mutation) check(state.view.readiness.submission, 'TESTNET_SUBMISSION_NOT_AUTHORIZED');
+    if (mutation)
+      check(
+        state.view.readiness.submission,
+        state.view.deployment.network === 'mainnet'
+          ? 'MAINNET_SUBMISSION_NOT_AUTHORIZED'
+          : 'TESTNET_SUBMISSION_NOT_AUTHORIZED',
+      );
   };
   const mayInstruct = (id) => {
     const value = currentOrder(id);
@@ -363,7 +388,7 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
       const raw = await client.view();
       if (generation !== epoch || version !== readVersion) return;
       const view = cleanView(raw, state.account);
-      const domainChanged = state.view?.deployment?.contract !== view.deployment?.contract;
+      const domainChanged = state.view?.deployment?.deploymentId !== view.deployment?.deploymentId;
       if (domainChanged) {
         state.receipts = {};
         state.transactions = {};
@@ -371,6 +396,11 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
         state.recoveryNotice = null;
         state.recoverySplits = {};
       }
+      check(
+        !state.account || sessionDeployment?.deploymentId === view.deployment?.deploymentId,
+        'SESSION_CHANGED',
+      );
+      if (domainChanged) state.roles = [];
       state.view = view;
       readAt = clock();
       state.status = 'ready';
@@ -599,7 +629,7 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
       try {
         const session = await client.session();
         if (generation !== epoch) return;
-        check(!session || session.networkPassphrase === TESTNET, 'SESSION_CHANGED');
+        sessionDeployment = session ? readDeploymentDomain(session) : null;
         state.account = session ? account(session.account) : null;
       } catch (error) {
         if (generation !== epoch) return;
@@ -645,13 +675,18 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
         if (!state.account) {
           const session = await client.authenticate();
           if (generation !== epoch) return;
-          check(session?.networkPassphrase === TESTNET, 'SESSION_CHANGED');
+          sessionDeployment = readDeploymentDomain(session);
+          check(
+            sessionDeployment.deploymentId === state.view.deployment.deploymentId,
+            'SESSION_CHANGED',
+          );
           state.account = account(session.account);
         }
         const reply = await client.command('connectWallet', { party });
         if (generation !== epoch) return;
         check(
-          reply.result?.account === state.account && reply.result.networkPassphrase === TESTNET,
+          reply.result?.account === state.account &&
+            reply.result.networkPassphrase === state.view.deployment.networkPassphrase,
           'SESSION_CHANGED',
         );
         if (!state.roles.includes(party)) state.roles.push(party);
@@ -666,6 +701,7 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
       }
     },
     async logout() {
+      sessionDeployment = null;
       ++epoch;
       ++readVersion;
       state = {

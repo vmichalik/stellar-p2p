@@ -238,6 +238,17 @@ test('durable idempotency survives reopen, while other orders and deployments re
       }),
       { code: 'PAYMENT_ALREADY_BOUND' },
     );
+    const mainnetDomain = { ...domain, network_passphrase: Networks.PUBLIC };
+    const mainnet = fixture().snapshot;
+    mainnet.network_passphrase = Networks.PUBLIC;
+    assert.equal(store.readCheckpoint(escrowDomainKey(mainnetDomain)), null);
+    assert.throws(() => store.assertReconciled(escrowDomainKey(mainnetDomain), '100'), {
+      code: 'CHAIN_RECONCILIATION_BEHIND',
+    });
+    await assert.rejects(
+      harness({ store, snapshot: mainnet, targetDomain: mainnetDomain }).policy.issue(request),
+      { code: 'PAYMENT_ALREADY_BOUND' },
+    );
   } finally {
     store.close();
     rmSync(directory, { recursive: true, force: true });
@@ -397,6 +408,7 @@ test('live adapter rejects browser callbacks, public proof and claimed verified 
     ]) {
       const policy = createLivePaymentPolicy({
         domain,
+        token: fixture().snapshot.config.token,
         store,
         signer,
         verifierReader: { readVerifiedRecord: async () => record },
@@ -408,6 +420,129 @@ test('live adapter rejects browser callbacks, public proof and claimed verified 
     assert.equal(signs, 0);
   } finally {
     store.close();
+  }
+});
+
+test('official network domains bind different keys and mainnet claims use the mainnet digest', async () => {
+  const mainnetDomain = { ...domain, network_passphrase: Networks.PUBLIC };
+  assert.notEqual(escrowDomainKey(domain), escrowDomainKey(mainnetDomain));
+  assert.notEqual(orderBinding(domain, '1'), orderBinding(mainnetDomain, '1'));
+  for (const network_passphrase of ['', 'Custom network', Networks.FUTURENET]) {
+    assert.throws(() => escrowDomainKey({ ...domain, network_passphrase }), {
+      code: 'INVALID_DOMAIN',
+    });
+  }
+  const snapshot = fixture().snapshot;
+  snapshot.network_passphrase = Networks.PUBLIC;
+  const h = harness({ targetDomain: mainnetDomain, snapshot });
+  try {
+    const receipt = await h.policy.issue(request);
+    assert.equal(receipt.domain.network_passphrase, Networks.PUBLIC);
+    assert.equal(
+      receipt.digestHex,
+      claimDigest({ ...mainnetDomain, claim: receipt.claim }).toString('hex'),
+    );
+    assert.notEqual(
+      receipt.digestHex,
+      claimDigest({ ...domain, claim: receipt.claim }).toString('hex'),
+    );
+    const key = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x11));
+    assert.equal(
+      key.verify(
+        claimDigest({ ...domain, claim: receipt.claim }),
+        Buffer.from(receipt.signatureHex, 'hex'),
+      ),
+      false,
+    );
+  } finally {
+    h.store.close();
+  }
+});
+
+test('live bootstrap requires explicit mainnet and an exact configured token, while normalization stays closed', async () => {
+  const key = Keypair.random();
+  const store = new ReplayStore(':memory:');
+  let signs = 0;
+  const signer = createEd25519SigningAdapter({
+    publicKeyHex: Buffer.from(key.rawPublicKey()).toString('hex'),
+    signDigest: async (digest) => {
+      signs++;
+      return key.sign(digest);
+    },
+  });
+  const options = {
+    domain: { ...domain, network_passphrase: Networks.PUBLIC },
+    network: 'mainnet',
+    token: fixture().snapshot.config.token,
+    store,
+    signer,
+    verifierReader: { readVerifiedRecord: async () => fixture().payment },
+    ledgerReader: {
+      readOrder: async () => {
+        throw new Error('normalizer must reject first');
+      },
+    },
+  };
+  try {
+    for (const mutation of [
+      { network: undefined },
+      { network: 'testnet' },
+      { network: 'custom' },
+      { domain },
+      { token: undefined },
+      { token: address(1) },
+    ]) {
+      assert.throws(
+        () => createLivePaymentPolicy({ ...options, ...mutation }),
+        /INVALID_DOMAIN|INVALID_TOKEN/,
+      );
+    }
+    await assert.rejects(createLivePaymentPolicy(options).issue(request), {
+      code: 'TLSN_PAYMENT_SCHEMA_UNVERIFIED',
+    });
+    assert.equal(signs, 0);
+  } finally {
+    store.close();
+  }
+});
+
+test('configured token is checked against the ledger before claim reservation or signing on either network', async () => {
+  for (const network_passphrase of [Networks.TESTNET, Networks.PUBLIC]) {
+    const f = fixture();
+    const targetDomain = { ...domain, network_passphrase };
+    f.snapshot.network_passphrase = network_passphrase;
+    const store = new ReplayStore(':memory:', { syntheticOnly: true });
+    const key = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x11));
+    let signs = 0;
+    store.advanceCheckpoint(escrowDomainKey(targetDomain), '100');
+    const policy = makePolicy({
+      domain: targetDomain,
+      token: address(6, true),
+      store,
+      syntheticOnly: true,
+      signer: {
+        syntheticOnly: true,
+        publicKeyHex: SYNTHETIC_PUBLIC_KEY_HEX,
+        signDigest: async (digest) => {
+          signs++;
+          return key.sign(digest);
+        },
+      },
+      clock: () => '1000',
+      loadEvidence: async () => f.payment,
+      normalize: validateSyntheticPayment,
+      ledgerReader: { readOrder: async () => f.snapshot },
+    });
+    try {
+      f.snapshot.config.token = address(7, true);
+      await assert.rejects(policy.issue(request), { code: 'TOKEN_CONFIG_MISMATCH' });
+      assert.equal(signs, 0);
+      f.snapshot.config.token = address(6, true);
+      assert.equal((await policy.issue(request)).claim.token, address(6, true));
+      assert.equal(signs, 1);
+    } finally {
+      store.close();
+    }
   }
 });
 

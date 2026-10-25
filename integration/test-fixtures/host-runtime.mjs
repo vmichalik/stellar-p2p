@@ -1,3 +1,4 @@
+import { receivingEntries, sacInstance } from './issued-asset.mjs';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -81,6 +82,7 @@ function encodedOrder(value) {
   });
 }
 function fixture(t, options = {}) {
+  const cfg = options.deployment ?? deployment;
   const directory = mkdtempSync(join(tmpdir(), 'pactlane-host-runtime-'));
   const storageDirectory = join(directory, 'private');
   let runtime;
@@ -104,13 +106,13 @@ function fixture(t, options = {}) {
     walletCalls: [],
   };
   const config = map({
-    signer: bytes(deployment.policySignerPublicKeyHex),
-    token: address(deployment.token),
+    signer: bytes(cfg.policySignerPublicKeyHex),
+    token: address(cfg.token),
   });
   const instance = xdr.ScVal.scvContractInstance(
     new xdr.ScContractInstance({
       executable: xdr.ContractExecutable.contractExecutableWasm(
-        Buffer.from(options.wasm ?? deployment.escrowWasmSha256, 'hex'),
+        Buffer.from(options.wasm ?? cfg.escrowWasmSha256, 'hex'),
       ),
       storage: [new xdr.ScMapEntry({ key: variant('Config'), val: config })],
     }),
@@ -119,14 +121,21 @@ function fixture(t, options = {}) {
     async getNetwork() {
       counts.network++;
       if (options.unavailable) throw Error('SYNTHETIC_PRIVATE_RPC_FAILURE');
-      return { passphrase: Networks.TESTNET, protocolVersion: 29 };
+      return { passphrase: options.rpcNetwork ?? cfg.networkPassphrase, protocolVersion: 29 };
     },
     async getLedgerEntries(...keys) {
       counts.ledger++;
+      if (keys[0].type === 'account') return receivingEntries(keys, options);
       const entries = keys.flatMap((key, index) => {
-        const orderId = index === 0 ? null : String(scValToNative(key.contractData.key)[1]);
+        const isToken = Address.fromScAddress(key.contractData.contract).toString() === cfg.token;
+        const orderId =
+          index === 0 || isToken ? null : String(scValToNative(key.contractData.key)[1]);
         if (orderId === options.missingOrder) return [];
-        const selected = index === 0 ? instance : encodedOrder(orders.get(orderId));
+        const selected = isToken
+          ? sacInstance()
+          : index === 0
+            ? instance
+            : encodedOrder(orders.get(orderId));
         return [
           {
             key,
@@ -195,7 +204,7 @@ function fixture(t, options = {}) {
     { id: 'expired', publicTerms: terms(alice, { offer_expires_at: '999' }) },
   ];
   const configOptions = {
-    deployment,
+    deployment: cfg,
     deploymentLedger: '90',
     storageDirectory,
     orderIds: ['0', '1', '2', '3'],
@@ -220,7 +229,7 @@ function fixture(t, options = {}) {
     },
     network: async () => {
       counts.walletCalls.push('network');
-      return Networks.TESTNET;
+      return cfg.networkPassphrase;
     },
     sign: async () => {
       counts.walletCalls.push('sign');

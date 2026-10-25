@@ -1,12 +1,6 @@
-import {
-  Address,
-  Networks,
-  StrKey,
-  nativeToScVal,
-  scValToNative,
-  rpc,
-  xdr,
-} from '@stellar/stellar-sdk';
+import { Address, StrKey, nativeToScVal, scValToNative, rpc, xdr } from '@stellar/stellar-sdk';
+import { validateDeployment, assertRpcNetwork } from './deployment-config.mjs';
+import { assertReceivingReady } from './asset-readiness.mjs';
 import { recipientCommitment } from '../policy/src/index.mjs';
 
 class ChainReaderError extends Error {}
@@ -57,18 +51,7 @@ export function createChainReader({
   clock = () => String(Math.floor(Date.now() / 1000)),
   maxLedgerAgeSeconds = '60',
 }) {
-  const cfg = structuredClone(deployment);
-  check(
-    cfg?.networkPassphrase === Networks.TESTNET && /^https:\/\/[^?#]+$/.test(cfg.rpcUrl),
-    'TESTNET_CONFIGURATION_REQUIRED',
-  );
-  check(
-    StrKey.isValidContract(cfg.contract) &&
-      StrKey.isValidContract(cfg.token) &&
-      hex32(cfg.policySignerPublicKeyHex) &&
-      hex32(cfg.escrowWasmSha256),
-    'INVALID_DEPLOYMENT',
-  );
+  const cfg = validateDeployment(deployment);
   const maxAge = integer(maxLedgerAgeSeconds);
   check(maxAge > 0n && maxAge <= 300n, 'INVALID_FRESHNESS_WINDOW');
   const remote = server ?? new rpc.Server(cfg.rpcUrl);
@@ -81,6 +64,26 @@ export function createChainReader({
       return await fn();
     } catch (error) {
       if (error instanceof ChainReaderError) throw error;
+      if (
+        [
+          'RPC_NETWORK_MISMATCH',
+          'RPC_PROTOCOL_UNSUPPORTED',
+          'ASSET_IDENTITY_REQUIRED',
+          'RECEIVING_ACCOUNT_INVALID',
+          'ISSUER_ACCOUNT_UNSUPPORTED',
+          'INVALID_RECEIVING_AMOUNT',
+          'RECEIVING_READ_UNAVAILABLE',
+          'RECEIVING_LEDGER_MISMATCH',
+          'RECEIVING_ACCOUNT_MISSING',
+          'RECEIVING_TRUSTLINE_MISSING',
+          'RECEIVING_ASSET_MISMATCH',
+          'RECEIVING_ASSET_UNAUTHORIZED',
+          'RECEIVING_CAPACITY_INVALID',
+          'RECEIVING_CAPACITY_INSUFFICIENT',
+          'RECEIVING_READ_STALE',
+        ].includes(error.message)
+      )
+        throw new ChainReaderError(error.message);
       throw new ChainReaderError('CHAIN_READER_UNAVAILABLE');
     }
   }
@@ -89,12 +92,7 @@ export function createChainReader({
     const id = orderId === null ? null : integer(orderId);
     check(nullifier === null || hex32(nullifier), 'INVALID_NULLIFIER');
     const network = await remote.getNetwork();
-    check(
-      network.passphrase === cfg.networkPassphrase &&
-        /^\d+$/.test(String(network.protocolVersion)) &&
-        Number(network.protocolVersion) >= 29,
-      'RPC_NETWORK_MISMATCH',
-    );
+    assertRpcNetwork(cfg, network);
     const keys = [
       dataKey(cfg.contract, xdr.ScVal.scvLedgerKeyContractInstance()),
       ...(id === null
@@ -105,6 +103,10 @@ export function createChainReader({
       keys.push(
         dataKey(cfg.contract, enumKey('Used', xdr.ScVal.scvBytes(Buffer.from(nullifier, 'hex')))),
       );
+    const tokenKey = cfg.asset
+      ? dataKey(cfg.token, xdr.ScVal.scvLedgerKeyContractInstance())
+      : null;
+    if (tokenKey) keys.push(tokenKey);
     const values = await remote.getLedgerEntries(...keys);
     check(
       sequence(values.latestLedger) && Array.isArray(values.entries),
@@ -143,6 +145,14 @@ export function createChainReader({
         Buffer.from(contract.executable.wasmHash.value).toString('hex') === cfg.escrowWasmSha256,
       'CONTRACT_CODE_MISMATCH',
     );
+    if (tokenKey) {
+      const tokenInstance = found.get(tokenKey.toXDR('base64'));
+      check(
+        tokenInstance?.type === 'scvContractInstance' &&
+          tokenInstance.instance.executable.type === 'contractExecutableStellarAsset',
+        'ASSET_EXECUTABLE_MISMATCH',
+      );
+    }
     const configKey = enumKey('Config').toXDR('base64');
     const configs = (contract.storage ?? []).filter(
       (item) => item.key.toXDR('base64') === configKey,
@@ -289,6 +299,13 @@ export function createChainReader({
                 expected === order.terms.recipient,
               'PAYMENT_INSTRUCTIONS_LOCKED',
             );
+            await assertReceivingReady({
+              deployment: cfg,
+              server: remote,
+              account,
+              amount: order.terms.token_amount,
+              clock,
+            });
             const offer = await privateOffer(result);
             check(
               typeof offer.destination === 'string' &&

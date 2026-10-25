@@ -1,0 +1,69 @@
+{
+  "scope": "Local explicit testnet/mainnet implementation; fixtures and loopback HTTP only for transaction paths",
+  "baseRevision": "0361bc4275e4c1d9d395c05c6261e83de338fcc7",
+  "branch": "codex/pactlane-explicit-networks",
+  "checks": {
+    "combinedAffectedSuite": {
+      "files": 19,
+      "passed": 252,
+      "failed": 0,
+      "skipped": 0,
+      "command": "node --test app/*.test.mjs integration/*.test.mjs policy/test/*.test.mjs tests/release/demo-build.test.mjs"
+    },
+    "finalConfigurationAndDirectFreighterGuard": {
+      "passed": 36,
+      "failed": 0,
+      "skipped": 0,
+      "command": "node --test integration/deployment-config.test.mjs integration/stellar-rpc-adapter.test.mjs",
+      "note": "Includes one new direct Freighter composition test added after the combined run; 253 distinct passing tests across the scoped runs"
+    },
+    "syntaxModulesAndInlineScripts": 97,
+    "protocolSnapshotConsistency": "passed; frozen protocol and escrow source unchanged",
+    "formatting": "scoped files passed",
+    "diffWhitespace": "passed",
+    "mockedFullRecoveryNetworks": ["testnet", "mainnet"],
+    "sandboxNote": "Initial combined run could not bind loopback (EPERM); authorized escalation passed the HTTP tests and the subsequent complete affected suite"
+  },
+  "preserved": {
+    "frozenCandidate": "0361bc4275e4c1d9d395c05c6261e83de338fcc7",
+    "mediaArchiveSha256": "ea605743bef97bcf176dec652f965f780df96ac8912390642000b13aad72c5cc",
+    "unchangedPaths": [
+      "contracts",
+      "tlsn",
+      "policy/src/evidence.mjs",
+      "app/app.mjs",
+      "app/model.mjs",
+      "app/demo-adapter.mjs",
+      "app/styles.css"
+    ]
+  },
+  "officialMetadata": {
+    "checkedDate": "2026-10-25",
+    "mainnetLedgerProtocol": 29,
+    "testnetLedgerProtocol": 29,
+    "supportedProtocol": 29,
+    "nodeBinaryVersionIsNotLedgerProtocol": true,
+    "sources": [
+      "https://horizon.stellar.org",
+      "https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/getNetwork",
+      "https://stellar.org/blog/developers/bell-protocol-30-upgrade-guide"
+    ]
+  },
+  "boundaries": {
+    "deploymentPerformed": false,
+    "sourcePublished": false,
+    "bankRequestMade": false,
+    "realWalletPrompted": false,
+    "networkTransactionSubmitted": false,
+    "paymentNormalizationAccepted": false,
+    "livePaymentLocksEnabled": false,
+    "liveFiatInstructionsEnabled": false
+  },
+  "remaining": [
+    "Actual operator deployment/asset/RPC/public-key/fee inputs",
+    "Explicit migration review for legacy deployment storage and networkless transaction keys",
+    "Shared physical payment replay DB across the payment authority",
+    "Authorized testnet validation and separate mainnet acceptance/execution",
+    "Accepted payment semantics and live TLS normalization"
+  ]
+}

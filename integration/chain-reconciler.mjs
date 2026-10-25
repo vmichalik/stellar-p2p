@@ -1,4 +1,6 @@
-import { Networks, StrKey, scValToNative } from '@stellar/stellar-sdk';
+import { StrKey, scValToNative } from '@stellar/stellar-sdk';
+import { NETWORKS } from '../app/network.mjs';
+import { assertRpcNetwork } from './deployment-config.mjs';
 import { escrowDomainKey, orderBinding } from '../policy/src/index.mjs';
 
 const check = (condition, code) => {
@@ -77,6 +79,7 @@ function orderEvent(event, contract, start, end) {
  */
 export function createChainReconciler({
   domain,
+  deployment,
   deploymentLedger,
   server,
   store,
@@ -87,10 +90,17 @@ export function createChainReconciler({
 }) {
   const frozen = structuredClone(domain);
   check(
-    frozen?.network_passphrase === Networks.TESTNET && StrKey.isValidContract(frozen.contract),
-    'TESTNET_CONFIGURATION_REQUIRED',
+    Object.values(NETWORKS).some((n) => n.passphrase === frozen?.network_passphrase) &&
+      StrKey.isValidContract(frozen.contract),
+    'NETWORK_CONFIGURATION_MISMATCH',
   );
-  const deployment = ledgerNumber(deploymentLedger);
+  check(
+    !deployment ||
+      (deployment.networkPassphrase === frozen.network_passphrase &&
+        deployment.contract === frozen.contract),
+    'RECONCILER_DEPLOYMENT_MISMATCH',
+  );
+  const firstLedger = ledgerNumber(deploymentLedger);
   check(
     typeof server?.getNetwork === 'function' &&
       typeof server?.getEvents === 'function' &&
@@ -111,14 +121,11 @@ export function createChainReconciler({
 
   async function sync(sequence) {
     const target = ledgerNumber(sequence);
-    check(target >= deployment, 'LEDGER_BEFORE_DEPLOYMENT');
+    check(target >= firstLedger, 'LEDGER_BEFORE_DEPLOYMENT');
     const network = await server.getNetwork();
-    check(
-      network?.passphrase === Networks.TESTNET && Number(network.protocolVersion) >= 29,
-      'RPC_NETWORK_MISMATCH',
-    );
+    assertRpcNetwork({ networkPassphrase: frozen.network_passphrase }, network);
     const previous = store.readCheckpoint(domainKey, deploymentLedger);
-    const start = previous === null ? deployment : ledgerNumber(previous) + 1;
+    const start = previous === null ? firstLedger : ledgerNumber(previous) + 1;
     if (start > target) return { ledgerSequence: previous, eventsProcessed: 0 };
     const found = new Map();
     let requests = 0;

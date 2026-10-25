@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { Address, Keypair, Networks, StrKey, nativeToScVal, xdr } from '@stellar/stellar-sdk';
 import { recipientCommitment, ReplayStore, escrowDomainKey } from '../policy/src/index.mjs';
+import { issuedDeployment, receivingEntries, sacInstance } from './test-fixtures/issued-asset.mjs';
 import { createChainReader } from './chain-reader.mjs';
 import { createChainReconciler } from './chain-reconciler.mjs';
 
@@ -10,6 +11,8 @@ const seller = Keypair.random().publicKey(),
 const deployment = {
   networkPassphrase: Networks.TESTNET,
   rpcUrl: 'https://rpc.example',
+  tokenDecimals: 7,
+  maxFeeStroops: '10000',
   contract: StrKey.encodeContract(Buffer.alloc(32, 5)),
   token: StrKey.encodeContract(Buffer.alloc(32, 6)),
   policySignerPublicKeyHex: '07'.repeat(32),
@@ -35,11 +38,12 @@ const map = (fields) =>
 const enumVal = (name, ...rest) => xdr.ScVal.scvVec([symbol(name), ...rest]);
 
 function fixture(options = {}) {
+  const cfg = options.issuedAsset ? issuedDeployment(deployment) : deployment;
   const calls = [],
     reconciled = [];
   const config = map({
-    signer: bytes(options.signer ?? deployment.policySignerPublicKeyHex),
-    token: addr(deployment.token),
+    signer: bytes(options.signer ?? cfg.policySignerPublicKeyHex),
+    token: addr(cfg.token),
   });
   const instance = xdr.ScVal.scvContractInstance(
     new xdr.ScContractInstance({
@@ -72,9 +76,21 @@ function fixture(options = {}) {
     },
     async getLedgerEntries(...keys) {
       calls.push(keys);
+      if (keys[0].type === 'account') return receivingEntries(keys, options);
       const entries = keys.flatMap((key, i) => {
-        if (options.missing === i || (i === 2 && !options.used)) return [];
-        const val = i === 0 ? instance : i === 1 ? order : xdr.ScVal.scvBool(true);
+        if (
+          options.missing === i ||
+          (i === 2 && key.contractData.key.type !== 'scvLedgerKeyContractInstance' && !options.used)
+        )
+          return [];
+        const isToken = Address.fromScAddress(key.contractData.contract).toString() === cfg.token;
+        const val = isToken
+          ? sacInstance()
+          : i === 0
+            ? instance
+            : i === 1
+              ? order
+              : xdr.ScVal.scvBool(true);
         const contractData = new xdr.ContractDataEntry({
           ext: xdr.ExtensionPoint.v0(),
           ...key.contractData,
@@ -126,7 +142,7 @@ function fixture(options = {}) {
     },
   };
   const reader = createChainReader({
-    deployment,
+    deployment: cfg,
     server,
     offerReader,
     reconciler,
@@ -159,7 +175,7 @@ test('public snapshot has no private offer data and consumed payment comes from 
 });
 
 test('instructions require confirmed unexpired Paying state and the bound buyer, then verify private recipient commitment', async () => {
-  const f = fixture();
+  const f = fixture({ issuedAsset: true });
   const request = { orderId: '1', recipientCommitment: recipient };
   const result = await f.reader.instructionsFor(buyer).read(request);
   assert.deepEqual(result, {
@@ -233,6 +249,7 @@ test('uint64 order identity remains exact and invalid integers fail before RPC',
 test('a private lookup that crosses pay_by does not return instructions', async () => {
   let now = '1010';
   const f = fixture({
+    issuedAsset: true,
     now: () => now,
     onPrivateRead: () => {
       now = '1100';
@@ -315,4 +332,20 @@ test('verifies deployed code/config and freshness before the first order exists'
     fixture({ timestamp: '800' }).reader.readDeployment(),
     /STALE_LEDGER_SNAPSHOT/,
   );
+});
+
+test('missing receiving trustline prevents fiat instructions before private recipient lookup', async () => {
+  let privateReads = 0;
+  const f = fixture({
+    issuedAsset: true,
+    missingTrustline: true,
+    onPrivateRead: () => {
+      privateReads++;
+    },
+  });
+  await assert.rejects(
+    f.reader.instructionsFor(buyer).read({ orderId: '1', recipientCommitment: recipient }),
+    /RECEIVING_TRUSTLINE_MISSING/,
+  );
+  assert.equal(privateReads, 0);
 });

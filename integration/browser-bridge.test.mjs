@@ -2,14 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer, request as httpRequest } from 'node:http';
 import { once } from 'node:events';
-import { Address, Keypair, Networks } from '@stellar/stellar-sdk';
+import { Address, Asset, Keypair, Networks } from '@stellar/stellar-sdk';
 import { createBrowserBridge } from './browser-bridge.mjs';
+import { readDeploymentDomain } from '../app/host-client.mjs';
 
 // Disposable, public fixture keys. Every HTTP request stays on the loopback
 // server below; no wallet extension, bank, RPC or funded account is used.
 const alice = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x61));
 const bob = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x62));
 const contract = Address.contract(Buffer.alloc(32, 0x63)).toString();
+const deployment = {
+  networkPassphrase: Networks.TESTNET,
+  contract,
+  token: contract,
+  tokenDecimals: 7,
+  tokenLabel: 'Test token',
+};
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function order(owner = alice.publicKey()) {
   return {
@@ -45,7 +53,12 @@ async function fixture(t, options = {}) {
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const publicOrigin = `http://127.0.0.1:${server.address().port}`;
-  bridge = createBrowserBridge({ publicOrigin, createServices: () => ({}), ...options });
+  bridge = createBrowserBridge({
+    publicOrigin,
+    deployment,
+    createServices: () => ({}),
+    ...options,
+  });
   t.after(async () => {
     bridge.close();
     server.closeAllConnections();
@@ -413,7 +426,7 @@ test('isolates service instances and every one-use wallet reply by session, oper
         assert.deepEqual(walletRequest.args, {
           transactionXdr: 'dW5zaWduZWQ=',
           account: key.publicKey(),
-          networkPassphrase: Networks.TESTNET,
+          ...readDeploymentDomain(deployment),
         });
       const result =
         method === 'network' ? Networks.TESTNET : method === 'sign' ? 'c2lnbmVk' : key.publicKey();
@@ -903,7 +916,9 @@ test('routes one-use recovery claims only to the authenticated seller and strips
   const buyerView = await f.request('/api/view', { cookie: buyerCookie });
   assert.deepEqual(buyerView.body.recoveryRequests, []);
   const sellerView = await f.request('/api/view', { cookie: sellerCookie });
-  assert.deepEqual(sellerView.body.recoveryRequests, [dto]);
+  assert.deepEqual(sellerView.body.recoveryRequests, [
+    { ...dto, ...readDeploymentDomain(deployment) },
+  ]);
   assert.doesNotMatch(
     JSON.stringify(sellerView.body),
     /PRIVATE|preimageXdr|claimToken|buyerSessionId/,
@@ -1002,5 +1017,129 @@ test('resolve dispatch binds the authenticated buyer and exposes only confirmed 
       })
     ).status,
     400,
+  );
+});
+
+const mainnetDeployment = () => ({
+  network: 'mainnet',
+  networkPassphrase: Networks.PUBLIC,
+  contract,
+  token: new Asset('USDC', bob.publicKey()).contractId(Networks.PUBLIC),
+  tokenDecimals: 7,
+  tokenLabel: 'USDC',
+  asset: { code: 'USDC', issuer: bob.publicKey() },
+});
+const emptyView = (deployment) => ({
+  configured: true,
+  deployment,
+  offers: [],
+  ownerOrders: [],
+  sellerDrafts: [],
+  balances: null,
+  serverTime: '150',
+  unavailableReasons: [],
+  readiness: { submission: false, paymentProof: false },
+});
+
+test('mainnet SDK session signature and wallet requests bind the exact issued asset and deployment', async (t) => {
+  const configured = mainnetDeployment();
+  const domain = readDeploymentDomain(configured);
+  let factoryDeployment;
+  const f = await fixture(t, {
+    deployment: configured,
+    readView: () => emptyView(configured),
+    createServices: ({ wallet, account, deployment }) => {
+      factoryDeployment = deployment;
+      return {
+        async connectWallet() {
+          assert.equal(await wallet.network(), Networks.PUBLIC);
+          await wallet.sign('dW5zaWduZWQ=', account);
+          return { account, networkPassphrase: Networks.PUBLIC };
+        },
+      };
+    },
+  });
+  const challenge = await f.challenge();
+  assert.equal(challenge.network, 'mainnet');
+  assert.equal(challenge.deploymentId, domain.deploymentId);
+  assert.ok(challenge.message.includes(`Deployment: ${domain.deploymentId}`));
+  assert.ok(challenge.message.includes(`Token: ${configured.token}`));
+  const cookie = await f.login();
+  assert.equal(
+    (await f.request('/api/session', { cookie })).body.deploymentId,
+    domain.deploymentId,
+  );
+  const view = await f.request('/api/view', { cookie });
+  assert.deepEqual(view.body.deployment.asset, configured.asset);
+  assert.equal(view.body.readiness.submission, false);
+  const id = await f.start(cookie, 'connectWallet', { party: 'buyer' });
+  const first = await f.poll(cookie, id, (value) => Boolean(value.walletRequest));
+  assert.equal(
+    (await f.reply(cookie, id, first.walletRequest.id, { result: Networks.TESTNET })).status,
+    400,
+  );
+  assert.equal(
+    (await f.reply(cookie, id, first.walletRequest.id, { result: Networks.PUBLIC })).status,
+    200,
+  );
+  const second = await f.poll(cookie, id, (value) => Boolean(value.walletRequest));
+  assert.deepEqual(second.walletRequest.args, {
+    transactionXdr: 'dW5zaWduZWQ=',
+    account: alice.publicKey(),
+    ...domain,
+  });
+  assert.equal(
+    (await f.reply(cookie, id, second.walletRequest.id, { result: 'c2lnbmVk' })).status,
+    200,
+  );
+  assert.equal((await f.poll(cookie, id)).result.networkPassphrase, Networks.PUBLIC);
+  assert.equal(factoryDeployment.deploymentId, domain.deploymentId);
+});
+
+test('SDK signatures for a different network or token cannot authenticate the configured mainnet session', async (t) => {
+  const configured = mainnetDeployment();
+  const f = await fixture(t, { deployment: configured });
+  for (const alter of [
+    (message) => message.replaceAll(Networks.PUBLIC, Networks.TESTNET),
+    (message) => message.replaceAll(configured.token, contract),
+  ]) {
+    const challenge = await f.challenge();
+    const response = await f.request('/api/session/verify', {
+      method: 'POST',
+      cookie: challenge.cookie,
+      body: {
+        challengeId: challenge.challengeId,
+        signature: Buffer.from(alice.signMessage(alter(challenge.message))).toString('base64'),
+      },
+    });
+    assert.equal(response.status, 401);
+    assert.equal(response.body.error, 'SIGNATURE_REJECTED');
+  }
+});
+
+test('mainnet bridge refuses implicit networks and mismatched SAC identity; changed views cannot replace its domain', async (t) => {
+  const configured = mainnetDeployment();
+  for (const value of [
+    { ...configured, network: undefined },
+    { ...configured, asset: undefined },
+    { ...configured, token: new Asset('USDC', bob.publicKey()).contractId(Networks.TESTNET) },
+  ])
+    assert.throws(() =>
+      createBrowserBridge({
+        publicOrigin: 'https://app.example.test',
+        deployment: value,
+        createServices: () => ({}),
+      }),
+    );
+  let current = structuredClone(configured);
+  const f = await fixture(t, { deployment: configured, readView: () => emptyView(current) });
+  const cookie = await f.login();
+  current.contract = Address.contract(Buffer.alloc(32, 0x75)).toString();
+  const response = await f.request('/api/view', { cookie });
+  assert.equal(response.status, 409);
+  assert.equal(response.body.error, 'DEPLOYMENT_CHANGED');
+  assert.equal(
+    (await f.request('/api/session', { cookie })).body.deploymentId,
+    readDeploymentDomain(configured).deploymentId,
   );
 });

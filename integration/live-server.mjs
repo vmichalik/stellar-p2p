@@ -7,7 +7,7 @@ import { createHostRuntime } from './host-runtime.mjs';
 const app = resolve(import.meta.dirname, '../app');
 const routes = new Map([
   ['/', ['live.html', 'text/html; charset=utf-8']],
-  ...['live-app.mjs', 'live-view-adapter.mjs', 'host-client.mjs'].map((name) => [
+  ...['live-app.mjs', 'live-view-adapter.mjs', 'host-client.mjs', 'network.mjs'].map((name) => [
     `/${name}`,
     [name, 'text/javascript; charset=utf-8'],
   ]),
@@ -44,6 +44,7 @@ export async function createLiveServer({
     createServices: (input) => runtime.createServices(input),
     readView: (input) => runtime.readView(input),
     recovery: runtime.recovery,
+    deployment: runtime.deployment ?? null,
   });
   const headers = {
     'Cache-Control': 'no-store',

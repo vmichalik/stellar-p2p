@@ -10,12 +10,14 @@ import {
   xdr,
 } from '@stellar/stellar-sdk';
 import { createRecoveryBroker, RECOVERY_ERROR_CODES } from './recovery-broker.mjs';
+import { deploymentIdentity } from '../app/network.mjs';
 
 // Offline disposable identities and RPC ports. No real wallet or listener.
 const buyer = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x61));
 const seller = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x62));
 const stranger = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x63));
 const deployment = {
+  network: 'testnet',
   networkPassphrase: Networks.TESTNET,
   contract: Address.contract(Buffer.alloc(32, 5)).toString(),
   token: Address.contract(Buffer.alloc(32, 6)).toString(),
@@ -62,13 +64,14 @@ const reply = (claim, signer = seller) => ({
 });
 
 function fixture(t, options = {}) {
+  const cfg = options.deployment ?? deployment;
   let now = 1_000,
     sequence = 100;
   const snapshot = (orderId) => ({
     confirmed: true,
-    network_passphrase: Networks.TESTNET,
-    contract: deployment.contract,
-    config: { token: deployment.token },
+    network_passphrase: cfg.networkPassphrase,
+    contract: cfg.contract,
+    config: { token: cfg.token },
     order: {
       id: orderId,
       state: 'Paying',
@@ -85,7 +88,7 @@ function fixture(t, options = {}) {
     rawProof: 'PRIVATE_PROOF',
   });
   const broker = createRecoveryBroker({
-    deployment,
+    deployment: cfg,
     readOrder: async ({ orderId }) =>
       options.snapshot ? options.snapshot(snapshot(orderId)) : snapshot(orderId),
     getLatestLedger: async () => ({ sequence }),
@@ -94,7 +97,16 @@ function fixture(t, options = {}) {
   });
   t.after(() => broker.close());
   const open = (name, key, expiresAt = 100_000) =>
-    broker.openSession({ id: ids[name], account: key.publicKey(), expiresAt });
+    broker.openSession({
+      id: ids[name],
+      account: key.publicKey(),
+      expiresAt,
+      network: cfg.network,
+      networkPassphrase: cfg.networkPassphrase,
+      contract: cfg.contract,
+      token: cfg.token,
+      deploymentId: deploymentIdentity(cfg),
+    });
   open('buyer', buyer);
   open('seller', seller);
   async function publish({
@@ -111,13 +123,16 @@ function fixture(t, options = {}) {
       deadline,
     });
     assert.equal(await port.selected(), seller.publicKey());
-    assert.equal(await port.network(), Networks.TESTNET);
+    assert.equal(await port.network(), cfg.networkPassphrase);
     const request = {
       entryXdr: entry.toXDR('base64'),
       account: seller.publicKey(),
-      networkPassphrase: Networks.TESTNET,
+      networkPassphrase: cfg.networkPassphrase,
+      network: cfg.network,
+      token: cfg.token,
+      deploymentId: deploymentIdentity(cfg),
       expirationLedger: 112,
-      contract: deployment.contract,
+      contract: cfg.contract,
       orderId,
       buyerTokens,
       ...mutate,
@@ -354,4 +369,105 @@ test('broker bounds sessions/requests and a real timer expires a pending seller 
   await new Promise((resolve) => setTimeout(resolve, 30));
   assert.equal((await timeout.outcome).error.code, 'RECOVERY_REQUEST_EXPIRED');
   assert.ok(RECOVERY_ERROR_CODES.includes('RECOVERY_REQUEST_EXPIRED'));
+});
+
+test('mainnet broker exposes exact deployment and reconstructs mainnet seller authorization', async (t) => {
+  const cfg = { ...deployment, network: 'mainnet', networkPassphrase: Networks.PUBLIC };
+  const f = fixture(t, { deployment: cfg });
+  const pending = await f.publish();
+  const [view] = await f.broker.list(ids.seller);
+  assert.equal(view.network, 'mainnet');
+  assert.equal(view.networkPassphrase, Networks.PUBLIC);
+  assert.equal(view.deploymentId, deploymentIdentity(cfg));
+  assert.equal(view.token, cfg.token);
+  const claim = await f.broker.claim(ids.seller, view.requestId);
+  await f.broker.respond(ids.seller, view.requestId, reply(claim));
+  assert.equal(
+    (await pending.outcome).value,
+    (await authorizeEntry(unsigned(), seller, 112, Networks.PUBLIC)).toXDR('base64'),
+  );
+});
+
+test('sessions, snapshots and collector context cannot cross network, contract or token', async (t) => {
+  const cfg = { ...deployment, network: 'mainnet', networkPassphrase: Networks.PUBLIC };
+  const f = fixture(t, { deployment: cfg });
+  const identity = {
+    id: ids.stranger,
+    account: stranger.publicKey(),
+    expiresAt: 20_000,
+    network: 'mainnet',
+    networkPassphrase: Networks.PUBLIC,
+    contract: cfg.contract,
+    token: cfg.token,
+    deploymentId: deploymentIdentity(cfg),
+  };
+  for (const change of [
+    { network: undefined },
+    { deploymentId: undefined },
+    { deploymentId: deploymentIdentity(deployment) },
+    { networkPassphrase: Networks.TESTNET },
+    { contract: cfg.token },
+    { token: cfg.contract },
+  ]) {
+    assert.throws(() => f.broker.openSession({ ...identity, ...change }), /SESSION_INVALID/);
+  }
+  for (const change of [
+    { networkPassphrase: Networks.TESTNET },
+    { network: 'testnet' },
+    { deploymentId: deploymentIdentity(deployment) },
+    { token: cfg.contract },
+  ]) {
+    const pending = await f.publish({ mutate: change });
+    assert.equal((await pending.outcome).error.code, 'RECOVERY_REQUEST_MISMATCH');
+    assert.deepEqual(await f.broker.list(ids.seller), []);
+  }
+  for (const snapshot of [
+    (value) => ({ ...value, network_passphrase: Networks.TESTNET }),
+    (value) => ({ ...value, contract: cfg.token }),
+    (value) => ({ ...value, config: { token: cfg.contract } }),
+  ]) {
+    const g = fixture(t, { deployment: cfg, snapshot });
+    await assert.rejects(g.publish(), /REQUEST_MISMATCH/);
+  }
+  const legacy = fixture(t);
+  legacy.broker.openSession({
+    id: ids.stranger,
+    account: stranger.publicKey(),
+    expiresAt: 20_000,
+  });
+  assert.throws(() => legacy.broker.openSession({ ...identity }), /SESSION_INVALID/);
+});
+
+test('seller signature from an identical testnet request cannot authorize mainnet recovery', async (t) => {
+  const testnet = fixture(t);
+  const mainnet = fixture(t, {
+    deployment: { ...deployment, network: 'mainnet', networkPassphrase: Networks.PUBLIC },
+  });
+  const first = await testnet.publish(),
+    second = await mainnet.publish();
+  const [testView] = await testnet.broker.list(ids.seller);
+  const [mainView] = await mainnet.broker.list(ids.seller);
+  const testClaim = await testnet.broker.claim(ids.seller, testView.requestId);
+  const mainClaim = await mainnet.broker.claim(ids.seller, mainView.requestId);
+  assert.notEqual(testClaim.preimageXdr, mainClaim.preimageXdr);
+  await assert.rejects(
+    mainnet.broker.respond(ids.seller, mainView.requestId, {
+      ...reply(mainClaim),
+      signature: signature(testClaim),
+    }),
+    /SIGNATURE_INVALID/,
+  );
+  assert.equal((await second.outcome).error.code, 'RECOVERY_SIGNATURE_INVALID');
+  await testnet.broker.respond(ids.seller, testView.requestId, reply(testClaim));
+  assert.ok((await first.outcome).value);
+});
+
+test('broker refuses implicit mainnet and unsupported network configuration', (t) => {
+  for (const cfg of [
+    { ...deployment, networkPassphrase: Networks.PUBLIC },
+    { ...deployment, network: 'mainnet' },
+    { ...deployment, network: 'custom', networkPassphrase: 'Custom network' },
+    { ...deployment, token: buyer.publicKey() },
+  ])
+    assert.throws(() => fixture(t, { deployment: cfg }), /RECOVERY_ARGUMENT_INVALID/);
 });

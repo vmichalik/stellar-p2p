@@ -1,12 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
-import { createHostClient, TESTNET_PASSPHRASE } from './host-client.mjs';
+import { NETWORKS } from './network.mjs';
+import { createHostClient, TESTNET_PASSPHRASE, readDeploymentDomain } from './host-client.mjs';
 
 // Shape-only disposable identities/signatures. The host bridge's separate
 // tests perform actual SDK signature verification; these test browser transport.
 const ACCOUNT = 'G' + 'A'.repeat(55),
   OTHER = 'G' + 'B'.repeat(55);
+const DEPLOYMENT = {
+  networkPassphrase: TESTNET_PASSPHRASE,
+  contract: 'C' + 'C'.repeat(55),
+  token: 'C' + 'D'.repeat(55),
+  tokenDecimals: 7,
+  tokenLabel: 'Test token',
+};
 const ID = 'o'.repeat(43),
   CHALLENGE = 'c'.repeat(43),
   REQUEST = 'r'.repeat(43);
@@ -40,7 +48,8 @@ function fixture(options = {}) {
     now: 1_000,
     authenticated: false,
     account: ACCOUNT,
-    network: TESTNET_PASSPHRASE,
+    network: options.deployment?.networkPassphrase ?? TESTNET_PASSPHRASE,
+    deployment: structuredClone(options.deployment ?? DEPLOYMENT),
     requests: [],
     walletCalls: [],
     replies: [],
@@ -55,14 +64,15 @@ function fixture(options = {}) {
     json: async () => body,
     ...extra,
   });
+  const domain = () => readDeploymentDomain(state.deployment);
   const info = () => ({
     account: ACCOUNT,
-    networkPassphrase: TESTNET_PASSPHRASE,
+    ...domain(),
     expiresAt: state.now + 60_000,
   });
   const walletRequest = (
     method = 'sign',
-    args = { transactionXdr: UNSIGNED, account: ACCOUNT, networkPassphrase: TESTNET_PASSPHRASE },
+    args = { transactionXdr: UNSIGNED, account: ACCOUNT, ...domain() },
     id = REQUEST,
   ) => ({ operationId: ID, status: 'running', walletRequest: { id, method, args } });
   const walletMethods = {
@@ -106,8 +116,8 @@ function fixture(options = {}) {
       return response({
         challengeId: CHALLENGE,
         expiresAt,
-        networkPassphrase: TESTNET_PASSPHRASE,
-        message: `Pactlane wallet session\nOrigin: ${location.origin}\nNetwork: ${TESTNET_PASSPHRASE}\nAccount: ${body.account}\nNonce: ${CHALLENGE}\nExpires: ${expiresAt}\nThis authenticates this browser session only. It does not authorize a transaction.`,
+        ...domain(),
+        message: `Pactlane wallet session\nOrigin: ${location.origin}\nNetwork: ${domain().networkPassphrase}\nDeployment: ${domain().deploymentId}\nContract: ${domain().contract}\nToken: ${domain().token}\nAccount: ${body.account}\nNonce: ${CHALLENGE}\nExpires: ${expiresAt}\nThis authenticates this browser session only. It does not authorize a transaction.`,
       });
     }
     if (path === '/api/session/verify') {
@@ -122,7 +132,13 @@ function fixture(options = {}) {
       return state.authenticated
         ? response(info())
         : response({ error: 'AUTHENTICATION_REQUIRED' }, 401);
-    if (path === '/api/view') return response({ orders: [], available: false });
+    if (path === '/api/view')
+      return response({
+        configured: true,
+        deployment: structuredClone(state.deployment),
+        orders: [],
+        available: false,
+      });
     if (path === '/api/commands') {
       state.commands++;
       return response({ operationId: ID }, 202);
@@ -171,7 +187,10 @@ test('authenticates exact account/network challenge and converts the typed Freig
     assert.equal(init.mode, 'same-origin');
     assert.equal(init.redirect, 'error');
   }
-  assert.deepEqual(await f.client.view(), { orders: [], available: false });
+  assert.equal(
+    (await f.client.view()).deployment.deploymentId,
+    readDeploymentDomain(DEPLOYMENT).deploymentId,
+  );
   await f.client.logout();
   assert.equal(await f.client.session(), null);
 });
@@ -183,7 +202,7 @@ test('refuses a tampered challenge before opening a message-signing prompt', asy
         ? response({
             challengeId: CHALLENGE,
             expiresAt: state.now + 60_000,
-            networkPassphrase: TESTNET_PASSPHRASE,
+            ...readDeploymentDomain(DEPLOYMENT),
             message: 'Sign a message for another origin/account',
           })
         : undefined,
@@ -746,6 +765,251 @@ test('logout while recovery approval is open discards the late signature', async
   await setImmediate();
   assert.equal(
     f.state.requests.some((item) => item.path.endsWith('/respond')),
+    false,
+  );
+});
+
+const mainnetDeployment = () => ({
+  ...DEPLOYMENT,
+  network: 'mainnet',
+  networkPassphrase: NETWORKS.mainnet.passphrase,
+  tokenLabel: 'USDC',
+  asset: { code: 'USDC', issuer: OTHER },
+});
+
+test('explicit mainnet binds challenge, transaction and recovery prompts to one deployment', async () => {
+  const deployment = mainnetDeployment();
+  const domain = readDeploymentDomain(deployment);
+  const reviewed = { ...recovery(), ...domain };
+  const f = fixture({
+    deployment,
+    job: ({ state, walletRequest }) =>
+      state.polls === 1
+        ? walletRequest()
+        : { operationId: ID, status: 'completed', result: { orderId: '0' } },
+    intercept: ({ path, response }) => {
+      if (path.endsWith('/claim'))
+        return response({
+          ...reviewed,
+          status: 'claimed',
+          claimToken: CLAIM,
+          preimageXdr: PREIMAGE,
+        });
+      if (path.endsWith('/respond')) return response({ accepted: true });
+    },
+  });
+  const session = await f.client.authenticate();
+  assert.equal(session.deploymentId, domain.deploymentId);
+  assert.equal(session.network, 'mainnet');
+  await f.client.command('reserve', { orderId: '0' });
+  await f.client.approveRecovery(reviewed);
+  for (const method of ['signMessage', 'signTransaction', 'signAuthEntry']) {
+    const calls = f.state.walletCalls.filter((call) => call.name === method);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].args[1].networkPassphrase, NETWORKS.mainnet.passphrase);
+  }
+  const challenge = f.state.walletCalls.find((call) => call.name === 'signMessage').args[0];
+  assert.ok(challenge.includes(`Deployment: ${domain.deploymentId}`));
+  assert.ok(challenge.includes(`Token: ${deployment.token}`));
+});
+
+test('mainnet cannot be selected implicitly or without a specific issued asset', async () => {
+  for (const deployment of [
+    { ...mainnetDeployment(), network: undefined },
+    { ...mainnetDeployment(), asset: undefined },
+    { ...mainnetDeployment(), network: 'testnet' },
+  ]) {
+    const f = fixture({ deployment });
+    await assert.rejects(f.client.authenticate(), { code: 'HOST_DEPLOYMENT_INVALID' });
+    assert.deepEqual(f.state.walletCalls, []);
+  }
+});
+
+test('a deployment change after review is rejected before any wallet-access prompt', async () => {
+  for (const field of ['contract', 'token']) {
+    const f = fixture({ deployment: mainnetDeployment() });
+    await f.client.view();
+    f.state.deployment[field] = 'C' + 'E'.repeat(55);
+    await assert.rejects(f.client.authenticate(), { code: 'CLIENT_DEPLOYMENT_CHANGED' });
+    assert.deepEqual(f.state.walletCalls, []);
+  }
+});
+
+test('a changed deployment after wallet signing discards the signature and preserves an unknown outcome', async () => {
+  let f;
+  f = fixture({
+    deployment: mainnetDeployment(),
+    wallet: {
+      signTransaction: async () => {
+        f.state.deployment.token = 'C' + 'E'.repeat(55);
+        return { signedTxXdr: SIGNED, signerAddress: ACCOUNT };
+      },
+    },
+    job: ({ walletRequest }) => walletRequest(),
+  });
+  await f.client.authenticate();
+  await assert.rejects(f.client.command('reserve', { orderId: '0' }), {
+    code: 'CLIENT_DEPLOYMENT_CHANGED',
+    outcome: 'unknown',
+  });
+  assert.equal(f.state.walletCalls.filter((call) => call.name === 'signTransaction').length, 1);
+  assert.equal(
+    f.state.replies.some((reply) => reply.result === SIGNED),
+    false,
+  );
+});
+
+test('cross-network session and same-network wrong-token requests cannot reuse an authenticated account', async () => {
+  let crossSession = false;
+  const f = fixture({
+    deployment: mainnetDeployment(),
+    intercept: ({ path, response, info }) =>
+      path === '/api/session' && crossSession
+        ? response({ ...info(), ...readDeploymentDomain(DEPLOYMENT) })
+        : undefined,
+    job: ({ walletRequest }) => {
+      const incoming = walletRequest();
+      Object.assign(
+        incoming.walletRequest.args,
+        readDeploymentDomain({ ...mainnetDeployment(), token: 'C' + 'E'.repeat(55) }),
+      );
+      return incoming;
+    },
+  });
+  await f.client.authenticate();
+  crossSession = true;
+  await assert.rejects(f.client.session(), { code: 'HOST_SESSION_INVALID' });
+  crossSession = false;
+  await assert.rejects(f.client.command('reserve', { orderId: '0' }), {
+    code: 'WALLET_REQUEST_INVALID',
+  });
+  assert.equal(
+    f.state.walletCalls.some((call) => call.name === 'signTransaction'),
+    false,
+  );
+});
+
+test('receiving-account preflight failure is a definite retryable result without an unknown operation', async () => {
+  let ready = false;
+  const f = fixture({
+    deployment: mainnetDeployment(),
+    job: () =>
+      ready
+        ? { operationId: ID, status: 'completed', result: { orderId: '0' } }
+        : { operationId: ID, status: 'failed', error: 'RECEIVING_TRUSTLINE_MISSING' },
+  });
+  await f.client.authenticate();
+  await assert.rejects(f.client.command('reserve', { orderId: '0' }), {
+    code: 'RECEIVING_TRUSTLINE_MISSING',
+    outcome: 'failed',
+    retryable: true,
+  });
+  assert.equal(f.client.lastOperation().outcome, 'failed');
+  assert.equal(
+    f.state.walletCalls.some((call) => call.name === 'signTransaction'),
+    false,
+  );
+  ready = true;
+  await f.client.command('reserve', { orderId: '0' });
+  assert.equal(f.state.commands, 2, 'Only an explicit second user request retries');
+});
+
+test('host deployment change after a returned signature remains unknown and is never marked retryable', async () => {
+  let signed = false;
+  const f = fixture({
+    deployment: mainnetDeployment(),
+    wallet: {
+      signTransaction: async () => {
+        signed = true;
+        return { signedTxXdr: SIGNED, signerAddress: ACCOUNT };
+      },
+    },
+    job: ({ walletRequest }) => walletRequest(),
+    intercept: ({ path, response }) =>
+      signed && path === '/api/view' ? response({ error: 'DEPLOYMENT_CHANGED' }, 409) : undefined,
+  });
+  await f.client.authenticate();
+  await assert.rejects(f.client.command('reserve', { orderId: '0' }), {
+    code: 'DEPLOYMENT_CHANGED',
+    outcome: 'unknown',
+    retryable: false,
+  });
+  assert.equal(
+    f.state.replies.some((reply) => reply.result === SIGNED),
+    false,
+  );
+});
+
+test('a wrong wallet network is rejected before requesting account access or a signature', async () => {
+  const f = fixture({ deployment: mainnetDeployment() });
+  f.state.network = TESTNET_PASSPHRASE;
+  await assert.rejects(f.client.authenticate(), {
+    code: 'WALLET_NETWORK_CHANGED',
+    outcome: 'not-submitted',
+  });
+  assert.deepEqual(
+    f.state.walletCalls.map((call) => call.name),
+    ['getNetworkDetails'],
+  );
+});
+
+test('unavailable chain or deployment prevents all prompts while unavailable payment proof permits authentication', async () => {
+  for (const reason of [
+    'CHAIN_UNAVAILABLE',
+    'DEPLOYMENT_UNAVAILABLE',
+    'PAYMENT_VERIFICATION_UNAVAILABLE',
+  ]) {
+    const f = fixture({
+      deployment: mainnetDeployment(),
+      intercept: ({ path, response, state }) =>
+        path === '/api/view'
+          ? response({
+              configured: true,
+              deployment: state.deployment,
+              unavailableReasons: [reason],
+            })
+          : undefined,
+    });
+    if (reason === 'PAYMENT_VERIFICATION_UNAVAILABLE')
+      assert.equal((await f.client.authenticate()).network, 'mainnet');
+    else {
+      await assert.rejects(f.client.authenticate(), {
+        code: 'CLIENT_CHAIN_UNAVAILABLE',
+        outcome: 'not-submitted',
+      });
+      assert.deepEqual(f.state.walletCalls, []);
+    }
+  }
+});
+
+test('chain unavailability reported after signing keeps the operation unknown and discards its signature', async () => {
+  let signed = false;
+  const f = fixture({
+    deployment: mainnetDeployment(),
+    wallet: {
+      signTransaction: async () => {
+        signed = true;
+        return { signedTxXdr: SIGNED, signerAddress: ACCOUNT };
+      },
+    },
+    job: ({ walletRequest }) => walletRequest(),
+    intercept: ({ path, response, state }) =>
+      path === '/api/view'
+        ? response({
+            configured: true,
+            deployment: state.deployment,
+            unavailableReasons: signed ? ['CHAIN_UNAVAILABLE'] : [],
+          })
+        : undefined,
+  });
+  await f.client.authenticate();
+  await assert.rejects(f.client.command('reserve', { orderId: '0' }), {
+    code: 'CLIENT_CHAIN_UNAVAILABLE',
+    outcome: 'unknown',
+    retryable: false,
+  });
+  assert.equal(
+    f.state.replies.some((reply) => reply.result === SIGNED),
     false,
   );
 });

@@ -1,5 +1,5 @@
 /** Browser-facing contract for the Node services in integration/.
- * The current app still uses its synthetic adapter; no live credentials are supplied.
+ * The live app reads configured deployment data; this interface supplies no credentials.
  * Canonical source: contracts/escrow/interface.json in the escrow workstream.
  * Monetary values and u64 values cross JSON as decimal strings, never JS floats.
  */
@@ -7,7 +7,11 @@ export type Integer = string;
 export type Address = string;
 export type ChainState = 'Funded' | 'Reserved' | 'Paying' | 'Released' | 'Refunded' | 'Resolved';
 export interface Deployment {
+  network: 'testnet' | 'mainnet';
   networkPassphrase: string;
+  deploymentId: string;
+  tokenLabel: string;
+  asset?: { code: string; issuer: Address }; // Required for mainnet.
   rpcUrl: string;
   contract: Address;
   token: Address;

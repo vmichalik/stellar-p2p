@@ -1,5 +1,7 @@
 # Pactlane
 
+The local live stack supports explicit testnet/mainnet configuration with submission disabled by default. See [network support and operator requirements](docs/release/mainnet-support.md). This is implementation capability, not a deployed mainnet exchange or accepted payment proof.
+
 Buy USDC on Stellar with a payment from the bank app you already use.
 
 I’m building a small version of [ZKP2P](https://www.zkp2p.xyz/) for Stellar. A seller locks USDC in escrow, a buyer pays them in Revolut, and a payment-policy signature lets the escrow release once. The first version focuses on one EUR payment rail and one whole offer.

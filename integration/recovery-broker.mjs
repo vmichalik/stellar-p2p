@@ -1,13 +1,13 @@
 import { randomBytes } from 'node:crypto';
 import {
   Address,
-  Networks,
   StrKey,
   authorizeEntry,
   buildAuthorizationEntryPreimage,
   nativeToScVal,
   xdr,
 } from '@stellar/stellar-sdk';
+import { resolveNetwork, deploymentIdentity } from '../app/network.mjs';
 
 export const RECOVERY_ERROR_CODES = Object.freeze([
   'RECOVERY_UNAVAILABLE',
@@ -82,12 +82,21 @@ export function createRecoveryBroker({
   maxRequests = 32,
 } = {}) {
   const cfg = structuredClone(deployment);
+  let network;
+  try {
+    network = resolveNetwork(cfg);
+  } catch {
+    throw new RecoveryError('RECOVERY_ARGUMENT_INVALID');
+  }
   check(
-    cfg?.networkPassphrase === Networks.TESTNET &&
+    cfg &&
       StrKey.isValidContract(cfg.contract) &&
       StrKey.isValidContract(cfg.token) &&
       cfg.tokenDecimals === 7,
   );
+  cfg.network = network.name;
+  cfg.networkPassphrase = network.passphrase;
+  const domainId = deploymentIdentity(cfg);
   check(
     typeof readOrder === 'function' &&
       typeof getLatestLedger === 'function' &&
@@ -152,7 +161,9 @@ export function createRecoveryBroker({
   const dto = (request) => ({
     requestId: request.requestId,
     orderId: request.orderId,
-    networkPassphrase: Networks.TESTNET,
+    network: cfg.network,
+    deploymentId: domainId,
+    networkPassphrase: cfg.networkPassphrase,
     contract: cfg.contract,
     token: cfg.token,
     buyer: request.buyer,
@@ -186,13 +197,29 @@ export function createRecoveryBroker({
   }
 
   return Object.freeze({
-    openSession({ id, account: owner, expiresAt }) {
+    openSession({ id, account: owner, expiresAt, ...identity }) {
       live();
       sweep();
       check(
         identifier(id) && account(owner) && time(expiresAt) && expiresAt > now(),
         'RECOVERY_SESSION_INVALID',
       );
+      // A mainnet session must explicitly identify this exact deployment.
+      // Legacy testnet callers may omit fields; supplied metadata never overrides
+      // the server's immutable broker domain.
+      for (const [field, expected] of Object.entries({
+        deploymentId: domainId,
+        network: cfg.network,
+        networkPassphrase: cfg.networkPassphrase,
+        contract: cfg.contract,
+        token: cfg.token,
+      })) {
+        check(
+          identity[field] === expected ||
+            (cfg.network === 'testnet' && identity[field] === undefined),
+          'RECOVERY_SESSION_INVALID',
+        );
+      }
       const existing = sessions.get(id);
       if (existing) {
         check(
@@ -223,7 +250,7 @@ export function createRecoveryBroker({
       const order = snapshot?.order;
       check(
         snapshot?.confirmed === true &&
-          snapshot.network_passphrase === Networks.TESTNET &&
+          snapshot.network_passphrase === cfg.networkPassphrase &&
           snapshot.contract === cfg.contract &&
           snapshot.config?.token === cfg.token &&
           order?.id === orderId &&
@@ -256,7 +283,7 @@ export function createRecoveryBroker({
         },
         network: async () => {
           checkBuyer();
-          return Networks.TESTNET;
+          return cfg.networkPassphrase;
         },
         async signAuthorization(input) {
           checkBuyer();
@@ -270,10 +297,16 @@ export function createRecoveryBroker({
             'contract',
             'orderId',
             'buyerTokens',
+            'network',
+            'token',
+            'deploymentId',
           ]);
           check(
-            input.account === order.terms.seller &&
-              input.networkPassphrase === Networks.TESTNET &&
+            input.network === cfg.network &&
+              input.token === cfg.token &&
+              input.deploymentId === domainId &&
+              input.account === order.terms.seller &&
+              input.networkPassphrase === cfg.networkPassphrase &&
               input.contract === cfg.contract &&
               input.orderId === orderId &&
               input.buyerTokens === buyerTokens &&
@@ -390,7 +423,7 @@ export function createRecoveryBroker({
         preimageXdr: buildAuthorizationEntryPreimage(
           request.entry,
           request.expirationLedger,
-          Networks.TESTNET,
+          cfg.networkPassphrase,
         ).toXDR('base64'),
       };
     },
@@ -444,7 +477,7 @@ export function createRecoveryBroker({
             request.entry,
             async () => ({ publicKey: request.seller, signature }),
             request.expirationLedger,
-            Networks.TESTNET,
+            cfg.networkPassphrase,
           );
         } catch {
           throw new RecoveryError('RECOVERY_SIGNATURE_INVALID');

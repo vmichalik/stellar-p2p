@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readDeploymentDomain } from './host-client.mjs';
+import { NETWORKS } from './network.mjs';
 import { createLiveViewAdapter, formatUnits, parseTokenUnits } from './live-view-adapter.mjs';
 
 const TESTNET = 'Test SDF Network ; September 2015';
@@ -98,11 +100,11 @@ function fixture({ configured = true, signedIn = true, paymentProof = true } = {
   };
   const client = {
     session: async () =>
-      view.account ? { account: view.account, networkPassphrase: TESTNET } : null,
+      view.account ? { account: view.account, ...readDeploymentDomain(view.deployment) } : null,
     authenticate: async () => {
       calls.push(['authenticate']);
       view.account = buyer;
-      return { account: buyer, networkPassphrase: TESTNET };
+      return { account: buyer, ...readDeploymentDomain(view.deployment) };
     },
     view: async () => structuredClone(view),
     logout: async () => {
@@ -114,7 +116,7 @@ function fixture({ configured = true, signedIn = true, paymentProof = true } = {
       calls.push([action, structuredClone(args)]);
       let result;
       if (action === 'connectWallet')
-        result = { account: view.account, networkPassphrase: TESTNET };
+        result = { account: view.account, ...readDeploymentDomain(view.deployment) };
       else if (action === 'reserve') {
         view.ownerOrders = [chainOrder()];
         view.offers = [];
@@ -351,7 +353,7 @@ test('overlapping wallet connection is refused and late authentication cannot re
   const connecting = f.adapter.connect('buyer');
   await assert.rejects(f.adapter.connect('seller'), { code: 'OPERATION_PENDING' });
   await f.adapter.logout();
-  authentication.resolve({ account: buyer, networkPassphrase: TESTNET });
+  authentication.resolve({ account: buyer, ...readDeploymentDomain(f.view().deployment) });
   await connecting;
   assert.equal(f.adapter.snapshot().account, null);
   assert.equal(
@@ -487,7 +489,7 @@ test('seller approval requires the matching confirmed order and does not fabrica
     return { requestId: value.requestId, accepted: true, approved: true };
   };
   await f.adapter.approveRecovery(recovery().requestId);
-  assert.deepEqual(reviewed, recovery());
+  assert.deepEqual(reviewed, { ...recovery(), ...readDeploymentDomain(f.view().deployment) });
   assert.equal(f.adapter.snapshot().view.ownerOrders[0].state, 'Paying');
   assert.equal(f.adapter.snapshot().recoveryNotice.approved, true);
   assert.deepEqual(f.adapter.snapshot().receipts, {});
@@ -518,4 +520,71 @@ test('expired proposals and late seller approvals after logout cannot authorize 
   await pending;
   assert.equal(f.adapter.snapshot().account, null);
   assert.equal(f.adapter.snapshot().recoveryNotice, null);
+});
+
+test('mainnet views retain explicit issued-asset identity and submission stays gated', async () => {
+  const f = fixture();
+  Object.assign(f.view().deployment, {
+    network: 'mainnet',
+    networkPassphrase: NETWORKS.mainnet.passphrase,
+    tokenLabel: 'USDC',
+    asset: { code: 'USDC', issuer: seller },
+  });
+  f.view().readiness.submission = false;
+  await f.adapter.initialize();
+  assert.equal(f.adapter.snapshot().view.deployment.network, 'mainnet');
+  assert.deepEqual(f.adapter.snapshot().view.deployment.asset, { code: 'USDC', issuer: seller });
+  await f.adapter.connect('buyer');
+  await assert.rejects(f.adapter.reserve('0'), { code: 'MAINNET_SUBMISSION_NOT_AUTHORIZED' });
+  assert.equal(
+    f.calls.some(([action]) => action === 'reserve'),
+    false,
+  );
+});
+
+test('changing only the token contract invalidates the authenticated view and clears receipt caches', async () => {
+  const f = await connected();
+  await f.adapter.reserve('0');
+  f.view().deployment.token = 'C' + 'E'.repeat(55);
+  await f.adapter.refresh();
+  const state = f.adapter.snapshot();
+  assert.equal(state.error.code, 'SESSION_CHANGED');
+  assert.notEqual(state.status, 'ready');
+  assert.deepEqual(state.receipts, {});
+  await assert.rejects(f.adapter.beginPayment('0'));
+});
+
+test('testnet confirmations cannot create receipts in an explicit mainnet deployment', async () => {
+  const f = fixture();
+  Object.assign(f.view().deployment, {
+    network: 'mainnet',
+    networkPassphrase: NETWORKS.mainnet.passphrase,
+    tokenLabel: 'USDC',
+    asset: { code: 'USDC', issuer: seller },
+  });
+  f.view().ownerOrders = [{ ...chainOrder('Resolved'), lastConfirmedTransaction: tx() }];
+  await f.adapter.initialize();
+  assert.equal(f.adapter.snapshot().error.code, 'UNCONFIRMED_TRANSACTION');
+  assert.deepEqual(f.adapter.snapshot().receipts, {});
+});
+
+test('receiving readiness failure clears the pending action so the user can fix the wallet and retry', async () => {
+  const f = await connected();
+  const original = f.client.command;
+  let ready = false;
+  f.client.command = async (action, args) => {
+    if (action === 'reserve' && !ready)
+      throw Object.assign(new Error('RECEIVING_TRUSTLINE_MISSING'), {
+        code: 'RECEIVING_TRUSTLINE_MISSING',
+        outcome: 'failed',
+        retryable: true,
+      });
+    return original(action, args);
+  };
+  await assert.rejects(f.adapter.reserve('0'), { code: 'RECEIVING_TRUSTLINE_MISSING' });
+  assert.equal(f.adapter.snapshot().pending, null);
+  assert.match(f.adapter.snapshot().error.message, /trustline/);
+  ready = true;
+  await f.adapter.reserve('0');
+  assert.equal(f.adapter.snapshot().view.ownerOrders[0].state, 'Reserved');
 });

@@ -1,7 +1,6 @@
 import {
   Address,
   Keypair,
-  Networks,
   Operation,
   StrKey,
   TransactionBuilder,
@@ -12,6 +11,7 @@ import {
   scValToNative,
   xdr,
 } from '@stellar/stellar-sdk';
+import { resolveNetwork, deploymentIdentity } from '../app/network.mjs';
 
 const check = (condition, code) => {
   if (!condition) throw new Error(code);
@@ -69,6 +69,7 @@ function successful(simulation) {
  */
 export async function prepareRecoveryTransaction({
   transaction,
+  deployment,
   server,
   contract,
   orderId,
@@ -78,6 +79,24 @@ export async function prepareRecoveryTransaction({
   recovery,
   maxFeeStroops,
 }) {
+  const cfg = structuredClone(deployment);
+  let network;
+  try {
+    network = resolveNetwork(cfg);
+  } catch {
+    throw new Error('RECOVERY_DEPLOYMENT_INVALID');
+  }
+  check(
+    cfg &&
+      StrKey.isValidContract(cfg.contract) &&
+      cfg.contract === contract &&
+      StrKey.isValidContract(cfg.token) &&
+      cfg.tokenDecimals === 7,
+    'RECOVERY_DEPLOYMENT_INVALID',
+  );
+  cfg.network = network.name;
+  cfg.networkPassphrase = network.passphrase;
+  const domainId = deploymentIdentity(cfg);
   check(
     recovery?.seller &&
       typeof recovery.seller.selected === 'function' &&
@@ -105,7 +124,7 @@ export async function prepareRecoveryTransaction({
   });
   const operation = transaction.operations[0];
   check(
-    transaction.networkPassphrase === Networks.TESTNET &&
+    transaction.networkPassphrase === cfg.networkPassphrase &&
       transaction.source === buyer &&
       transaction.operations.length === 1 &&
       (!operation.source || operation.source === buyer) &&
@@ -156,7 +175,7 @@ export async function prepareRecoveryTransaction({
   const port = recovery.seller;
   const selected = async () =>
     check(
-      (await port.selected()) === seller && (await port.network()) === Networks.TESTNET,
+      (await port.selected()) === seller && (await port.network()) === cfg.networkPassphrase,
       'RECOVERY_SELLER_WALLET_MISMATCH',
     );
   await selected();
@@ -164,7 +183,10 @@ export async function prepareRecoveryTransaction({
     Object.freeze({
       entryXdr: sellerEntry.toXDR('base64'),
       account: seller,
-      networkPassphrase: Networks.TESTNET,
+      network: cfg.network,
+      deploymentId: domainId,
+      token: cfg.token,
+      networkPassphrase: cfg.networkPassphrase,
       expirationLedger,
       contract,
       orderId,
@@ -200,7 +222,7 @@ export async function prepareRecoveryTransaction({
     'RECOVERY_SIGNATURE_INVALID',
   );
   const payload = hash(
-    buildAuthorizationEntryPreimage(sellerEntry, expirationLedger, Networks.TESTNET).toXDR(),
+    buildAuthorizationEntryPreimage(sellerEntry, expirationLedger, cfg.networkPassphrase).toXDR(),
   );
   check(
     Keypair.fromPublicKey(seller).verify(payload, signature[0].signature),

@@ -1,0 +1,67 @@
+{
+  "format": "pactlane.escrow.deployment-candidate.v1",
+  "status": "not_deployed",
+  "artifact": {
+    "path": "contracts/escrow/artifacts/pactlane_escrow.wasm",
+    "sha256": "8940569853b21a957fc5a81402666e95ed75f054ce2223926231ffc2c0c506dd",
+    "size_bytes": 13326,
+    "target": "wasm32v1-none",
+    "optimized": true,
+    "rustc": "1.99.1",
+    "stellar_cli": "28.1.0",
+    "soroban_sdk": "29.0.1",
+    "required_protocol": 29
+  },
+  "protocol": {
+    "version": "pactlane.protocol.v1",
+    "encoder_path": "contracts/escrow/protocol/protocol.mjs",
+    "encoder_sha256": "08e73cbd4d2507ef85c62317638a4d4fcefd922d9de1ba3822793450cbd2127e",
+    "vectors_path": "contracts/escrow/protocol/vectors.json",
+    "vectors_sha256": "354e82ac989709a518b150506ec7424601e7a6ed8d63e20e3825ef7e026e3dcb",
+    "interface_sha256": "c451882cfec7d323d48949225c1773e0d3eeb827c879fad40679d5b8457189b6",
+    "js_stellar_sdk": "17.1.0"
+  },
+  "network": {
+    "name": "testnet",
+    "passphrase": "Test SDF Network ; September 2015",
+    "network_id_hex": "cee0302d59844d32bdca915c8203dd44b33fbb7edc19051ea37abedf28ecd472",
+    "live_protocol_compatibility": "unverified_network_unavailable"
+  },
+  "constructor": {
+    "token_address": null,
+    "signer_public_key_hex": null,
+    "argument_order": [
+      "token",
+      "signer"
+    ],
+    "token_type": "Address: approved canonical testnet USDC C-address",
+    "signer_type": "BytesN<32>: raw trusted payment-policy Ed25519 public key",
+    "public_fixture_key_allowed": false
+  },
+  "deployment_account": null,
+  "deployed_contract_id": null,
+  "fixed_terms": {
+    "currency": "EUR",
+    "rail": "revolut",
+    "whole_offer_only": true,
+    "payment_failure_recovery": "hold_until_valid_claim_or_dual_wallet_resolution"
+  },
+  "checks": {
+    "native_contract_tests": 29,
+    "compiled_wasm_contract_tests": 29,
+    "js_protocol_tests": 11,
+    "javascript_syntax_modules_and_inline_scripts": 21,
+    "all_passed": true,
+    "live_payment_proof": "unverified",
+    "testnet_transactions": "not_attempted"
+  },
+  "prerequisites": [
+    "Existing human authorization for the intended testnet deployment and account use",
+    "Fresh live network protocol compatibility check against this artifact's required environment",
+    "Approved testnet USDC token address and checked decimals",
+    "Trusted policy Ed25519 public key; never the published synthetic fixture key",
+    "Existing authorized source account, fee budget and reachable testnet RPC",
+    "Strict verified-evidence adapter with stable recipient/account/payment identities and exact units",
+    "Durable nullifier issuance/consumption and manual-resolution reconciliation across deployments"
+  ]
+}

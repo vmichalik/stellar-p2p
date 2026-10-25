@@ -6,9 +6,18 @@
     <meta name="theme-color" content="#f7f5ee" />
     <meta
       name="description"
-      content="Pactlane — peer-to-peer USDC exchange on Stellar. Interactive app prototype with sample data."
+      content="Trade euros for USDC on Stellar. A clearer handoff from Revolut payment to USDC release. Simulated walkthrough with no live payment or settlement."
     />
     <title>Pactlane · Buy USDC</title>
+    <link rel="canonical" href="https://pactlane.io/" />
+    <meta property="og:site_name" content="Pactlane" />
+    <meta property="og:url" content="https://pactlane.io/" />
+    <meta property="og:title" content="Pactlane · USDC exchange on Stellar" />
+    <meta
+      property="og:description"
+      content="Interactive buyer and seller demo with sample data. No real funds move."
+    />
+    <meta name="robots" content="noindex, nofollow" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%23ed7047'/%3E%3Cpath d='M12 29V11h9a6 6 0 010 12h-9m5-12v18' fill='none' stroke='%232d382e' stroke-width='3'/%3E%3C/svg%3E"
@@ -19,6 +28,7 @@
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <div id="pactlane"></div>
+    <div id="flow-announcement" class="sr-only" role="status" aria-live="polite"></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <dialog id="modal" aria-labelledby="modal-title"></dialog>
     <noscript>Pactlane’s interactive demo needs JavaScript.</noscript>

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-25T13:57:55.114739+00:00",
+  "executionHost": "Mac mini",
+  "worktree": "/private/tmp/pactlane-coordinator-review-20261025",
+  "branch": "codex/pactlane-coordinator-intake",
+  "sourceParents": {
+    "integration": "c8f44752b82b1fe8f766028a782e7759caef2cc7",
+    "tls": "2c98f8e86ee3fb6c9f89c14883c43b0a0d38f03a"
+  },
+  "scope": "Local source merge with reconciled documentation, evidence and test commands; no live proof or deployment",
+  "nodeVersion": "26.7.0",
+  "javascript": {
+    "rootIncludingTlsRuntime": 110,
+    "policy": 51,
+    "canonicalProtocol": 11,
+    "walletRpcJournal": 11,
+    "total": 183,
+    "failures": 0,
+    "skipped": 0
+  },
+  "pythonBenchmarkPreparation": {
+    "tests": 8,
+    "failures": 0
+  },
+  "syntaxModulesAndInlineScripts": 65,
+  "frozenProtocolSync": true,
+  "runtimeAssets": {
+    "preparation": "offline from checksum-verified public archives",
+    "extensionRelease": "0.1.0.1501",
+    "extensionArchiveSha256": "1c312ad4305653b8d9351cf3eac46de4222a43be513260bf53053cfa1de45155",
+    "sourceArchiveSha256": "a8f7080ce953e59f930654fb08c9e66f6373fbadbd122593e3e1502bf83ff25a",
+    "preparedDiagnosticExtensionInstalled": false
+  },
+  "testEnvironment": "Initial restricted run failed on loopback listen EPERM; approved local regression rerun passed all suites with zero skips.",
+  "importedNotRerun": [
+    "29 native escrow tests",
+    "29 compiled-WASM escrow tests",
+    "1 cross-component compiled-WASM rehearsal",
+    "browser desktop/mobile review"
+  ],
+  "historicalIntegrationEvidence": "evidence/release/checks.json",
+  "bankTestsPaused": true,
+  "authenticatedTlsnTransferAccepted": false,
+  "releaseGate": "NOT_CLEARED",
+  "networkTransactionsSubmitted": false,
+  "deployed": false,
+  "publishedByCoordinator": false
+}

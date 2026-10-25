@@ -1,10 +1,12 @@
 # Finish the hackathon build
 
-The local components work together. The next milestone is the same trade through real host services and an authorized testnet deployment.
+The app, policy and escrow worked together in the recorded local WASM rehearsal. TLS source and sanitized deployment evidence are now imported; verify the combined candidate before a new release claim. The next milestone is the same trade through real host services and an authorized testnet deployment. Browser/host implementation and local rehearsals can continue while bank tests remain paused.
 
 ## 1. Resolve payment evidence
 
-Use the proof owner’s existing response-only check. Establish HTTP success, selected transfer association, exact units/sign, completed outgoing state/type, completion timestamp, stable payer scope, recipient and transfer identity. Do not open a second bank diagnostic from this lane.
+Bank tests remain paused. The failed cloud connection was explained by the Fly trial shutdown; a post-upgrade bank-free check passed the former cutoff for 391.5 seconds. The plugin allocation mitigation is deployed, but the QuickJS callback limit and disposal issue are not fixed. See [the proof handoff](proof-handoff.md).
+
+Only after the owner decides to resume, use the existing response-only flow with normal per-attempt consent/disclosure review. Establish HTTP success, selected transfer association, exact units/sign, completed outgoing state/type, completion timestamp, stable payer scope, recipient and transfer identity. Do not change selectors without source evidence or open a second bank diagnostic from this lane.
 
 Done when the server accepts a real completed transfer, live normalization has source-backed rules, and wrong recipient/amount/state/time cases fail. Keep values and raw proofs private.
 

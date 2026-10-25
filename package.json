@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev:app": "node scripts/serve-app.mjs",
-    "test": "node --test tlsn/*.test.mjs app/*.test.mjs tests/release/*.test.mjs",
+    "test": "node --test tlsn/*.test.mjs tlsn/benchmark/*.test.mjs infra/proof-benchmark/*.test.mjs app/*.test.mjs tests/release/*.test.mjs",
     "test:app": "node --test app/*.test.mjs",
     "test:all": "node scripts/test-all.mjs",
     "setup:integration": "node scripts/setup-integration.mjs",
@@ -21,7 +21,10 @@
     "prepare:tlsn": "python3 scripts/prepare-tlsn.py",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:legacy": "npm --prefix archive/reclaim test"
+    "test:legacy": "npm --prefix archive/reclaim test",
+    "prepare:benchmark": "python3 scripts/prepare-proof-benchmark.py",
+    "test:benchmark-prep": "python3 -m unittest discover -s scripts -p \"test_prepare_proof_benchmark.py\"",
+    "prepare:extension-setup60": "python3 scripts/prepare-extension-setup60.py"
   },
   "devDependencies": {
     "prettier": "3.6.2"

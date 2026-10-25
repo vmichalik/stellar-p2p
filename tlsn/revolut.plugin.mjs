@@ -3,6 +3,8 @@
 // A live replay reached the bank response; required payment fields remain unverified.
 const VERIFIER_ORIGIN = '';
 const PROXY_URL = '';
+// The response-check renderer sets this to true; explicit payment modes then fail closed.
+const RESPONSE_SHAPE_ONLY = false;
 const DETAIL_URL =
   /^https:\/\/app\.revolut\.com\/api\/retail\/transaction\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FIELDS = [
@@ -38,8 +40,10 @@ const KEYS_REGEX = '"(?:' + SHAPE_KEYS.join('|') + ')"\\s*:';
 const MAX_SENT_DATA = 4096;
 const MAX_RECV_DATA = 16384;
 const config = {
-  name: 'Check a Revolut payment',
-  description: 'Check one existing transfer. This test does not move money.',
+  name: RESPONSE_SHAPE_ONLY ? 'Inspect a Revolut response' : 'Check a Revolut payment',
+  description: RESPONSE_SHAPE_ONLY
+    ? 'Inspect HTTP status and JSON structure for one existing transfer. No payment-field disclosure.'
+    : 'Check one existing transfer. This test does not move money.',
   urls: ['https://app.revolut.com/*'],
   requests: [
     {
@@ -56,18 +60,49 @@ function isDetail(request) {
 }
 
 function main() {
-  const [latest] = useHeaders((headers) =>
-    headers.filter(isDetail).sort((a, b) => b.timestamp - a.timestamp),
-  );
   useEffect(() => {
     openWindow('https://app.revolut.com/start');
   }, []);
+  const pending = useState('pending', false);
+  // The pinned QuickJS host allocates callbacks when serializing hook values.
+  // Avoid repeatedly copying captured headers while an explicit proof is pending.
+  // Keep a non-null DOM result so the host can append its disclosure-approval UI.
+  if (pending) {
+    return div(
+      {
+        style: {
+          position: 'fixed',
+          bottom: '12px',
+          right: '12px',
+          width: '300px',
+          zIndex: '2147483647',
+          backgroundColor: 'white',
+          color: '#111',
+          padding: '16px',
+          borderRadius: '12px',
+          fontFamily: 'system-ui',
+          fontSize: '14px',
+        },
+      },
+      ['Proof in progress. Review the TLSNotary disclosure prompt when it appears.'],
+    );
+  }
+  const [latest] = useHeaders((headers) =>
+    headers
+      .filter(isDetail)
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 1),
+  );
   // Header values stay inside the extension runtime and are never rendered.
   useEffect(() => {
     setState('selected', latest || null);
   }, [latest]);
-  const pending = useState('pending', false);
-  const message = useState('message', 'Open one existing transfer, then click Generate proof.');
+  const message = useState(
+    'message',
+    RESPONSE_SHAPE_ONLY
+      ? 'Open one existing transfer, then click Check response only.'
+      : 'Open one existing transfer, then click Generate proof.',
+  );
   return div(
     {
       style: {
@@ -93,7 +128,7 @@ function main() {
           : 'Open an existing transfer to continue.',
       ]),
       div({}, [message]),
-      latest && !pending
+      latest && !pending && !RESPONSE_SHAPE_ONLY
         ? button({ onclick: 'generateProof' }, ['Generate proof for the last opened transfer'])
         : div({}, [pending ? 'Generating proof…' : 'No proof has started.']),
       latest && !pending
@@ -110,7 +145,14 @@ async function checkResponse() {
   return generateProof('response-shape');
 }
 
-async function generateProof(mode = 'payment-fields') {
+async function generateProof(mode = RESPONSE_SHAPE_ONLY ? 'response-shape' : 'payment-fields') {
+  if (RESPONSE_SHAPE_ONLY && mode !== 'response-shape') {
+    setState(
+      'message',
+      'Only the approved response-shape check is available here. No proof was requested.',
+    );
+    return;
+  }
   if (useState('pending', false)) return;
   const selected = useState('selected', null);
   if (!isDetail(selected)) {
@@ -291,11 +333,11 @@ async function generateProof(mode = 'payment-fields') {
         'message',
         'The response is missing required field ' + missing[1] + '. The gate is not cleared.',
       );
-    } else if (/setupProver timed out after 30000ms/.test(errorText)) {
+    } else if (/setupProver timed out after (?:30000|60000)ms/.test(errorText)) {
       errorCode = 'MPC_SETUP_TIMEOUT';
       setState(
         'message',
-        'MPC_SETUP_TIMEOUT: proof setup exceeded 30 seconds. Use Check connection only on the private test page before another bank test.',
+        'MPC_SETUP_TIMEOUT: proof setup exceeded this extension build’s limit. Use Check connection only before another bank test.',
       );
     } else if (/context mux error|maximum number of streams/i.test(errorText)) {
       errorCode = 'MPC_SETUP_FAILED';

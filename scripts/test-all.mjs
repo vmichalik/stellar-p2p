@@ -3,6 +3,7 @@ const root = new URL('../', import.meta.url);
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 for (const args of [
   ['test'],
+  ['run', 'test:benchmark-prep'],
   ['--prefix', 'policy', 'run', 'check:protocol'],
   ['--prefix', 'policy', 'test'],
   ['--prefix', 'contracts/escrow/protocol', 'test'],

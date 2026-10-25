@@ -11,28 +11,29 @@ npm run dev:app
 
 This is the synthetic buyer/seller demo. It makes no bank or chain request. Its loopback URL works only on the execution host. A hosted app or authorized private route is a separate handoff.
 
-For policy, protocol and wallet/RPC checks, run `npm run setup:integration` then `npm run test:all`. The compiled-WASM rehearsal needs a compatible Rust toolchain: `npm run rehearse:local`. See [integration](../integration/README.md) for rebuilds and service gaps. The checked host used Node 26.7.0, Rust 1.99.1 and Stellar CLI 28.1.0.
+For policy, protocol and wallet/RPC checks, run `npm run setup:integration`, prepare the TLS assets below, then run `npm run test:all`. The compiled-WASM rehearsal needs a compatible Rust toolchain: `npm run rehearse:local`. See [integration](../integration/README.md) for rebuilds and service gaps. The checked host used Node 26.7.0, Rust 1.99.1 and Stellar CLI 28.1.0.
 
-## Earlier private proof prototype
+## TLS source and local verification
 
-The instructions below reproduce the packaged private launcher. They are not the current cloud deployment's source/runbook. The proof owner operates that runtime; its sanitized source handoff is still pending. Do not restart or replace it from these instructions. Current owner browser: MacBook Pro. Historical Windows results do not establish current device readiness.
+The imported cloud/proof source is documented in [the proof handoff](proof-handoff.md). Importing it does not deploy the combined app or change the existing service. **Bank tests remain paused** pending the owner's decision to resume and normal per-attempt consent/disclosure review. The local preparation and synthetic checks below do not require a bank request.
 
-## Source checks
+A release check must exercise the shipped runtimes rather than skip missing assets. `setup:integration` installs nested package dependencies only. The TLS cases additionally need:
 
-For the earlier proof tooling alone, run:
+- `.toolchain/tlsn-extension-0.1.0.1501.zip`, prepared and hash-checked by `prepare:tlsn`.
+- `.private/extension-setup60/audit.json` and its generated extension/package, prepared offline by `prepare:extension-setup60`.
+- `.private/benchmark-stage/benchmark/` with pinned JS, WASM and spawn assets, prepared by `prepare:benchmark` with explicit app/origin arguments below.
 
-```sh
-npm test
-npm run check
-```
+After preparation, run `npm run test:all` (which includes the Python benchmark-preparation suite) and `npm run check`, and require zero skipped runtime tests. Gateway tests open synthetic loopback listeners; the host must permit them. This does not repeat a historical public proof or establish payment evidence. Native/compiled-WASM escrow suites and `npm run rehearse:local` remain separate integration gates.
 
-The TLSNotary tests use Node’s standard library. The full root suite now includes app and packaging checks too; nested policy/protocol/integration suites need their locked dependencies.
+## Private proof service runbook
+
+The following commands reproduce the packaged private launcher. They do not manage the current Fly deployment and should not be used to restart or replace it. Current owner browser: MacBook Pro; the verifier/build host is the Mac mini. Devices do not share loopback addresses or browser profiles.
 
 ## Prepare TLSNotary
 
 The browser flow needs TLSNotary extension `0.1.0.1501` and the verifier from source commit `68bbd380d6e1a89d79748e5294661c752f5d1205`. That source uses TLSNotary `0.1.0-alpha.15`. Read the [official quickstart](https://tlsnotary.org/docs/quick_start/browser_extension/) and [verifier docs](https://tlsnotary.org/docs/extension/verifier/).
 
-You need Python 3 and a Rust/Cargo toolchain compatible with the pinned upstream workspace. The tested build host is Apple Silicon macOS with Rust 1.99.1; a Windows verifier build has not been checked. Downloads and build output stay in ignored `.toolchain/`.
+You need Python 3 and a Rust/Cargo toolchain compatible with the pinned upstream workspace. The tested build host is Apple Silicon macOS with Rust 1.99.1; a Windows verifier build has not been checked. The current browser client is Chrome on the owner's MacBook Pro. Its public extension check passed on 25 October 2026. Downloads and build output stay in ignored `.toolchain/`.
 
 ```sh
 npm run prepare:tlsn
@@ -73,7 +74,7 @@ The gateway listens on `127.0.0.1:17848` by default and forwards only the suppor
 
 Put a private HTTPS reverse proxy in front of the gateway, with WebSocket upgrades enabled. The browser device must be able to reach that route. If using Tailscale, configure only a dedicated Serve port and keep it inside the tailnet; do not enable Funnel or replace unrelated routes. Verify `/health` returns `ok` and `/info` reports the pinned git hash and TLSNotary version.
 
-There is no proxy provisioning, deployment or service manager in this repo. A remote host’s `localhost` is reachable only on that host.
+These local start commands do not provision a proxy or service manager. The optional public-host staging files are described below; preparation does not deploy them. A remote host’s `localhost` is reachable only on that host.
 
 ## Check the public flow first
 
@@ -87,15 +88,50 @@ A successful callback is `PUBLIC_PROOF_COMPLETED`. Confirm acceptance in the ver
 
 If setup stalls, `/setup-check/` measures MPC setup in an ordinary browser worker. It uploads about 76 MB and makes no bank request. `/connection-check` is a bounded 1 MiB synthetic upload used by the launcher. These diagnostics answer different questions from an extension proof.
 
-## Authenticated transfer checks
+## Authenticated transfer checks — paused
 
-The account owner must approve the verifier and the exact disclosure. Use an existing outgoing transfer; generating a proof does not require sending a new payment.
+This section is a reference for a later owner-resumed attempt, not an instruction to retry now. The account owner must first decide to resume bank tests, then approve the verifier and exact disclosure for each attempt. Use an existing outgoing transfer; generating a proof does not require sending a new payment.
 
 Open `/`, run the transfer test, and navigate to that transfer inside the extension’s Revolut window. Wait for the individual-detail request. Use **Check response only** to establish HTTP status and response structure before changing the provisional payment selectors.
 
 The full field test requests amount, currency, recipient code, transaction ID, state, completion time and type, plus the request line, response status and Date header. Those fields go to the verifier even though the launcher displays only presence booleans. Request headers stay undisclosed in the extension protocol.
 
-The launcher cannot authorize a claim or release funds. The implemented policy package still rejects live evidence until its source-backed normalizer is complete. Stop at a missing field or failed proof; keep raw bank material out of chat, screenshots and Git.
+The launcher cannot authorize a claim or release funds. The integrated server-side policy exists, but its live normalizer deliberately rejects unverified payment semantics. Stop at a missing field or failed proof; keep raw bank material out of chat, screenshots and Git.
+
+## Public bank-free diagnostic and host comparison
+
+The [cloud check](https://stellar-p2p-proof-vijay.fly.dev/benchmark/) was deployed and checked by the proof workstream; current availability has not been rechecked during source intake. It runs without an extension, bank login or VPN client. It performs synthetic MPC setup only and uploads about 76 MB. The diagnostic waits up to 90 seconds while reporting the 30-second and 60-second extension deadlines separately.
+
+The owner already completed six alternating comparison trials; results are in [the proof handoff](proof-handoff.md#completed-bank-free-comparison). If a later device/runtime/route change warrants a new bank-free comparison, expand Details and run it from the same foreground browser tab and network. The mini route must be reachable for its trials. The sequence uses about 456 MB and includes same-host cooldowns for the verifier's abandoned-session deadline. Export or report the sanitized summary; keep raw transport data out of the repo.
+
+The reproducible staging command requires explicit operator-selected origins:
+
+```sh
+python3 scripts/prepare-proof-benchmark.py \
+  --app YOUR_FLY_APP \
+  --mini-origin https://your-private-mini-origin
+```
+
+Use the operator-selected app/origin for a real staging handoff. A local-only test stage may use `--app pactlane-offline-check --mini-origin https://mini.example.test`; those values are configuration fixtures, not deployment targets. Add `--offline` to reuse checksum-verified archives already present under `.private/benchmark-downloads`.
+
+The helper checks pinned public downloads and stages the source, runtime assets, gateway and Fly configuration under ignored `.private/benchmark-stage`. It starts and deploys nothing. Review the staged configuration before an authorized deployment. The public deployment uses HTTPS/WSS, a fixed target, bounded admission, a server-side registration-budget cap and no webhooks. These are prototype resource bounds, not a completed payment policy.
+
+The separate [cloud response-only page](https://stellar-p2p-proof-vijay.fly.dev/response-check/) is an authenticated diagnostic and remains subject to the bank-test pause. Only after deciding to resume, the account owner must review the displayed verifier, approve the checkbox and review the extension's own permission/disclosure prompts. Open one existing outgoing transfer and use **Check response only**. The page consumes consent after each extension execution and requires fresh approval for another attempt.
+
+This diagnostic discloses the transfer request path including its transaction ID, HTTP status, Content-Type, JSON root marker and selected field names. It does not select cookie/authorization values or financial field values for disclosure. Its rendered plugin rejects payment-field mode before proof setup. Paste only the sanitized `Response check:` line when reporting the result. A successful shape check still leaves `NOT_CLEARED`.
+
+## Prepare the offline 60-second extension regression fixture
+
+After the pinned release archive is present in `.toolchain/`, run:
+
+```sh
+npm run prepare:extension-setup60
+node --test tlsn/extension-setup60.test.mjs
+```
+
+The preparer works offline and writes only to ignored `.private/extension-setup60`; existing output is preserved. The extension's displayed name/version label identifies the local variant. Only the setup watchdog and its matching messages change to 60 seconds; all WASM, permissions and other deadlines stay identical. This is a local diagnostic repack of the official release, not an official release or full source rebuild.
+
+Preparing this fixture for local tests does not require installing it. The owner previously requested the variant, but its installation on the MacBook has not been verified. Any later owner-directed browser test uses Chrome's supported unpacked-extension flow, with the store copy disabled for that test and launcher pages reloaded. Permission and disclosure prompts still apply; this does not resume bank tests. The numeric API version remains compatible, so a numeric version check alone cannot identify this local variant.
 
 ## Optional developer diagnostics
 
@@ -107,4 +143,4 @@ These optional diagnostics are development tools, not part of the normal user fl
 
 ## Formatting
 
-Run `npm ci` to install the pinned development formatter, then use `npm run format:check` or `npm run format`. Rust and Python files are outside Prettier’s scope.
+Run `npm ci --ignore-scripts` to install the pinned development formatter, then use `npm run format:check` or `npm run format`. Rust and Python files are outside Prettier’s scope.

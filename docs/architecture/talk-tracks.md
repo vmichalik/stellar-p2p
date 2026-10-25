@@ -37,3 +37,7 @@ Use the short explanation that fits the conversation. The public app and local c
 **Why not just use an exchange?** Some people already have the payment account and want USDC on Stellar without another intermediary's onboarding. For users happy with an exchange or direct on-ramp, there may be no reason to switch. Pactlane still needs to prove that the privacy benefit and direct-trade pricing are worth the proof and wallet steps.
 
 **What about disputes or fraud?** The design deliberately avoids an operator override. Valid policy proof can release to the buyer; recovery requires both wallets. This limits unilateral intervention but can leave an order stuck. Payment reversibility, fraud handling, support, and legal obligations need more work before production.
+
+**Does it support MB WAY?** No. The current contract accepts EUR and the `revolut` rail, and the frozen proof namespace names `app.revolut.com`. MB WAY would need an authenticated source, reviewed field semantics and identities, protocol/contract support, fresh vectors and another deployment. It is not an existing feature.
+
+**What can a compromised signer do?** It can attest to a false payment for a locked order and release tokens to that order’s recorded buyer. It cannot change the stored buyer, token or amount through a claim, or withdraw a funded, unreserved offer using `release`. The policy key is a substantial trust assumption.

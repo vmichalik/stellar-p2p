@@ -21,3 +21,5 @@ Private keys, bank identities, raw proof material, and runtime secrets stay outs
 Two unrelated untracked files, `README 2.md` and `docs/status 2.md`, were left untouched and excluded from the commits. Private runtime files, testnet journals and disposable diagnostic output remain ignored.
 
 The read-only workbench preview was stopped after its browser checks, revoking its temporary capability. The architecture study is self-contained; `npm run read:architecture` serves its local preview. A loopback URL is not a Windows-device handoff. Open or download `docs/architecture/study.html` through Codex, or use the private repository once the push is approved.
+
+The read-only architecture preview is running on Mac-mini loopback port `8788` for the Codex browser, using `node scripts/serve-architecture.mjs`. It serves the guide and its explicit source links only. Stop that process when the preview is no longer needed; the HTML itself works offline.

@@ -2,6 +2,8 @@
 
 The Soroban contract is the token custody and order-state component. It is deliberately narrow: one seller-funded offer can become at most one whole trade with one buyer. It has no partial fills, admin withdrawal, upgrade entry point, unilateral recovery override, or timeout from the `Paying` state.
 
+One deployed escrow manages multiple numbered orders. The token and policy signer are shared immutable configuration; each order has its own deposit and lifecycle. Funding an offer creates a storage record, not a new contract.
+
 ## State machine
 
 ```mermaid

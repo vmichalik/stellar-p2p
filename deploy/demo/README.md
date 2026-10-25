@@ -1,5 +1,7 @@
 # Static demo deployment
 
+Latest social-image deployment: see [the live social handoff](../../docs/release/SOCIAL-IMAGES-HANDOFF.md). It records the currently published image assets, metadata, Worker version and verification. Older domain/proof observations below retain their historical scope.
+
 Canonical app: `https://pactlane.io`. `www.pactlane.io` and `app.pactlane.io` redirect to the apex with path/query preserved. The coordinator owns publication and domain routing. This lane prepares source and artifacts only.
 
 ## Build and inspect
@@ -10,9 +12,9 @@ npm run check:demo -- --record
 npm run preview:demo
 ```
 
-The build copies ten allowlisted assets, renders canonical/social metadata and writes the synthetic hash manifest, security headers, robots and sitemap into ignored `dist/demo`. No policy, proof source, bank data or signer is copied. The audit records every output file, including generated headers/metadata, with exact hashes and source dirty status in `.private/release/domain-bundle.json`. The preview binds only loopback; it is not a remote handoff.
+The build copies 26 allowlisted app/image assets, renders canonical/social metadata and writes the synthetic hash manifest, security headers, robots and sitemap into ignored `dist/demo`. No policy, proof source, bank data or signer is copied. The audit records every output file, including generated headers/metadata, with exact hashes and source dirty status in `.private/release/domain-bundle.json`. The preview binds only loopback; it is not a remote handoff.
 
-`deploy/demo/site.mjs` owns metadata. Social preview is a checked-in 1200×630 PNG using the local licensed Manrope font. `scripts/render-social.py` is an optional Pillow authoring tool; building does not require Pillow. No analytics or external resource loading is added.
+`deploy/demo/site.mjs` owns metadata, with reviewed image paths and alt text in `deploy/demo/social.mjs`. All seven social designs are included in PNG/JPEG; the primary OG and X JPEGs also have content-versioned filenames. The older `scripts/render-social.py` authoring tool is historical and is not used for the current image system. Building copies the checked-in images and does not require an image renderer. No analytics or external resource loading is added.
 
 ## Workers Static Assets candidate
 

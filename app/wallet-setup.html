@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Pactlane · Wallet setup</title>
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/live-styles.css" />
+    <script src="/vendor/freighter-api.js" defer></script>
+    <script type="module" src="/wallet-setup.mjs"></script>
+  </head>
+  <body class="live-app">
+    <main class="wallet-setup">
+      <a class="text-button" href="/">← Back to the exchange</a>
+      <p class="eyebrow">STELLAR CONNECTION</p>
+      <h1>Use Freighter on desktop or mobile.</h1>
+      <p>Connect the browser extension, or pair the Freighter mobile app using WalletConnect.</p>
+      <section class="panel">
+        <label for="wallet-network">Network to check</label
+        ><select id="wallet-network">
+          <option value="mainnet">Stellar mainnet · connection only</option>
+          <option value="testnet">Stellar testnet</option>
+        </select>
+        <p class="small-note">
+          This check requests your public address and checks the connection’s network. It requests
+          no signature or transaction, and does not log you in to the exchange.
+        </p>
+        <button id="connect-wallet" class="button primary">Connect Freighter</button
+        ><button id="disconnect-wallet" class="button secondary" hidden>Disconnect wallet</button>
+        <div id="wallet-result" class="wallet-result" role="status" aria-live="polite">
+          Not connected.
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Mainnet trading is not enabled</h2>
+        <p>
+          The current exchange still enforces testnet. A successful mainnet wallet connection does
+          not enable funding, payment locks or settlement.
+        </p>
+        <ul>
+          <li>
+            Accepted authenticated Revolut payment evidence and trusted policy composition are still
+            outstanding.
+          </li>
+          <li>
+            Mainnet contract, token, policy signer and deployment identity have not been configured
+            and verified.
+          </li>
+          <li>End-to-end real-wallet validation and payment reconciliation remain outstanding.</li>
+        </ul>
+        <p>
+          Keep real funds out of this preview. The exchange retains its existing payment and
+          recovery guards.
+        </p>
+      </section>
+      <p>
+        <a href="https://freighter.app/" target="_blank" rel="noopener noreferrer"
+          >Get Freighter from its official site</a
+        >
+      </p>
+    </main>
+  </body>
+</html>

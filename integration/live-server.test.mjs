@@ -93,7 +93,11 @@ async function fixture(t, overrides = {}) {
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const publicOrigin = `http://127.0.0.1:${server.address().port}`;
-  app = await createLiveServer({ publicOrigin, runtime });
+  app = await createLiveServer({
+    publicOrigin,
+    runtime,
+    walletConnect: overrides.walletConnect ?? {},
+  });
   t.after(async () => {
     app.close();
     server.closeAllConnections();
@@ -152,6 +156,11 @@ test('serves only the live asset allowlist and exact installed Freighter bytes w
     '/live-app.mjs',
     '/live-view-adapter.mjs',
     '/host-client.mjs',
+    '/freighter-connector.mjs',
+    '/wallet-dialog.mjs',
+    '/wallet-setup.mjs',
+    '/wallet',
+    '/wallet-config.json',
     '/styles.css',
     '/live-styles.css',
     '/assets/fonts/manrope.woff2',
@@ -276,4 +285,20 @@ test('runtime errors and cross-owner view mistakes do not leak private values', 
     rejected.body.toString(),
     /SYNTHETIC_PRIVATE|recipientSalt|privateNote|offerData/,
   );
+});
+
+test('mobile assets are opt-in, locally bundled and do not widen the default CSP', async (t) => {
+  const off = await fixture(t);
+  assert.equal((await off.request('/vendor/walletconnect.mjs')).status, 404);
+  const config = await off.request('/wallet-config.json');
+  assert.equal(JSON.parse(config.body.toString()).enabled, false);
+  assert.doesNotMatch(config.headers['content-security-policy'], /relay.walletconnect/);
+  const enabled = await fixture(t, { walletConnect: { projectId: 'a'.repeat(32) } });
+  const bundle = await enabled.request('/vendor/walletconnect.mjs');
+  assert.equal(bundle.status, 200);
+  assert.match(bundle.headers['content-security-policy'], /wss:\/\/relay.walletconnect.com/);
+  assert.doesNotMatch(bundle.headers['content-security-policy'], /connect-src \*/);
+  const publicConfig = JSON.parse((await enabled.request('/wallet-config.json')).body.toString());
+  assert.equal(publicConfig.enabled, true);
+  assert.deepEqual(Object.keys(publicConfig).sort(), ['appUrl', 'enabled', 'projectId']);
 });

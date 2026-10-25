@@ -1,0 +1,298 @@
+{
+  "verifiedAt": "2026-10-25T22:30:37.608633+00:00",
+  "objective": "Update all live Pactlane social cards and OG images",
+  "site": "https://pactlane.io/",
+  "worker": "pactlane-demo",
+  "workerVersion": "98f4d8fa-ed5e-4cfe-a45c-07db641aa6d6",
+  "deployment": {
+    "deploymentId": "6e7c4dc3-5ff6-4d8e-8455-6db619808f88",
+    "createdOn": "2026-10-25T22:25:37.461862Z",
+    "versions": [
+      {
+        "version_id": "98f4d8fa-ed5e-4cfe-a45c-07db641aa6d6",
+        "percentage": 100
+      }
+    ]
+  },
+  "deployedSourceRevision": "6ae97918fc90c6c23507399f82d31c4a74f5d094",
+  "productionBase": "88ba889f1927ec9283b45c2120d9c8df6a661419",
+  "creativeSourceRevision": "8b904c0e82539b2c4952d730e16e909b02c65f8f",
+  "checks": {
+    "releaseTestsPassed": 10,
+    "baselineAll12LiveHashesMatched": true,
+    "deployedAssetHashesMatched": 28,
+    "newImageFiles": 16,
+    "designs": 7,
+    "exportFormats": ["png", "jpg"],
+    "legacyPreviewReplaced": true,
+    "headMetadataHasNoDevelopmentStageLabels": true,
+    "crawlerProfiles": [
+      {
+        "userAgent": "facebookexternalhit/1.1",
+        "status": 200,
+        "newImagesInServerHtml": true
+      },
+      {
+        "userAgent": "Twitterbot/1.0",
+        "status": 200,
+        "newImagesInServerHtml": true
+      },
+      {
+        "userAgent": "LinkedInBot/1.0",
+        "status": 200,
+        "newImagesInServerHtml": true
+      }
+    ],
+    "aliases": [
+      {
+        "host": "www.pactlane.io",
+        "status": 308,
+        "location": "https://pactlane.io/assets/social/og-default-32116a99787d.jpg?share=1",
+        "client": "curl normal-browser user agent"
+      },
+      {
+        "host": "app.pactlane.io",
+        "status": 308,
+        "location": "https://pactlane.io/assets/social/og-default-32116a99787d.jpg?share=1",
+        "client": "curl normal-browser user agent"
+      }
+    ],
+    "securityAndRoutingSourceUnchanged": true,
+    "runtimeConfigurationAndBindingsMatchedBeforeActivation": true,
+    "unchangedAppMediaAssets": [
+      "styles.css",
+      "app.mjs",
+      "model.mjs",
+      "demo-adapter.mjs",
+      "presentation.mjs",
+      "assets/fonts/manrope.woff2",
+      "assets/fonts/OFL.txt",
+      "assets/favicon.svg",
+      "demo.mp4",
+      "demo-script.txt"
+    ]
+  },
+  "metadata": {
+    "viewport": "width=device-width, initial-scale=1, viewport-fit=cover",
+    "robots": "noindex, nofollow",
+    "description": "Your bank app. A human supplier. Your Stellar wallet. Buy Stellar assets from a person at an upfront price.",
+    "theme-color": "#f7f5ee",
+    "og:type": "website",
+    "og:site_name": "Pactlane",
+    "og:title": "Pactlane \u00b7 Your bank app. Your Stellar wallet.",
+    "og:description": "Your bank app. A human supplier. Your Stellar wallet. Buy Stellar assets from a person at an upfront price.",
+    "og:url": "https://pactlane.io/",
+    "og:image": "https://pactlane.io/assets/social/og-default-32116a99787d.jpg",
+    "og:image:secure_url": "https://pactlane.io/assets/social/og-default-32116a99787d.jpg",
+    "og:image:type": "image/jpeg",
+    "og:image:width": "1200",
+    "og:image:height": "630",
+    "og:image:alt": "Pactlane. Your bank app. Your Stellar wallet. Orange and green paired frames represent a peer-to-peer exchange.",
+    "twitter:card": "summary_large_image",
+    "twitter:title": "Pactlane \u00b7 Your bank app. Your Stellar wallet.",
+    "twitter:description": "Your bank app. A human supplier. Your Stellar wallet. Buy Stellar assets from a person at an upfront price.",
+    "twitter:image": "https://pactlane.io/assets/social/social-link-wide-a7593d7d0e8e.jpg",
+    "twitter:image:alt": "Pactlane link card. Your bank app. Your Stellar wallet. Paired orange and green frames."
+  },
+  "manifestSha256": "9466e26ff83b3912e3dddfeacc132cb0fb1eafa5ec3d2dbf94c2f885f0bba36a",
+  "assets": [
+    {
+      "path": "index.html",
+      "status": 200,
+      "bytes": 2787,
+      "sha256": "a09dd8c62d69184a675271e6c474d90fc6f8fbd648367b643a55279677bee6ad",
+      "contentType": "text/html"
+    },
+    {
+      "path": "styles.css",
+      "status": 200,
+      "bytes": 55454,
+      "sha256": "92cb540f735a50a4f708a145c79f65071d91022527609a46706ec5f7d77a0a08",
+      "contentType": "text/css"
+    },
+    {
+      "path": "app.mjs",
+      "status": 200,
+      "bytes": 60797,
+      "sha256": "3b8104ea46b4052f3d2293e335dbf7dca8715a1e4128e9c2d27c6c7cf64a49ef",
+      "contentType": "text/javascript"
+    },
+    {
+      "path": "model.mjs",
+      "status": 200,
+      "bytes": 13610,
+      "sha256": "6bab9aeed89e15686ea1ae281a2d46751bb43b82ee2f421c8447dda81e8a89ce",
+      "contentType": "text/javascript"
+    },
+    {
+      "path": "demo-adapter.mjs",
+      "status": 200,
+      "bytes": 3668,
+      "sha256": "a594e7b29e1570a9fccebe1ecd4b6f8f224a71e9cae5959c4ac129a3d8bf41aa",
+      "contentType": "text/javascript"
+    },
+    {
+      "path": "presentation.mjs",
+      "status": 200,
+      "bytes": 7303,
+      "sha256": "1ecfe5cbc0c61686780eb1d50c9389df0610c30805e245bc3b1ab97d39bd4d15",
+      "contentType": "text/javascript"
+    },
+    {
+      "path": "assets/fonts/manrope.woff2",
+      "status": 200,
+      "bytes": 24576,
+      "sha256": "e310b55a7fd9677f5e3555e6c6c4d064fa1f1d24393f0ddbe217cea12a8c432f",
+      "contentType": "font/woff2"
+    },
+    {
+      "path": "assets/fonts/OFL.txt",
+      "status": 200,
+      "bytes": 4386,
+      "sha256": "d6a309fcfb963d329a93baf9df66fa5f3c23a4be2b5f67edf24d6cafecde12ac",
+      "contentType": "text/plain"
+    },
+    {
+      "path": "assets/social-preview.png",
+      "status": 200,
+      "bytes": 256278,
+      "sha256": "ea638b28167620273ae2310550d6af144df939849d8bda2f677b52fcb3b20cd1",
+      "contentType": "image/png"
+    },
+    {
+      "path": "assets/favicon.svg",
+      "status": 200,
+      "bytes": 334,
+      "sha256": "a88935722e815d49768c99e9eed87d6ba758e0b19342db7c6456821425f8b6fe",
+      "contentType": "image/svg+xml"
+    },
+    {
+      "path": "assets/social/og-default.png",
+      "status": 200,
+      "bytes": 256278,
+      "sha256": "ea638b28167620273ae2310550d6af144df939849d8bda2f677b52fcb3b20cd1",
+      "contentType": "image/png"
+    },
+    {
+      "path": "assets/social/og-default.jpg",
+      "status": 200,
+      "bytes": 99655,
+      "sha256": "32116a99787dcdb2ccfdaf52054ae25aabd400576e81d2ed60c67b96979735d2",
+      "contentType": "image/jpeg"
+    },
+    {
+      "path": "assets/social/og-dark.png",
+      "status": 200,
+      "bytes": 230423,
+      "sha256": "c7303533c84738a55a19f410607fa1d156d9bed25a5db1c3e9ecaf554f96bd42",
+      "contentType": "image/png"
+    },
+    {
+      "path": "assets/social/og-dark.jpg",
+      "status": 200,
+      "bytes": 91404,
+      "sha256": "937e4c6e979be822b290e25130eff0e4592be9b0109e012c46734a77dbbedaa8",
+      "contentType": "image/jpeg"
+    },
+    {
+      "path": "assets/social/social-link-wide.png",
+      "status": 200,
+      "bytes": 238059,
+      "sha256": "8318f3b5bead8368eee397dec0502e0a6f021c1e04482feaceb5fafc249a68c0",
+      "contentType": "image/png"
+    },
+    {
+      "path": "assets/social/social-link-wide.jpg",
+      "status": 200,
+      "bytes": 94897,
+      "sha256": "a7593d7d0e8e54e330ce90a2c822f6354eaae61d336618eec2c6d99bf9cf1e47",
+      "contentType": "image/jpeg"
+    },
+    {
+      "path": "assets/social/social-landscape.png",
+      "status": 200,
+      "bytes": 465080,
+      "sha256": "58755b3dc5f6e384671b2f90e4703fe02aa8f9356ef3b69c2bb962510f8f9019",
+      "contentType": "image/png"
+    },
+    {
+      "path": "assets/social/social-landscape.jpg",
+      "status": 200,
+      "bytes": 157558,
+      "sha256": "8a0b51c0f804bd35c11a29e197c52d99810f10a318285041f828be02e9471154",
+      "contentType": "image/jpeg"
+    },
+    {
+      "path": "assets/social/social-square.png",
+      "status": 200,
+      "bytes": 307721,
+      "sha256": "2191ed612e5502bc35dec200f64c3771f67da3d0bea3426b1d3f866b223b379b",
+      "contentType": "image/png"
+    },
+    {
+      "path": "assets/social/social-square.jpg",
+      "status": 200,
+      "bytes": 118504,
+      "sha256": "028b0b028e969ee0f96b0ea4cfc447bd07fcc6c7aa994f98518e1b24a458f662",
+      "contentType": "image/jpeg"
+    },
+    {
+      "path": "assets/social/social-portrait.png",
+      "status": 200,
+      "bytes": 409374,
+      "sha256": "d08d03034a436541d64990decfd4a634ddca6f9650b036ee78af73a788038462",
+      "contentType": "image/png"
+    },
+    {
+      "path": "assets/social/social-portrait.jpg",
+      "status": 200,
+      "bytes": 156529,
+      "sha256": "af506054a520c6f4102712285a31939a2f44af2ad3b59273d35fdd73050716b5",
+      "contentType": "image/jpeg"
+    },
+    {
+      "path": "assets/social/social-story.png",
+      "status": 200,
+      "bytes": 498211,
+      "sha256": "8081c793935dd2a3b477a4af2a1a8be227a7698a48b0b05c7c68679e6e4b26a1",
+      "contentType": "image/png"
+    },
+    {
+      "path": "assets/social/social-story.jpg",
+      "status": 200,
+      "bytes": 164515,
+      "sha256": "98c91fae8358bb2ef8f5a3ae25e7130987eabdde6c433e9fce8c48a341e7cd92",
+      "contentType": "image/jpeg"
+    },
+    {
+      "path": "assets/social/og-default-32116a99787d.jpg",
+      "status": 200,
+      "bytes": 99655,
+      "sha256": "32116a99787dcdb2ccfdaf52054ae25aabd400576e81d2ed60c67b96979735d2",
+      "contentType": "image/jpeg"
+    },
+    {
+      "path": "assets/social/social-link-wide-a7593d7d0e8e.jpg",
+      "status": 200,
+      "bytes": 94897,
+      "sha256": "a7593d7d0e8e54e330ce90a2c822f6354eaae61d336618eec2c6d99bf9cf1e47",
+      "contentType": "image/jpeg"
+    },
+    {
+      "path": "demo.mp4",
+      "status": 200,
+      "bytes": 4764952,
+      "sha256": "49f8ec2b46b35981bcee0398ed0206dcafa5131e20afa24be608a8eba2129436",
+      "contentType": "video/mp4"
+    },
+    {
+      "path": "demo-script.txt",
+      "status": 200,
+      "bytes": 2821,
+      "sha256": "d664a70fae94ce25d3d9bbb2e29769a8f925beef2172fa716b3311fd7e293645",
+      "contentType": "text/plain"
+    }
+  ],
+  "verificationNote": "Python urllib default-client HEAD returned403; normal-browser curl checks returned308 without any routing or access-control change.",
+  "limits": "Direct public requests with crawler user agents verify the server HTML, not third-party social-platform cache state. No bank, wallet, contract or payment-runtime action was performed."
+}

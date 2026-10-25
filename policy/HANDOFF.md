@@ -6,7 +6,7 @@ Objective: implement the strict server evidence/order-to-claim boundary for Pact
 - Repository: private `vmichalik/stellar-p2p`.
 - Worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-policy`.
 - Branch: `codex/pactlane-payment-policy`, isolated from baseline `807412686da2cdad494ee284675dbefc35110257`.
-- Implementation commit: `52600e2afd68363369486b3d7e098c0e95d248c0`. This handoff follows as a documentation-only commit on the same branch. Cherry-pick both commits, or take the branch's `policy/` tree.
+- Initial implementation commit: `52600e2afd68363369486b3d7e098c0e95d248c0`; initial handoff commit: `dd7259c`. The later presentation follow-up is described below. Integrate the branch's scoped commit stack, or take its `policy/` tree.
 - Scope: `policy/` only. No app, contract, main-checkout documentation, live runtime, account, bank permission, RPC or deployment files were changed. Nothing was pushed or published.
 
 ## Delivered
@@ -56,3 +56,13 @@ The live schema still needs independently verified source host/status/read-only 
 There is no authenticated bank payment, live signer, RPC implementation, deployed registry/indexer, wallet transaction, escrow release or full live trade established by these tests. SQLite is local single-host plumbing, not a distributed service. Production authentication, storage protection/backup/migration and complete manual-recovery manifests remain host integration work. Expired claim renewal deliberately rejects with `CLAIM_RENEWAL_REQUIRES_RECONCILIATION`; no automatic renewal or unreserve operation exists. A signer/operator must reconcile the order and unknown submission outcome before adding any renewal behavior.
 
 Next action: the release integration thread can cherry-pick this scoped implementation and handoff, wire the labeled synthetic rehearsal, and keep live ingestion rejecting while the proof owner completes evidence semantics. The working tree should be clean after the handoff commit; installed dependencies remain ignored.
+
+## App-state follow-up, 25 October 2026
+
+Added a browser-safe `./presentation` package entry point and [APP-STATES.md](APP-STATES.md). `presentPolicyOutcome` maps fixed codes/results to state/message/action tokens; app copy and styling remain with the app owner. No raw exception, bank value, account identity, transaction hash, URL or arbitrary code is reflected. Outputs are presentation-only and always prohibit automatic retry, payment resend and release authorization.
+
+Payment mismatch, unavailable proof and used transfers have distinct review actions. Mutual recovery requires explicit trusted context for this order: a global manual-reconciliation hold alone cannot establish which parties still need to approve. A pending or uncertain submitted release also requires explicit context from the transaction adapter and takes priority over another proof/payment attempt. A generic policy-adapter failure maps to issuance review, not an invented submitted-transaction state. Synthetic and merely policy-accepted results do not become confirmed receipts.
+
+No frozen protocol, evidence normalizer, signing/replay behavior, app files, domains, DNS or live runtime was changed. `pactlane.io` / `proof.pactlane.io` routing remains with the owning lanes. The bank source-origin namespace inside the frozen protocol must remain `https://app.revolut.com` during product-domain migration.
+
+The follow-up adds four focused presentation tests to the existing suite: **55 tests passed**, the shared-protocol synchronization check passed, package-local formatting passed and the repository syntax check passed for **30 modules and inline scripts**. Exact delivery commit is recorded in the thread's final response. Next: the app owner can consume the fixed state/action tokens and provide transaction/recovery context from its trusted lifecycle adapters. Live ingestion remains rejecting and no owner bank test is required for this work.

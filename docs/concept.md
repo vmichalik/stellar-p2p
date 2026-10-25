@@ -1,37 +1,51 @@
-# The idea
+# Pactlane
 
-I want to get from euros in my bank app to USDC in my Stellar wallet without sending money to an exchange first.
+I already have a bank account. If I need USDC in my wallet, I don't want another exchange account or another company holding a copy of my passport.
 
-The starting point is ZKP2P’s model: prove an off-chain payment, then use that proof to settle an on-chain trade. The Stellar version should feel simple: pick an offer, pay the seller in Revolut, prove the payment, receive USDC.
+I'm building Pactlane so two people can make that exchange directly. One person has USDC and wants euros. The other pays them through Revolut and receives USDC in their Stellar wallet. I'd rather the person supplying the USDC earned the margin than hand it to a big exchange.
 
-## Who it’s for
+## What someone would use the USDC for
 
-The first user is someone who already has Revolut and wants USDC on Stellar. The seller supplies the USDC and accepts EUR. A useful first pilot would be a small group trading with known limits; liquidity and reliable payment verification matter more than adding more rails.
+The buyer needs a reason to want USDC on Stellar. They might be funding an app such as [Blend](https://docs.blend.capital/tech-docs/integrations), whose lending pools accept it, or paying someone who already uses that asset and network.
 
-## Why Stellar
+Someone receiving USDC can also turn it into cash through a compatible [MoneyGram wallet](https://developer.moneygram.com/moneygram-developer/docs/integrate-moneygram-ramps), subject to its location and identity requirements. That could be part of a remittance route, although Pactlane doesn't provide that service and MoneyGram also supports Solana.
 
-The intended integration puts the USDC escrow and release rules in Soroban. The interesting part is bringing evidence from a normal payment app into that trade. Stellar is the settlement layer; the bank payment still happens outside the chain.
+Someone who just wants to hold dollars probably doesn't care which chain they're on. Someone who wants euros onchain may prefer [EURC, which is also issued on Stellar](https://www.circle.com/eurc). Getting euros onchain doesn't itself justify converting them to dollars.
 
-The escrow and policy now execute together locally against compiled Soroban WASM. A testnet deployment and real wallet transaction are still needed for the network demo.
+## Why use this instead of an exchange?
 
-## Why Revolut first
+If someone already uses Kraken and is happy with it, they may have no reason to switch. [Kraken supports Stellar USDC](https://support.kraken.com/articles/360000678446-cryptocurrencies-available-on-kraken), with [free EUR SEPA deposit options](https://support.kraken.com/articles/360000381846-cash-deposit-options-fees-minimums-and-processing-times-). [Ramp also supports buying Stellar USDC](https://support.rampnetwork.com/en/articles/432-what-cryptoassets-does-ramp-network-support) directly into a wallet.
 
-We found an individual-transfer response to target and built tooling around it. That gives us a narrow feasibility question: can the verifier authenticate a completed outgoing payment and bind it to the right order?
+I want an option for someone who would prefer to use their existing payment account and trade with another person. Avoiding another institution's onboarding and identity collection is a reason to choose that route, even when the institution offers a good product.
 
-MB WAY is a useful follow-on for Portugal. We have not established a working proof route for an MB WAY send. MB NET virtual cards address a different payment flow and do not, by themselves, prove that one person paid another. The MVP should not depend on resolving both rails.
+[Exchange availability](https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated) and [payment-app availability](https://help.revolut.com/en-PT/help/profile-and-plan/profile-plan/verifying-identity/what-countries-are-supported/) also differ. Someone can have access to one without the other. That is worth investigating country by country; it doesn't establish that Pactlane can serve them. The first build still requires Revolut.
 
-## Weekend scope
+## Less identity data to hand over
 
-One seller, one buyer, one EUR payment rail and testnet USDC. The finished demo should show an accepted proof, one release, and rejection when the same payment is submitted again.
+Already having completed KYC with a bank doesn't make me indifferent to doing it again elsewhere. Each additional company gets another set of sensitive documents. [Coinbase's May 2025 breach](https://www.coinbase.com/blog/protecting-our-customers-standing-up-to-extortionists) included government-ID images and customer account information.
 
-An order book, multiple banks, agent automation and private on-chain balances can wait. x402 and agent payments were early ideas; an agent could eventually fund its Stellar wallet through this flow, once the payment and settlement path works.
+The aim is to verify the payment using the facts needed for that trade, without Pactlane collecting another passport or a full bank statement. Revolut still knows who paid whom, the counterparty sees payment information, and Stellar transactions are public.
 
-## Decisions still open
+We still need to establish what identity checks a production service would require. The proof-service code also writes disclosed transcript data to server logs. That needs changing before a live privacy claim.
 
-- Can an existing outgoing transfer be proved reliably on the owner’s current MacBook Pro?
-- Which signed fields establish recipient, direction, completion and a stable payment ID?
-- How do we bind the payment to a newly reserved order and reject older payments?
-- Is the verifier-signer trust model useful enough for the first pilot?
-- Can the live host reliably reconcile every payment identity across deployments and manual recoveries?
+## Where the money goes
 
-Recovery is decided: after the payment lock, proof failure holds funds. A later valid proof can release, or both parties authorize the same release/refund/split. There is no unilateral post-lock timeout refund. An uncooperative party can leave funds locked.
+I like the idea that someone can earn money by making their USDC available to another person. They put up the funds and take the payment risk. The intended model lets them earn a margin in the price they offer.
+
+Bank, network and verification costs still need paying, and Pactlane's pricing isn't decided. Sellers could also be businesses.
+
+I also want to see whether we can beat card-on-ramp prices. [Ramp lists processing rates up to 3.9% for EUR card purchases and 1.4% for manual bank transfers](https://support.rampnetwork.com/en/articles/12634-fees-and-exchange-rates-when-buying-crypto). [Kraken Pro's base stablecoin trading fee is 0.20%](https://www.kraken.com/features/fee-schedule). Those are different services and neither figure is an all-in wallet quote. We need to compare euros paid with usable USDC received, including the seller's margin and every remaining charge.
+
+## What Pactlane would improve in a direct trade
+
+Once two people choose to trade, the difficult part is deciding when to release the crypto. The buyer has sent money and wants their USDC. The seller needs to know the right payment arrived. [OKX's dispute guidance](https://www.okx.com/en-us/help/how-do-i-raise-a-dispute-when-using-p2p-trading) describes the messages, screenshots and support cases that can follow a payment without a release.
+
+I'm borrowing [ZKP2P's approach](https://github.com/zkp2p/): authenticate payment data and use it to settle the trade. The seller funds the offer before the buyer pays. Payment instructions appear after the escrow lock confirms. Pactlane's verifier would check the payment against the order and sign an authorization for the Soroban contract to release USDC.
+
+The seller shouldn't need to inspect a screenshot and approve every normal trade. But payment evidence doesn't make a bank transfer irreversible. If verification fails after payment, USDC stays held until valid proof arrives or both people approve recovery. An uncooperative counterparty can leave the trade unresolved.
+
+## What I want to prove next
+
+I'd start with people who need USDC on Stellar and dislike opening another exchange account or already buy from other people. Find out what they actually used last time, whether identity collection affected that choice, and what price they'd accept. Ask sellers what they'd need to earn to supply USDC repeatedly. Then test whether the privacy benefit and direct trade are worth installing an extension and dealing with proof generation.
+
+The weekend build stays narrow: one buyer, one seller, EUR through Revolut, and a fixed USDC offer. The [public app](https://pactlane.io) currently simulates that flow. The payment policy and compiled Soroban escrow have executed together locally, including a release and replay rejection. An accepted authenticated bank payment and a confirmed testnet trade are still outstanding.

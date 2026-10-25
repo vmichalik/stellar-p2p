@@ -1,0 +1,23 @@
+{
+  "observedAt": "2026-10-25T14:11:34.639694+00:00",
+  "sourceRevision": "708b313bb79a8900817c2799fd7fc11ec85c0bb2",
+  "publicationReady": false,
+  "blocker": "Final app polish and two recovery fixes pending immutable app snapshot",
+  "currentBundleManifestSha256": "21ff15df7397dfe7f2422eb30b2344b1444c3b2fad23353e3119869a3f0a6c6a",
+  "rootTests": {
+    "passed": 115,
+    "skipped": 0,
+    "note": "Plus subsequent scoped 8/8 packaging/Worker tests after adding one module-intake case"
+  },
+  "policyTests": 55,
+  "protocolTests": 11,
+  "walletRpcTests": 11,
+  "pythonPreparationTests": 8,
+  "wranglerDryRun": "passed, official installed 4.152.0, ASSETS only",
+  "deploymentPerformed": false,
+  "dnsChanged": false,
+  "proofOriginChanged": false,
+  "operationalProofOrigin": "https://stellar-p2p-proof-vijay.fly.dev",
+  "canonicalProofOriginPending": "https://proof.pactlane.io",
+  "livePaymentGate": "NOT_CLEARED"
+}

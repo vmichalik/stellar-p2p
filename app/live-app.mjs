@@ -1,3 +1,4 @@
+import { modeToggle, extensionCard, whyPage } from './site-ui.mjs';
 import { resolveNetwork } from './network.mjs';
 import { browserWallet } from './wallet-dialog.mjs';
 import { createDeploymentWallet } from './deployment-wallet.mjs';
@@ -52,14 +53,8 @@ const row = (label, value) =>
   `<div class="detail-row"><span>${esc(label)}</span><strong>${value}</strong></div>`;
 const euros = (value) => `€${formatUnits(value, 2)}`;
 const networkLabel = (state) =>
-  state.view?.deployment ? resolveNetwork(state.view.deployment).label : 'Network not configured';
-const assetNotice = (state) =>
-  state.view?.deployment?.network === 'mainnet'
-    ? 'Mainnet · real assets'
-    : state.view?.deployment
-      ? 'Test assets only'
-      : 'Exchange not configured';
-const tokenLabel = (state) => state.view?.deployment?.tokenLabel ?? 'Token';
+  state.view?.deployment ? resolveNetwork(state.view.deployment).label : 'Stellar';
+const tokenLabel = (state) => state.view?.deployment?.tokenLabel ?? 'USDC';
 const deploymentDetails = (state) => {
   const value = state.view?.deployment;
   if (!value) return '';
@@ -91,47 +86,45 @@ const empty = (title, description, symbol = 'wallet', action = '') =>
 const connect = (state, role) =>
   button(`${state.account ? 'Use wallet' : 'Connect wallet'} ${icon('wallet')}`, 'connect', {
     id: role,
-    disabled: isBusy(state) || !state.view?.configured,
+    disabled: isBusy(state),
   });
-
-function howItWorks(state) {
-  return `<aside class="panel live-info-panel"><h2>Your bank app. Your wallet.</h2><p>A supplier provides the tokens. Escrow connects their funded offer to your payment.</p>
-    <div class="live-step"><span>1</span><div><strong>Reserve a funded offer</strong><p>The seller’s tokens are already in escrow.</p></div></div>
-    <div class="live-step"><span>2</span><div><strong>Lock before you pay</strong><p>Payment details appear only after the lock is confirmed.</p></div></div>
-    <div class="live-step"><span>3</span><div><strong>Verify, then receive</strong><p>Payment verification authorizes release to your wallet.</p></div></div>
-    <details class="live-disclosure"><summary>What is shared?</summary><p>Payment verification uses selected transfer details. The payment-policy operator receives those fields and authorizes release; the contract checks that authorization.</p><p>Revolut sees the bank payment and Stellar transfers are public. Review the disclosure before sharing payment details.</p></details>
-    <p class="small-note">${esc(networkLabel(state))} · ${esc(assetNotice(state))}</p></aside>`;
-}
-
-function exchangePurpose() {
-  return `<section class="live-purpose" aria-labelledby="live-purpose-title"><div><p class="eyebrow">WHY PACTLANE</p><h2 id="live-purpose-title">An exchange between people.</h2><p>Buyers bring euros. Suppliers bring tokens. Both see the amounts and the next step before committing.</p></div><div class="live-purpose-points"><div><h3>Receive in your own wallet</h3><p>Pay through the bank app you already use and receive the agreed tokens in a Stellar wallet you control.</p></div><div><h3>The supplier sets the quote</h3><p>Any supplier margin is built into their quote. Compare the exact amounts before reserving; bank, wallet or network charges may still apply.</p></div></div></section>`;
-}
 
 function market(state) {
   const view = state.view;
-  const offer = view?.offers.find((value) => value.id === state.selectedOfferId);
   const available =
     view?.offers.filter((value) => BigInt(value.offerExpiresAt) > BigInt(state.now)) ?? [];
-  const intro =
-    heading(
-      state.view?.deployment?.network === 'testnet' && tokenLabel(state) === 'Test token'
-        ? 'Buy test tokens'
-        : `Buy ${esc(tokenLabel(state))}`,
-      'Choose a funded supplier. Pay in EUR with Revolut. Receive tokens in your own wallet.',
-    ) + exchangePurpose();
+  const offer = available.find((value) => value.id === state.selectedOfferId);
+  const intro = heading(
+    'From Revolut to your Stellar wallet.',
+    'Choose a funded offer and pay in euros.',
+    'BUY USDC',
+  );
   if (!view?.configured)
     return (
       intro +
-      `<div class="trade-layout">${empty('The exchange is getting ready', 'This exchange is not configured yet. Funded offers will appear here when it is ready.', 'shield', button(`Refresh ${icon('refresh')}`, 'refresh', { disabled: isBusy(state), secondary: true }))}${howItWorks(state)}</div>`
+      empty(
+        'Offers are unavailable right now',
+        'Refresh to check again.',
+        'buy',
+        button(`Refresh ${icon('refresh')}`, 'refresh', {
+          disabled: isBusy(state),
+          secondary: true,
+        }),
+      )
     );
   if (!available.length)
     return (
       intro +
-      `<div class="trade-layout">${empty('No funded offers yet', 'Once a seller funds an offer, you can reserve the full amount here. No payment is needed to browse.', 'buy', button(`View seller workspace ${icon('arrow')}`, 'sell', { secondary: true }))}${howItWorks(state)}</div>`
+      empty(
+        'No offers available',
+        'Offers appear after the seller funds escrow.',
+        'buy',
+        button(`Sell USDC ${icon('arrow')}`, 'sell', { secondary: true }),
+      )
     );
   return (
     intro +
-    `<div class="market-layout"><section class="offers-column" aria-labelledby="offers-title"><div class="filter-bar"><div class="filter"><span>You pay with</span><strong><span class="currency-disc">€</span> EUR</strong></div><div class="filter"><span>Payment method</span><strong><span class="revolut-mark">R</span> Revolut</strong></div></div><div class="section-title"><h2 id="offers-title">Funded offers <span>${available.length}</span></h2><span>Fixed whole offer</span></div><div class="offer-list">${available.map((value) => `<button class="offer ${value.id === state.selectedOfferId ? 'selected' : ''}" data-action="offer" data-id="${esc(value.id)}" aria-pressed="${value.id === state.selectedOfferId}"><span class="offer-top"><span class="person"><span class="avatar peach">${icon('wallet')}</span><span><strong>Seller ${esc(short(value.seller))}</strong><span>Revolut · EUR</span></span></span>${pill('Funded', 'green')}</span><span class="offer-rate"><strong>${formatUnits(value.tokenAmount)} <span>${esc(tokenLabel(state))}</span></strong><span class="select-circle">${value.id === state.selectedOfferId ? icon('check') : ''}</span></span><span class="offer-bottom"><span>Order ${esc(value.id)}</span><span>Exact payment ${euros(value.fiatMinor)}</span></span></button>`).join('')}</div><div class="how-it-works"><div>${icon('lock')}<span>Funded escrow</span></div><div>${icon('shield')}<span>Verified payment</span></div><div>${icon('wallet')}<span>Your wallet</span></div></div></section>
+    `<div class="market-layout"><section class="offers-column" aria-labelledby="offers-title"><div class="filter-bar"><div class="filter"><span>You pay with</span><strong><span class="currency-disc">€</span> EUR</strong></div><div class="filter"><span>Payment method</span><strong><span class="revolut-mark">R</span> Revolut</strong></div></div><div class="section-title"><h2 id="offers-title">Funded offers <span>${available.length}</span></h2></div><div class="offer-list">${available.map((value) => `<button class="offer ${value.id === state.selectedOfferId ? 'selected' : ''}" data-action="offer" data-id="${esc(value.id)}" aria-pressed="${value.id === state.selectedOfferId}"><span class="offer-top"><span class="person"><span class="avatar peach">${icon('wallet')}</span><span><strong>Seller ${esc(short(value.seller))}</strong><span>Revolut · EUR</span></span></span>${pill('Funded', 'green')}</span><span class="offer-rate"><strong>${formatUnits(value.tokenAmount)} <span>${esc(tokenLabel(state))}</span></strong><span class="select-circle">${value.id === state.selectedOfferId ? icon('check') : ''}</span></span><span class="offer-bottom"><span>Order ${esc(value.id)}</span><span>Exact payment ${euros(value.fiatMinor)}</span></span></button>`).join('')}</div></section>
     <aside class="quote-panel panel"><div class="quote-heading"><h2>Your exchange</h2><span class="paired-mark" aria-hidden="true">↙↗</span></div>${offer ? `<div class="summary-amount"><span>You pay exactly</span><strong>${euros(offer.fiatMinor)}</strong></div><div class="quote-details">${row('You receive', token(offer.tokenAmount, state))}${row('Seller', esc(short(offer.seller)))}${row('Network', esc(networkLabel(state)))}${row('Pactlane fee', '€0.00')}</div>${deploymentDetails(state)}${state.roles.includes('buyer') ? button(`Reserve this offer ${icon('arrow')}`, 'reserve', { id: offer.id, disabled: !enabled(state, 'buyer', true) || offer.seller === state.account || BigInt(offer.offerExpiresAt) <= BigInt(state.now) }) : connect(state, 'buyer')}<p class="quote-footnote">${icon('lock')} No bank payment until the payment lock is confirmed.</p>` : '<p class="small-note">Select an offer to continue.</p>'}</aside></div>`
   );
 }
@@ -140,12 +133,8 @@ function seller(state) {
   const drafts = state.view?.sellerDrafts ?? [];
   const own = state.view?.ownerOrders.filter((value) => value.terms.seller === state.account) ?? [];
   return (
-    heading(
-      'Sell your tokens',
-      'Fund an approved offer and follow your trades from one place.',
-      'SELLER WORKSPACE',
-    ) +
-    `<div class="trade-layout"><div class="live-drafts">${!state.account || !state.roles.includes('seller') ? empty('Connect your seller wallet', 'Use the wallet assigned to your approved offer. Funding always requires your wallet approval.', 'wallet', connect(state, 'seller')) : drafts.length ? drafts.map((draft) => `<section class="panel live-draft">${pill('Ready to fund', 'orange')}<h2>${token(draft.publicTerms.token_amount, state)}</h2>${row('Buyer pays exactly', euros(draft.publicTerms.fiat_minor))}${row('Payment method', 'Revolut · EUR')}${row('Seller wallet', esc(short(draft.publicTerms.seller)))}<div class="live-actions">${button(`Fund escrow ${icon('lock')}`, 'fund', { id: draft.id, disabled: !enabled(state, 'seller', true) })}</div><p class="small-note">Recipient details stay private until a buyer’s payment lock is confirmed.</p></section>`).join('') : empty('Your offers will appear here', 'There are no approved, unfunded offers for this wallet. Existing trades are listed below.', 'sell')}
+    heading('Sell USDC', 'Fund an offer to make it available to buyers.', 'SELLER WORKSPACE') +
+    `<div class="trade-layout"><div class="live-drafts">${!state.account || !state.roles.includes('seller') ? empty('Connect your seller wallet', 'Connect the wallet you want to sell from.', 'wallet', connect(state, 'seller')) : drafts.length ? drafts.map((draft) => `<section class="panel live-draft">${pill('Ready to fund', 'orange')}<h2>${token(draft.publicTerms.token_amount, state)}</h2>${row('Buyer pays exactly', euros(draft.publicTerms.fiat_minor))}${row('Payment method', 'Revolut · EUR')}${row('Seller wallet', esc(short(draft.publicTerms.seller)))}<div class="live-actions">${button(`Fund escrow ${icon('lock')}`, 'fund', { id: draft.id, disabled: !enabled(state, 'seller', true) })}</div><p class="small-note">Recipient details stay private until a buyer’s payment lock is confirmed.</p></section>`).join('') : empty('Your offers will appear here', 'No draft offers for this wallet.', 'sell')}
     ${own.length ? `<section><div class="section-title"><h2>Your trades</h2><span>${own.length}</span></div>${orderList(own, state)}</section>` : ''}</div><aside class="panel live-info-panel"><h2>Your wallet</h2><div class="live-balance">${formatUnits(state.view?.balances?.tokenAtoms)}</div><p>${esc(tokenLabel(state))} on ${esc(networkLabel(state))}</p>${row('Account', esc(short(state.account)))}${deploymentDetails(state)}${row('Balance', !state.view?.balances ? 'Unavailable' : state.status === 'ready' ? 'Confirmed read' : 'Last confirmed read')}<div class="escrow-note">${icon('shield')}<p>After payment is locked, funds stay held until verified release or an agreement authorized by both wallets.</p></div></aside></div>`
   );
 }
@@ -270,28 +259,40 @@ function render() {
   const progress = state.pending
     ? `<div class="live-progress" role="status"><div class="progress-line">${state.pending.status === 'unknown' ? icon('clock') : '<span class="spinner" aria-hidden="true"></span>'}<span>${state.pending.status === 'unknown' ? 'Confirmation pending. Your transaction may still complete.' : state.pending.status === 'wallet' ? 'Confirm the request in your wallet.' : 'Waiting for the exchange to confirm this operation.'}</span></div>${state.pending.status === 'unknown' && state.pending.operationId ? `<div class="live-actions">${button('Check pending operation', 'resume', { secondary: true })}</div>` : ''}</div>`
     : '';
-  const alert = state.error
-    ? `<div class="live-alert" role="alert">${icon('info')}<div><strong>${state.error.outcome === 'unknown' ? 'Keep this trade open' : 'This step needs attention'}</strong><p>${esc(state.error.message)}</p></div></div>`
-    : '';
-  const unavailable =
-    state.view?.configured && !state.view.readiness.submission
-      ? `<div class="live-alert">${icon('info')}<div><strong>Transactions are not enabled yet</strong><p>You can connect your wallet and inspect trades. Funding and settlement stay unavailable until the exchange is ready.</p></div></div>`
+  const alert =
+    state.error && (state.view?.configured || !['buy', 'why'].includes(route))
+      ? `<div class="live-alert" role="alert">${icon('info')}<div><strong>${state.error.outcome === 'unknown' ? 'Keep this trade open' : 'This step needs attention'}</strong><p>${esc(state.error.message)}</p></div></div>`
       : '';
   const body =
-    state.status === 'loading' && !state.view
-      ? `${heading('Your exchange, with confidence', 'Reading the current state of Pactlane.')}<section class="panel live-empty" role="status"><span class="spinner" aria-hidden="true"></span><p>Connecting to the exchange…</p></section>`
+    state.status === 'loading' && !state.view && route !== 'why'
+      ? `${heading('From Revolut to your Stellar wallet.', 'Choose a funded offer and pay in euros.')}<section class="panel live-empty" role="status"><span class="spinner" aria-hidden="true"></span><p>Connecting to the exchange…</p></section>`
       : route === 'sell'
         ? seller(state)
         : route === 'trades'
           ? trades(state)
           : route === 'trade'
             ? trade(state)
-            : market(state);
+            : route === 'why'
+              ? whyPage()
+              : market(state);
   root.setAttribute(
     'aria-busy',
     String(state.status === 'loading' || state.status === 'refreshing'),
   );
-  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="wordmark" href="/" aria-label="Pactlane home"><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span>Pactlane<span class="brand-dot">.</span></a><p class="nav-label">YOUR EXCHANGE</p><nav aria-label="Main navigation"><button class="nav-item ${route === 'buy' ? 'active' : ''}" data-action="buy">${icon('buy')} Buy tokens</button><button class="nav-item ${route === 'sell' ? 'active' : ''}" data-action="sell">${icon('sell')} Sell tokens</button><button class="nav-item ${['trades', 'trade'].includes(route) ? 'active' : ''}" data-action="trades">${icon('receipt')} Your trades <span class="nav-count">${state.view?.ownerOrders.length ?? 0}</span></button></nav><div class="sidebar-bottom"><div class="network-badge"><span class="network-dot"></span>${esc(networkLabel(state))}</div><p>Make a pact.<br />Move forward.</p><span class="sidebar-caption">Payment proof. Clear settlement.</span></div></aside><div class="workspace"><header class="app-header"><span class="header-location">Exchange / ${route === 'sell' ? 'Sell' : ['trades', 'trade'].includes(route) ? 'Your trades' : 'Buy'}</span><div class="header-actions"><a class="text-button" href="/wallet">Wallet setup</a><span class="live-header-role">${esc(assetNotice(state))}</span><button class="icon-button" data-action="refresh" aria-label="Refresh confirmed status" ${isBusy(state) ? 'disabled' : ''}>${icon('refresh')}</button>${state.account ? `<span class="wallet-button live-account">${icon('wallet')}${esc(short(state.account))}</span><button class="icon-button" data-action="logout" aria-label="Disconnect wallet">${icon('close')}</button>` : `<button class="wallet-button" data-action="connect" data-id="${currentRole}" ${isBusy(state) || !state.view?.configured ? 'disabled' : ''}>${icon('wallet')} Connect wallet</button>`}</div></header><main id="main" tabindex="-1">${alert}${progress}${unavailable}${body}</main><footer class="app-footer"><span>Built for a clearer exchange.</span><span>${esc(networkLabel(state))} · confirmed transactions only</span></footer></div></div>`;
+  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="wordmark" href="/" aria-label="Pactlane home"><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span>pactlane<span class="brand-dot">.</span></a><p class="nav-label">YOUR WORKSPACE</p><nav aria-label="Main navigation">${[
+    ['buy', 'buy', 'Buy USDC'],
+    ['sell', 'sell', 'Sell USDC'],
+    ['trades', 'receipt', 'My trades'],
+    ['why', 'info', 'Why Pactlane'],
+  ]
+    .map(
+      ([name, symbol, label]) =>
+        `<button class="nav-item ${route === name || (name === 'trades' && route === 'trade') ? 'active' : ''}" data-action="${name}" ${route === name ? 'aria-current="page"' : ''}>${icon(symbol)} ${label}</button>`,
+    )
+    .join(
+      '',
+    )}</nav>${extensionCard()}<div class="sidebar-bottom"><div class="network-badge"><span class="network-dot"></span>${esc(networkLabel(state))}</div></div></aside><div class="workspace"><header class="app-header">${modeToggle(false, !!state.pending)}<div class="header-actions">${state.account ? `<span class="wallet-button live-account">${icon('wallet')}${esc(short(state.account))}</span><button class="icon-button" data-action="logout" aria-label="Disconnect wallet">${icon('close')}</button>` : `<button class="wallet-button" data-action="connect" data-id="${currentRole}" ${isBusy(state) ? 'disabled' : ''}>${icon('wallet')} Connect wallet</button>`}</div></header><main id="main" tabindex="-1">${alert}${progress}${body}</main><footer class="app-footer"><span>Peer-to-peer. On Stellar.</span></footer></div></div>`;
+  document.title = `Pactlane · ${route === 'why' ? 'Why Pactlane' : route === 'sell' ? 'Sell USDC' : route === 'buy' ? 'Buy USDC' : 'My trades'}`;
 
   if (focus)
     [...root.querySelectorAll('[data-action]')]
@@ -312,7 +313,7 @@ function toast(message) {
 }
 async function action(name, id) {
   try {
-    if (['buy', 'sell', 'trades'].includes(name)) {
+    if (['buy', 'sell', 'trades', 'why'].includes(name)) {
       route = name;
       render();
       return;

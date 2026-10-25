@@ -26,7 +26,7 @@ export function tradePresentation(order, viewer = 'buyer', now = Date.now()) {
   const terminal = ['completed', 'resolved', 'refunded'].includes(order.status);
   const base = {
     heldAtoms: terminal ? 0 : order.tokenAtoms,
-    fundsLabel: Number.isFinite(order.lockedAt) ? 'Payment locked' : 'Reserved',
+    fundsLabel: order.lockedAt ? 'Payment locked' : 'Reserved',
     nextActor: 'Ana',
     tone: 'pending',
   };

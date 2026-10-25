@@ -123,10 +123,8 @@ export function friendlyError(error) {
   if (error?.outcome === 'unknown')
     return 'Confirmation is still pending. Check this operation before starting another; closing the wallet does not cancel a submitted transaction.';
   const messages = {
-    DEPLOYMENT_NOT_CONFIGURED:
-      'This exchange is not ready yet. Please check back when setup is complete.',
-    HOST_NOT_CONFIGURED:
-      'This exchange is not ready yet. Please check back when setup is complete.',
+    DEPLOYMENT_NOT_CONFIGURED: 'The exchange is unavailable right now. Please try again shortly.',
+    HOST_NOT_CONFIGURED: 'The exchange is unavailable right now. Please try again shortly.',
     DEPLOYMENT_UNAVAILABLE:
       'The exchange is unavailable. No transaction was submitted; refresh before trying again.',
     WALLET_REJECTED:

@@ -78,3 +78,18 @@ protocol/vectors.json
 src/lib.rs
 src/test.rs
 ```
+
+## UI semantics review for integration (25 October 2026)
+
+Reviewed fresh local sources: `pactlane-ui` at `f4c6c42` and `pactlane-integration` at `c8f44752b82b1fe8f766028a782e7759caef2cc7`. Their `app/app.mjs` and `app/model.mjs` are byte-identical. Escrow/protocol remain frozen at `6196df3`; this update changes this explanatory handoff only. The following corrections belong to the UI/integration lane; root handles delivery.
+
+1. **Keep late-proof access during recovery.** `app/app.mjs:200,228` hides the payment panel when a proposal exists and offers verification only when `paymentReported` is already true. For a locked Paying order, always retain **“Verify an existing payment”** while agreement is pending, including after `pay_by`. If not yet reported, use the existing payment-report/check entry path. A browser report remains display state, never evidence that payment occurred.
+2. **Keep the pre-lock expiry exception accessible.** The same proposal-first rendering hides the refund action for expired Reserved orders. Show **“Return expired reservation to seller”** when the authoritative state is Reserved and `now >= pay_by`, even with a proposal. Never show this action for Paying. A proposal does not itself create a payment lock.
+3. **Name the lock and deadline precisely.** At `app/app.mjs:189,194,289`, prefer **“Confirm escrow lock”** / **“Confirming escrow lock…”** over “Lock payment window.” Add **“Pay before {pay_by, with timezone}. Confirming the lock does not extend this deadline.”** Keep recipient details and copy controls hidden until lock confirmation; the model already gates this correctly.
+4. **Make failure and late-payment copy explicit.** At `app/app.mjs:193,209`, use **“Your USDC is still held. Don’t pay again. You can retry verification or agree on a resolution with the seller.”** For the ended payment window: **“Don’t send a new payment. You can still verify a transfer made after the lock confirmed and before {pay_by}.”** The payment deadline ends new-payment eligibility, not the ability to prove an earlier eligible transfer or the escrow hold.
+5. **Describe both valid exit paths.** At `app/app.mjs:200`, replace “stays held until the agreement is confirmed” with **“Funds stay held until a valid payment check settles the trade or both wallets confirm the same allocation.”** Retain **“A proposal or one approval does not move funds.”** Live recovery must authorize the exact same order/allocation with both wallets and confirm the transaction before showing a final balance. A proof retry may still settle while a proposal is pending.
+6. **Keep branding and evidence status aligned.** Use Pactlane / `pactlane.io` for the app and `proof.pactlane.io` for the payment-check surface; root owns DNS and reachability. Domain branding must not remove the visible **“Demo · Simulated payments and settlement”** status or turn sample receipts into claimed chain confirmations.
+
+Source review found the existing model correctly restricts expired-reservation refunds to Reserved, requires both demo approvals for resolution, allows verification after the payment deadline, and hides instructions before a confirmed lock. Preserve those behaviors. No unilateral post-payment unlock exists in the frozen contract; do not add one to resolve a UX dead end.
+
+Verification for this review: read/diff/hash checks only. No contract/protocol edits, new tests, test expansion, browser rehearsal, deployment, bank request or owner testing was performed. Prior test results above are historical for the frozen snapshot and were not refreshed by this copy review.

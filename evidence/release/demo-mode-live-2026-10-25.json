@@ -1,0 +1,251 @@
+{
+  "checkedAt": "2026-10-25T23:23:32.548Z",
+  "sourceRevision": "a492f13557cd88b97b9ecf49f619084982238e25",
+  "scope": "PUBLIC_SITE_UI_AND_ASSET_VERIFICATION",
+  "origin": "https://pactlane.io",
+  "liveDefault": true,
+  "demoToggle": true,
+  "demoConnectionsBlocked": true,
+  "extensionInSidebar": true,
+  "whySeparateTab": true,
+  "unfundedOffersHidden": true,
+  "hashes": [
+    {
+      "path": "index.html",
+      "sha256": "ed15d7c5f9b3941d54a5a45dfda5667b4969ef2eaa6780a0bbdfaa832364c709",
+      "bytes": 2877
+    },
+    {
+      "path": "entry.mjs",
+      "sha256": "61a105e75b61cfc381c1383ab1858b47b803c20156b74834f7e0df8e49619dc9",
+      "bytes": 1018
+    },
+    {
+      "path": "site-ui.mjs",
+      "sha256": "72d338bdd266780998045f610c3ba3f85abda1fdfe1d388d975b0a762e22fc9d",
+      "bytes": 2219
+    },
+    {
+      "path": "site-shell.css",
+      "sha256": "4abb0cc5b35eefc670a1b6b859537ad9836ab3769791d2b76809d690b0179a84",
+      "bytes": 4808
+    },
+    {
+      "path": "marketplace.mjs",
+      "sha256": "55bb502aa55c91eac9558df3adede1871cbd9b6afbfba38e9f2f229c77659afa",
+      "bytes": 444
+    },
+    {
+      "path": "live-app.mjs",
+      "sha256": "21053680e795aabde48e759ed3b8306e3db7e2a197f93a49230d1f9cf2ba3d52",
+      "bytes": 31886
+    },
+    {
+      "path": "live-view-adapter.mjs",
+      "sha256": "df2bc26dc8592f02d7012b5412e25f0b35264a0b293773fd34cb03a12b495828",
+      "bytes": 32121
+    },
+    {
+      "path": "live-styles.css",
+      "sha256": "1364ae591838d9540eb1ae3fc6361e6c29a3052b719e208a60823842a20aaeff",
+      "bytes": 6883
+    },
+    {
+      "path": "host-client.mjs",
+      "sha256": "ad79e58371d8aa1c3b732077268d6dd24c828d766f4ee333cb64af66aa5b3e5f",
+      "bytes": 32164
+    },
+    {
+      "path": "network.mjs",
+      "sha256": "e77bb524731f72190e72294755c2a246406f0ebd395f9223e6d7df2ff6a54432",
+      "bytes": 1156
+    },
+    {
+      "path": "deployment-wallet.mjs",
+      "sha256": "7fe52cd23378aef509a73cce92f336724ed5d89008d5a54dc70d298676592653",
+      "bytes": 2687
+    },
+    {
+      "path": "freighter-connector.mjs",
+      "sha256": "cd21e7bc46a4aa315f67e4776c20ed7c33574d80c733033ab6c847b066680216",
+      "bytes": 10685
+    },
+    {
+      "path": "wallet-dialog.mjs",
+      "sha256": "c120a2a8b0f90827203c984b1ee278b53a6cf504db40bad5781366eb4a611480",
+      "bytes": 6106
+    },
+    {
+      "path": "vendor/freighter-api.js",
+      "sha256": "d797429cf97f9a67f1999910830a89dc01d565aedebafb651a11b1ed003a7e9d",
+      "bytes": 10687
+    },
+    {
+      "path": "vendor/walletconnect.mjs",
+      "sha256": "3dd4f9cfbd148a0f527cb21cfec010eccef3880504f5a54d850cd43a6e90ff1d",
+      "bytes": 520063
+    },
+    {
+      "path": "styles.css",
+      "sha256": "92cb540f735a50a4f708a145c79f65071d91022527609a46706ec5f7d77a0a08",
+      "bytes": 55454
+    },
+    {
+      "path": "app.mjs",
+      "sha256": "e3427714467461abe05c22e42ad41ac16d9f3363027aee444338f53431fc8e4d",
+      "bytes": 53650
+    },
+    {
+      "path": "model.mjs",
+      "sha256": "6bab9aeed89e15686ea1ae281a2d46751bb43b82ee2f421c8447dda81e8a89ce",
+      "bytes": 13610
+    },
+    {
+      "path": "demo-adapter.mjs",
+      "sha256": "a594e7b29e1570a9fccebe1ecd4b6f8f224a71e9cae5959c4ac129a3d8bf41aa",
+      "bytes": 3668
+    },
+    {
+      "path": "presentation.mjs",
+      "sha256": "1ecfe5cbc0c61686780eb1d50c9389df0610c30805e245bc3b1ab97d39bd4d15",
+      "bytes": 7303
+    },
+    {
+      "path": "assets/fonts/manrope.woff2",
+      "sha256": "e310b55a7fd9677f5e3555e6c6c4d064fa1f1d24393f0ddbe217cea12a8c432f",
+      "bytes": 24576
+    },
+    {
+      "path": "assets/fonts/OFL.txt",
+      "sha256": "d6a309fcfb963d329a93baf9df66fa5f3c23a4be2b5f67edf24d6cafecde12ac",
+      "bytes": 4386
+    },
+    {
+      "path": "assets/social-preview.png",
+      "sha256": "ea638b28167620273ae2310550d6af144df939849d8bda2f677b52fcb3b20cd1",
+      "bytes": 256278
+    },
+    {
+      "path": "assets/favicon.svg",
+      "sha256": "a88935722e815d49768c99e9eed87d6ba758e0b19342db7c6456821425f8b6fe",
+      "bytes": 334
+    },
+    {
+      "path": "assets/social/og-default.png",
+      "sha256": "ea638b28167620273ae2310550d6af144df939849d8bda2f677b52fcb3b20cd1",
+      "bytes": 256278
+    },
+    {
+      "path": "assets/social/og-default.jpg",
+      "sha256": "32116a99787dcdb2ccfdaf52054ae25aabd400576e81d2ed60c67b96979735d2",
+      "bytes": 99655
+    },
+    {
+      "path": "assets/social/og-dark.png",
+      "sha256": "c7303533c84738a55a19f410607fa1d156d9bed25a5db1c3e9ecaf554f96bd42",
+      "bytes": 230423
+    },
+    {
+      "path": "assets/social/og-dark.jpg",
+      "sha256": "937e4c6e979be822b290e25130eff0e4592be9b0109e012c46734a77dbbedaa8",
+      "bytes": 91404
+    },
+    {
+      "path": "assets/social/social-link-wide.png",
+      "sha256": "8318f3b5bead8368eee397dec0502e0a6f021c1e04482feaceb5fafc249a68c0",
+      "bytes": 238059
+    },
+    {
+      "path": "assets/social/social-link-wide.jpg",
+      "sha256": "a7593d7d0e8e54e330ce90a2c822f6354eaae61d336618eec2c6d99bf9cf1e47",
+      "bytes": 94897
+    },
+    {
+      "path": "assets/social/social-landscape.png",
+      "sha256": "58755b3dc5f6e384671b2f90e4703fe02aa8f9356ef3b69c2bb962510f8f9019",
+      "bytes": 465080
+    },
+    {
+      "path": "assets/social/social-landscape.jpg",
+      "sha256": "8a0b51c0f804bd35c11a29e197c52d99810f10a318285041f828be02e9471154",
+      "bytes": 157558
+    },
+    {
+      "path": "assets/social/social-square.png",
+      "sha256": "2191ed612e5502bc35dec200f64c3771f67da3d0bea3426b1d3f866b223b379b",
+      "bytes": 307721
+    },
+    {
+      "path": "assets/social/social-square.jpg",
+      "sha256": "028b0b028e969ee0f96b0ea4cfc447bd07fcc6c7aa994f98518e1b24a458f662",
+      "bytes": 118504
+    },
+    {
+      "path": "assets/social/social-portrait.png",
+      "sha256": "d08d03034a436541d64990decfd4a634ddca6f9650b036ee78af73a788038462",
+      "bytes": 409374
+    },
+    {
+      "path": "assets/social/social-portrait.jpg",
+      "sha256": "af506054a520c6f4102712285a31939a2f44af2ad3b59273d35fdd73050716b5",
+      "bytes": 156529
+    },
+    {
+      "path": "assets/social/social-story.png",
+      "sha256": "8081c793935dd2a3b477a4af2a1a8be227a7698a48b0b05c7c68679e6e4b26a1",
+      "bytes": 498211
+    },
+    {
+      "path": "assets/social/social-story.jpg",
+      "sha256": "98c91fae8358bb2ef8f5a3ae25e7130987eabdde6c433e9fce8c48a341e7cd92",
+      "bytes": 164515
+    },
+    {
+      "path": "assets/social/og-default-32116a99787d.jpg",
+      "sha256": "32116a99787dcdb2ccfdaf52054ae25aabd400576e81d2ed60c67b96979735d2",
+      "bytes": 99655
+    },
+    {
+      "path": "assets/social/social-link-wide-a7593d7d0e8e.jpg",
+      "sha256": "a7593d7d0e8e54e330ce90a2c822f6354eaae61d336618eec2c6d99bf9cf1e47",
+      "bytes": 94897
+    },
+    {
+      "path": "demo.mp4",
+      "sha256": "49f8ec2b46b35981bcee0398ed0206dcafa5131e20afa24be608a8eba2129436",
+      "bytes": 4764952
+    },
+    {
+      "path": "demo-script.txt",
+      "sha256": "d664a70fae94ce25d3d9bbb2e29769a8f925beef2172fa716b3311fd7e293645",
+      "bytes": 2821
+    }
+  ],
+  "aliases": [
+    {
+      "host": "www.pactlane.io",
+      "status": 308,
+      "location": "https://pactlane.io/?demo=1"
+    },
+    {
+      "host": "app.pactlane.io",
+      "status": 308,
+      "location": "https://pactlane.io/?demo=1"
+    }
+  ],
+  "pageErrors": [],
+  "liveBackendAvailable": false,
+  "paymentGate": "NOT_CLEARED",
+  "deployment": {
+    "id": "b2b2b9ec-70ee-4506-a002-e09295b066a0",
+    "created_on": "2026-10-25T23:23:12.687629Z",
+    "versions": [
+      {
+        "version_id": "c7154099-63c9-4c7b-987d-cb0b7f706aa4",
+        "percentage": 100
+      }
+    ]
+  },
+  "worker": "pactlane-demo",
+  "rollbackVersion": "98f4d8fa-ed5e-4cfe-a45c-07db641aa6d6"
+}

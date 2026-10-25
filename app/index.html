@@ -2,26 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#f7f5ee" />
     <meta
       name="description"
-      content="Explore paying a peer from an existing bank account to receive USDC in a Stellar wallet. Synthetic demo: no real funds or bank verification."
+      content="Trade euros for USDC on Stellar. Pay someone through Revolut. Receive USDC in your Stellar wallet. Simulated walkthrough with no live payment or settlement."
     />
-    <title>Pactlane · From your bank app to your Stellar wallet</title>
+    <title>Pactlane · Buy USDC</title>
+    <link rel="canonical" href="https://pactlane.io/" />
+    <meta property="og:site_name" content="Pactlane" />
+    <meta property="og:url" content="https://pactlane.io/" />
+    <meta property="og:title" content="Pactlane · USDC exchange on Stellar" />
+    <meta
+      property="og:description"
+      content="Interactive buyer and seller demo with sample data. No real funds move."
+    />
+    <meta name="robots" content="noindex, nofollow" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%23ed7047'/%3E%3Cpath d='M12 29V11h9a6 6 0 010 12h-9m5-12v18' fill='none' stroke='%232d382e' stroke-width='3'/%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="./styles.css" />
-    <script type="module" src="./app.mjs"></script>
+    <link rel="stylesheet" href="./live-styles.css" />
+    <link rel="stylesheet" href="./site-shell.css" />
+    <script type="module" src="./entry.mjs"></script>
   </head>
-  <body class="demo-app">
+  <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <div id="pactlane"></div>
     <div id="flow-announcement" class="sr-only" role="status" aria-live="polite"></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <dialog id="modal" aria-labelledby="modal-title"></dialog>
-    <noscript>Pactlane’s interactive demo needs JavaScript.</noscript>
+    <noscript>Pactlane needs JavaScript.</noscript>
   </body>
 </html>

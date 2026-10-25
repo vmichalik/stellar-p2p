@@ -28,6 +28,10 @@ Build: `node scripts/build-demo.mjs --media-dir /private/tmp/pactlane-live-socia
 
 ## Publication and next action
 
-Publication receipt will be added after the existing Worker version is activated and checked publicly. Prior production version is `98f4d8fa-ed5e-4cfe-a45c-07db641aa6d6`. No source push to GitHub is part of this update.
+Published source: `a492f13557cd88b97b9ecf49f619084982238e25`. Cloudflare Worker `pactlane-demo` now runs version `c7154099-63c9-4c7b-987d-cb0b7f706aa4` at 100%; deployment `b2b2b9ec-70ee-4506-a002-e09295b066a0` was created at 23:23:12.687 UTC. Prior production version `98f4d8fa-ed5e-4cfe-a45c-07db641aa6d6` remains the rollback reference. No source push to GitHub occurred.
+
+Public browser verification completed at 23:23:32.548 UTC: default live UI, explicit demo toggle, demo connection-blocking CSP, sidebar extension link, separate Why tab, mobile navigation and no sample offers in live mode all passed with zero page errors. All 42 served asset hashes matched the clean source build. Both www/app aliases returned308 preserving `?demo=1`. The real API returned its expected explicit503; this is not live trading acceptance. See `evidence/release/demo-mode-live-2026-10-25.json`.
+
+Owner handoff: https://pactlane.io/ (live UI) and https://pactlane.io/?demo=1 (full simulated flow). No local preview is needed on the MacBook. The following documentation commit records this publication; it is not another deployed source version. Remaining untracked artifacts are ignored `.private/ui-check`, `dist/demo` and local dependency links; there are no pending source changes after that commit.
 
 After this website change, compose the durable, configured mainnet exchange host and serve/proxy its authenticated same-origin routes. Carry this frontend into that host and update its static allowlist before switching the public backend. Prepare actual contract deployment/funding transactions for owner review and signing; keep the historical payment separate from the new trade. Do not instruct the owner to send EUR0.89 before escrow is confirmed locked and the verification service is ready.

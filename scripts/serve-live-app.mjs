@@ -14,7 +14,14 @@ if (process.env.PACTLANE_HOST_MODULE) {
   const module = await import(pathToFileURL(resolve(process.env.PACTLANE_HOST_MODULE)).href);
   runtime = await module.createRuntime({ publicOrigin });
 }
-const app = await createLiveServer({ publicOrigin, runtime });
+const app = await createLiveServer({
+  publicOrigin,
+  runtime,
+  walletConnect: {
+    projectId: process.env.PACTLANE_WALLETCONNECT_PROJECT_ID ?? '',
+    appUrl: process.env.PACTLANE_WALLETCONNECT_APP_URL ?? publicOrigin,
+  },
+});
 const server = createServer(
   { requestTimeout: 15_000, headersTimeout: 10_000, maxHeaderSize: 16_384 },
   app.handler,

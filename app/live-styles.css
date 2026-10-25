@@ -296,3 +296,78 @@
     gap: 16px;
   }
 }
+
+.wallet-setup {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 36px 24px;
+}
+.wallet-setup h1 {
+  font-size: 32px;
+  line-height: 1.25;
+  margin: 18px 0;
+}
+.wallet-setup > .panel {
+  padding: 24px;
+  margin-top: 24px;
+}
+.wallet-setup .panel > p,
+.wallet-setup li {
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 12px 0;
+}
+.wallet-setup select {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin: 12px 0;
+  padding: 10px;
+  font: inherit;
+}
+.wallet-result {
+  padding-top: 16px;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.wallet-connection-dialog {
+  max-width: 440px;
+}
+.wallet-connection-dialog h2 {
+  padding-right: 0;
+  font-size: 25px;
+}
+.wallet-connection-dialog > p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.wallet-connection-dialog > .button {
+  margin-top: 12px;
+}
+.wallet-connection-dialog img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 16px auto;
+}
+.wallet-connection-dialog textarea {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin: 16px 0;
+  font: inherit;
+  font-size: 16px;
+}
+@media (max-width: 620px) {
+  .live-app .header-actions > a {
+    font-size: 12px;
+  }
+  .wallet-setup {
+    padding: 24px 18px;
+  }
+}
+
+.wallet-setup [hidden] {
+  display: none !important;
+}

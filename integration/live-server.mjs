@@ -3,14 +3,23 @@ import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { createBrowserBridge } from './browser-bridge.mjs';
 import { createHostRuntime } from './host-runtime.mjs';
+import { walletConfiguration, walletBundle } from './wallet-assets.mjs';
 
 const app = resolve(import.meta.dirname, '../app');
 const routes = new Map([
   ['/', ['live.html', 'text/html; charset=utf-8']],
-  ...['live-app.mjs', 'live-view-adapter.mjs', 'host-client.mjs', 'network.mjs'].map((name) => [
-    `/${name}`,
-    [name, 'text/javascript; charset=utf-8'],
-  ]),
+  ['/wallet', ['wallet-setup.html', 'text/html; charset=utf-8']],
+  ...[
+    'live-app.mjs',
+    'live-view-adapter.mjs',
+    'host-client.mjs',
+    'network.mjs',
+    'deployment-wallet.mjs',
+    'freighter-connector.mjs',
+    'wallet-dialog.mjs',
+    'wallet-setup.mjs',
+  ].map((name) => [`/${name}`, [name, 'text/javascript; charset=utf-8']]),
+
   ...['styles.css', 'live-styles.css'].map((name) => [
     `/${name}`,
     [name, 'text/css; charset=utf-8'],
@@ -22,9 +31,15 @@ const routes = new Map([
 export async function createLiveServer({
   publicOrigin,
   runtime = createHostRuntime(),
+  walletConnect = {},
   ...bridgeOptions
 } = {}) {
   const origin = new URL(publicOrigin);
+  const walletConfig = walletConfiguration({ ...walletConnect, publicOrigin });
+  const mobileBundle = walletConfig.enabled ? await walletBundle() : null;
+  const walletConnections = walletConfig.enabled
+    ? ' https://relay.walletconnect.com wss://relay.walletconnect.com https://relay.walletconnect.org wss://relay.walletconnect.org https://pulse.walletconnect.org https://verify.walletconnect.com https://verify.walletconnect.org'
+    : '';
   const freighter = await readFile(
     new URL('node_modules/@stellar/freighter-api/build/index.min.js', import.meta.url),
   );
@@ -50,8 +65,7 @@ export async function createLiveServer({
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer',
-    'Content-Security-Policy':
-      "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+    'Content-Security-Policy': `default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'${walletConnections}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`,
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   };
   return Object.freeze({
@@ -66,7 +80,13 @@ export async function createLiveServer({
         const url = new URL(request.url, publicOrigin);
         if (url.origin !== publicOrigin || url.search || url.hash) throw Error();
         let body, type;
-        if (url.pathname === '/vendor/freighter-api.js') {
+        if (url.pathname === '/wallet-config.json') {
+          body = JSON.stringify(walletConfig);
+          type = 'application/json; charset=utf-8';
+        } else if (url.pathname === '/vendor/walletconnect.mjs' && mobileBundle) {
+          body = mobileBundle;
+          type = 'text/javascript; charset=utf-8';
+        } else if (url.pathname === '/vendor/freighter-api.js') {
           body = freighter;
           type = 'text/javascript; charset=utf-8';
         } else {

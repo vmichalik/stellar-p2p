@@ -1,4 +1,6 @@
 import { resolveNetwork } from './network.mjs';
+import { browserWallet } from './wallet-dialog.mjs';
+import { createDeploymentWallet } from './deployment-wallet.mjs';
 import { createHostClient } from './host-client.mjs';
 import {
   createLiveViewAdapter,
@@ -7,7 +9,14 @@ import {
   parseTokenUnits,
 } from './live-view-adapter.mjs';
 
-const client = createHostClient();
+const freighter = createDeploymentWallet({
+  readDeployment: () => adapter.snapshot().view?.deployment,
+  createWallet: browserWallet,
+  onInvalidate: () => {
+    adapter?.logout().catch(() => {});
+  },
+});
+const client = createHostClient({ freighter });
 const adapter = createLiveViewAdapter({ client });
 const root = document.querySelector('#pactlane');
 const toastElement = document.querySelector('#toast');
@@ -282,7 +291,8 @@ function render() {
     'aria-busy',
     String(state.status === 'loading' || state.status === 'refreshing'),
   );
-  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="wordmark" href="/" aria-label="Pactlane home"><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span>Pactlane<span class="brand-dot">.</span></a><p class="nav-label">YOUR EXCHANGE</p><nav aria-label="Main navigation"><button class="nav-item ${route === 'buy' ? 'active' : ''}" data-action="buy">${icon('buy')} Buy tokens</button><button class="nav-item ${route === 'sell' ? 'active' : ''}" data-action="sell">${icon('sell')} Sell tokens</button><button class="nav-item ${['trades', 'trade'].includes(route) ? 'active' : ''}" data-action="trades">${icon('receipt')} Your trades <span class="nav-count">${state.view?.ownerOrders.length ?? 0}</span></button></nav><div class="sidebar-bottom"><div class="network-badge"><span class="network-dot"></span>${esc(networkLabel(state))}</div><p>Make a pact.<br />Move forward.</p><span class="sidebar-caption">Payment proof. Clear settlement.</span></div></aside><div class="workspace"><header class="app-header"><span class="header-location">Exchange / ${route === 'sell' ? 'Sell' : ['trades', 'trade'].includes(route) ? 'Your trades' : 'Buy'}</span><div class="header-actions"><span class="live-header-role">${esc(assetNotice(state))}</span><button class="icon-button" data-action="refresh" aria-label="Refresh confirmed status" ${isBusy(state) ? 'disabled' : ''}>${icon('refresh')}</button>${state.account ? `<span class="wallet-button live-account">${icon('wallet')}${esc(short(state.account))}</span><button class="icon-button" data-action="logout" aria-label="Disconnect wallet">${icon('close')}</button>` : `<button class="wallet-button" data-action="connect" data-id="${currentRole}" ${isBusy(state) || !state.view?.configured ? 'disabled' : ''}>${icon('wallet')} Connect wallet</button>`}</div></header><main id="main" tabindex="-1">${alert}${progress}${unavailable}${body}</main><footer class="app-footer"><span>Built for a clearer exchange.</span><span>${esc(networkLabel(state))} · confirmed transactions only</span></footer></div></div>`;
+  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="wordmark" href="/" aria-label="Pactlane home"><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span>Pactlane<span class="brand-dot">.</span></a><p class="nav-label">YOUR EXCHANGE</p><nav aria-label="Main navigation"><button class="nav-item ${route === 'buy' ? 'active' : ''}" data-action="buy">${icon('buy')} Buy tokens</button><button class="nav-item ${route === 'sell' ? 'active' : ''}" data-action="sell">${icon('sell')} Sell tokens</button><button class="nav-item ${['trades', 'trade'].includes(route) ? 'active' : ''}" data-action="trades">${icon('receipt')} Your trades <span class="nav-count">${state.view?.ownerOrders.length ?? 0}</span></button></nav><div class="sidebar-bottom"><div class="network-badge"><span class="network-dot"></span>${esc(networkLabel(state))}</div><p>Make a pact.<br />Move forward.</p><span class="sidebar-caption">Payment proof. Clear settlement.</span></div></aside><div class="workspace"><header class="app-header"><span class="header-location">Exchange / ${route === 'sell' ? 'Sell' : ['trades', 'trade'].includes(route) ? 'Your trades' : 'Buy'}</span><div class="header-actions"><a class="text-button" href="/wallet">Wallet setup</a><span class="live-header-role">${esc(assetNotice(state))}</span><button class="icon-button" data-action="refresh" aria-label="Refresh confirmed status" ${isBusy(state) ? 'disabled' : ''}>${icon('refresh')}</button>${state.account ? `<span class="wallet-button live-account">${icon('wallet')}${esc(short(state.account))}</span><button class="icon-button" data-action="logout" aria-label="Disconnect wallet">${icon('close')}</button>` : `<button class="wallet-button" data-action="connect" data-id="${currentRole}" ${isBusy(state) || !state.view?.configured ? 'disabled' : ''}>${icon('wallet')} Connect wallet</button>`}</div></header><main id="main" tabindex="-1">${alert}${progress}${unavailable}${body}</main><footer class="app-footer"><span>Built for a clearer exchange.</span><span>${esc(networkLabel(state))} · confirmed transactions only</span></footer></div></div>`;
+
   if (focus)
     [...root.querySelectorAll('[data-action]')]
       .find(
@@ -321,6 +331,7 @@ async function action(name, id) {
     else if (name === 'logout') {
       recoveryDrafts.clear();
       await adapter.logout();
+      await freighter.disconnect();
     } else if (name === 'reserve') {
       await adapter.reserve(id);
       route = 'trade';

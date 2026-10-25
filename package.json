@@ -8,7 +8,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test tlsn/*.test.mjs",
+    "test": "node --test tlsn/*.test.mjs tests/release/*.test.mjs",
+    "test:release": "node --test tests/release/*.test.mjs",
+    "build:demo": "node scripts/build-demo.mjs",
     "check": "node scripts/check.mjs",
     "start": "node --env-file=.env tlsn/launcher.mjs",
     "prepare:tlsn": "python3 scripts/prepare-tlsn.py",

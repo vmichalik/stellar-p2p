@@ -15,31 +15,33 @@ This branch assembles stable component handoffs for review. It does not change r
 
 Accept a scoped commit or an explicitly frozen, hashed file manifest. Do not copy from a worktree while its owner is editing. Inspect each commit's paths before integrating it. Root package and canonical docs are reconciled here rather than accepted wholesale from another lane.
 
-| Component | Source branch / lane | Intake status |
-| --- | --- | --- |
-| Escrow and canonical claim encoding | `pactlane-escrow` | Waiting for committed snapshot and shared vectors |
-| Buyer/seller app | `codex/pactlane-ui` | Waiting for whole-offer and payment-lock alignment |
-| Payment policy | Resolve TLSNotary payment-proof gate | Waiting for isolated implementation and handoff |
-| Proof runtime | Pactlane TLSNotary PoC | Waiting for sanitized cloud-source snapshot |
-| Submission assets | Pactlane demo and submission | Separate artifact lane; simulated shots must remain labeled |
+| Component                           | Source branch / lane                 | Intake status                                               |
+| ----------------------------------- | ------------------------------------ | ----------------------------------------------------------- |
+| Escrow and canonical claim encoding | `pactlane-escrow`                    | Waiting for committed snapshot and shared vectors           |
+| Buyer/seller app                    | `codex/pactlane-ui`                  | Waiting for whole-offer and payment-lock alignment          |
+| Payment policy                      | Resolve TLSNotary payment-proof gate | Waiting for isolated implementation and handoff             |
+| Proof runtime                       | Pactlane TLSNotary PoC               | Waiting for sanitized cloud-source snapshot                 |
+| Submission assets                   | Pactlane demo and submission         | Separate artifact lane; simulated shots must remain labeled |
 
 ## Rehearsal gates
 
-| Check | Pass condition | Current result |
-| --- | --- | --- |
-| Root scripts | One command runs all integrated JS suites; runtime dependencies and lockfile agree | Pending intake |
-| Fixed offers | Exact whole offer amount in UI, policy and contract; no partial-fill input | Pending intake |
-| Payment lock | Fiat recipient and instructions appear only after confirmed `begin_payment` | Pending intake |
-| Held funds | Failed proof after payment lock leaves escrow held; both parties authorize manual settlement | Pending intake |
-| Evidence boundary | Browser and synthetic callbacks cannot reach a live signer or release endpoint | Pending intake |
-| Claim encoding | JS policy and Rust contract reproduce the same ScVal-XDR digest and stable nullifier | Pending intake |
-| Contract | Native and compiled-WASM suites pass for the imported revision | Pending intake |
-| Recovery and replay | Retry/reload/duplicate actions preserve balances; repeated payment cannot settle twice | Pending intake |
-| Buyer/seller UI | One funded whole offer completes a synthetic trade with matching balances and receipt | Pending intake |
-| Responsive review | Desktop and mobile review; no overflow, missing controls or browser errors | Pending intake |
-| Proof runtime | Public proof records actual origin, version and date separately from payment proof | Pending intake |
-| Testnet | Network, asset, deployed hash and transaction/balance evidence recorded | Not established |
-| Reachable demo | Third-party URL checked in a fresh browser; access limitations stated | Not established |
+| Check               | Pass condition                                                                               | Current result  |
+| ------------------- | -------------------------------------------------------------------------------------------- | --------------- |
+| Root scripts        | One command runs all integrated JS suites; runtime dependencies and lockfile agree           | Pending intake  |
+| Fixed offers        | Exact whole offer amount in UI, policy and contract; no partial-fill input                   | Pending intake  |
+| Payment lock        | Fiat recipient and instructions appear only after confirmed `begin_payment`                  | Pending intake  |
+| Held funds          | Failed proof after payment lock leaves escrow held; both parties authorize manual settlement | Pending intake  |
+| Evidence boundary   | Browser and synthetic callbacks cannot reach a live signer or release endpoint               | Pending intake  |
+| Claim encoding      | JS policy and Rust contract reproduce the same ScVal-XDR digest and stable nullifier         | Pending intake  |
+| Contract            | Native and compiled-WASM suites pass for the imported revision                               | Pending intake  |
+| Recovery and replay | Retry/reload/duplicate actions preserve balances; repeated payment cannot settle twice       | Pending intake  |
+| Buyer/seller UI     | One funded whole offer completes a synthetic trade with matching balances and receipt        | Pending intake  |
+| Responsive review   | Desktop and mobile review; no overflow, missing controls or browser errors                   | Pending intake  |
+| Proof runtime       | Public proof records actual origin, version and date separately from payment proof           | Pending intake  |
+| Testnet             | Network, asset, deployed hash and transaction/balance evidence recorded                      | Not established |
+| Reachable demo      | Third-party URL checked in a fresh browser; access limitations stated                        | Not established |
+
+Late-proof acceptance is also required: an already locked order must keep verification and retry available after `pay_by`. Expiry blocks starting a new payment, not proving that a payment arrived in time.
 
 ## Candidate scope
 

@@ -1,0 +1,20 @@
+{
+  "name": "@pactlane/payment-policy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "exports": {
+    ".": "./src/index.mjs",
+    "./testing": "./src/testing.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "check:protocol": "node scripts/check-protocol-sync.mjs"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "17.1.0"
+  }
+}

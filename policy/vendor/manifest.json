@@ -1,0 +1,17 @@
+{
+  "protocolVersion": "pactlane.protocol.v1",
+  "snapshots": [
+    {
+      "canonicalPath": "contracts/escrow/protocol/protocol.mjs",
+      "localPath": "vendor/escrow-protocol.mjs",
+      "sha256": "08e73cbd4d2507ef85c62317638a4d4fcefd922d9de1ba3822793450cbd2127e"
+    },
+    {
+      "canonicalPath": "contracts/escrow/protocol/vectors.json",
+      "localPath": "test/fixtures/protocol-vectors.json",
+      "sha256": "354e82ac989709a518b150506ec7424601e7a6ed8d63e20e3825ef7e026e3dcb"
+    }
+  ],
+  "sourceRevision": "6196df363e4b711dc1a0cf3c2b7cab8aa0bf0a78",
+  "sourceBranch": "pactlane-escrow"
+}

@@ -31,5 +31,140 @@
   "tlsnSorobanAdapterImplemented": false,
   "escrowDeployed": false,
   "fundsReleased": false,
-  "rawProofsIncluded": false
+  "rawProofsIncluded": false,
+  "currentObservations": {
+    "observedDate": "2026-10-25",
+    "browserDevice": "MacBook Pro, owner-reported",
+    "publicExtensionProofOnMacBook": {
+      "ownerReportedResult": "PUBLIC_PROOF_COMPLETED",
+      "httpStatus": 200,
+      "verifierAccepted": true,
+      "verifierLogCheckedAt": "2026-10-25T10:46:50.018766Z",
+      "verifierHost": "Mac mini",
+      "authenticatedBankRequestMade": false
+    },
+    "authenticatedResponseShapeAttempt": {
+      "ownerApproved": true,
+      "result": "MPC_SETUP_TIMEOUT",
+      "bankRequestMade": false,
+      "responseShapeEstablished": false
+    },
+    "macBookBrowserSetupDiagnosis": {
+      "source": "owner-reported bank-free browser diagnostic",
+      "elapsedSeconds": 36.2,
+      "queuedMegabytesRounded": 76.1,
+      "receivedMegabytesRounded": 3.4,
+      "threads": 8,
+      "pendingMegabytesAt30Seconds": 13.0,
+      "extensionDeadline30Met": false,
+      "bankRequestMade": false
+    },
+    "macBookHostComparison": {
+      "source": "owner-reported six-trial foreground browser comparison",
+      "recordedAt": "2026-10-25T12:13:23.479933+00:00",
+      "order": ["mini", "cloud", "mini", "cloud", "mini", "cloud"],
+      "threads": 8,
+      "maxSentData": 4096,
+      "maxRecvData": 16384,
+      "mini": {
+        "elapsedSecondsRounded": [16.9, 17.9, 18.4],
+        "medianSecondsRounded": 17.9,
+        "passes": 3,
+        "within30Seconds": 3,
+        "within60Seconds": 3
+      },
+      "cloud": {
+        "elapsedSecondsRounded": [16.4, 17.4, 24.5],
+        "medianSecondsRounded": 17.4,
+        "passes": 3,
+        "within30Seconds": 3,
+        "within60Seconds": 3
+      },
+      "cloudMedianReductionPercentRounded": 2.8,
+      "interpretation": "Small sample; no established meaningful speed or tail-latency advantage. Retain cloud for public reachability.",
+      "bankRequestMade": false,
+      "paymentProof": false,
+      "cloudImageDigest": "sha256:59770e9ed678081a5ec940bcf7b3f6c2fb30e15bdac1bd4d20a482e87cf6a55e"
+    },
+    "automatedMiniClientSmoke": {
+      "client": "isolated Google Chrome on Mac mini",
+      "crossOriginIsolated": true,
+      "threads": 10,
+      "miniElapsedMs": 3473,
+      "cloudElapsedMs": 6499,
+      "cloudObservedAt": "2026-10-25T11:56:38.583Z",
+      "scope": "infrastructure checks, not owner MacBook comparison",
+      "bankRequestMade": false,
+      "cloudImageDigest": "sha256:59770e9ed678081a5ec940bcf7b3f6c2fb30e15bdac1bd4d20a482e87cf6a55e"
+    },
+    "publicHosting": {
+      "provider": "Fly.io Machines",
+      "region": "cdg",
+      "location": "Paris",
+      "url": "https://stellar-p2p-proof-vijay.fly.dev/benchmark/",
+      "vmCount": 1,
+      "cpuKind": "shared",
+      "vcpus": 2,
+      "memoryMiB": 4096,
+      "autoStop": false,
+      "healthCheck": "passing",
+      "httpsAndWss": true,
+      "vpnRequired": false,
+      "sourcePin": "68bbd380d6e1a89d79748e5294661c752f5d1205",
+      "localVariant": "public-demo-loopback-fixed-target-budget-capped",
+      "imageDigest": "sha256:2c6da2b1669d8592fe072439a225872d6530996fbb23b33a41bddb04c7ce6b89",
+      "cryptoSourceChanged": false,
+      "webhooksEnabled": false,
+      "oversizedRegistrationRejectedLive": true,
+      "cloudPublicExtensionProofAccepted": true,
+      "bankRequestMade": false,
+      "cloudPublicExtensionProofImageDigest": "sha256:9bb965a489c295f253b234c4ce748afe478da5ce4fc4664458ea983ea652be14",
+      "oversizedRegistrationRejectedLiveImageDigest": "sha256:59770e9ed678081a5ec940bcf7b3f6c2fb30e15bdac1bd4d20a482e87cf6a55e",
+      "healthObservedAt": "2026-10-25T12:49:31.401564+00:00"
+    },
+    "localExtensionOverride": {
+      "requestedByOwner": true,
+      "setupWatchdogMs": 60000,
+      "otherTimeoutsChanged": false,
+      "cryptoAssetsChanged": false,
+      "preparedAndDelivered": true,
+      "installedOnMacBook": "UNVERIFIED",
+      "deterministicPackageSha256": "589378bb683253d69375e43615de91895399a46b9c7a61c1983d6c588bdd3248"
+    },
+    "publicExtensionProofOnCloud": {
+      "ownerReportedResult": "PUBLIC_PROOF_COMPLETED",
+      "httpStatus": 200,
+      "verifierAccepted": true,
+      "verifierLogObservedAt": "2026-10-25T12:34:28.445088Z",
+      "verifierHost": "Fly Paris",
+      "imageDigest": "sha256:9bb965a489c295f253b234c4ce748afe478da5ce4fc4664458ea983ea652be14",
+      "serverNameVerified": "app.revolut.com",
+      "authenticatedRevealRangesValidated": true,
+      "sessionCompletedDelivered": true,
+      "disclosed": ["public request line", "HTTP status"],
+      "authenticatedBankRequestMade": false,
+      "paymentProof": false
+    },
+    "responseOnlyLauncher": {
+      "url": "https://stellar-p2p-proof-vijay.fly.dev/response-check/",
+      "imageDigest": "sha256:2c6da2b1669d8592fe072439a225872d6530996fbb23b33a41bddb04c7ce6b89",
+      "deployed": true,
+      "exactHttpsRoutesVerified": true,
+      "strictFreshNonceVerified": true,
+      "fullPaymentPluginRouteAvailable": false,
+      "forcedShapeOnly": true,
+      "consentRequired": true,
+      "consentConsumedAfterExecution": true,
+      "liveBrowserCheck": {
+        "observedAt": "2026-10-25T12:49:29.873Z",
+        "client": "isolated Chrome on Mac mini",
+        "extensionApi": "synthetic",
+        "realBankPluginExecuted": false,
+        "authenticatedBankRequestMade": false
+      },
+      "authenticatedCloudResponseShapeEstablished": false,
+      "ownerApprovalForAuthenticatedCloudCheck": "PENDING",
+      "releaseGate": "NOT_CLEARED"
+    }
+  }
 }

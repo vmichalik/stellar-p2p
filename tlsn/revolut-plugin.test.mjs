@@ -169,22 +169,23 @@ test('failures do not propagate private error text', async () => {
 });
 
 test('setup timeout is a fixed diagnostic code without private exception details', async () => {
-  const h = await harness({
-    configured: true,
-    headers: [detail],
-    fail: true,
-    failureMessage:
-      'setupProver timed out after 30000ms for prover-3 private-synthetic-secret https://private.example',
-  });
-  h.plugin.main();
-  await h.plugin.checkResponse();
-  assert.equal(h.calls.done[0].errorCode, 'MPC_SETUP_TIMEOUT');
-  assert.equal(h.calls.done[0].releaseGate, 'NOT_CLEARED');
-  assert.doesNotMatch(
-    JSON.stringify(h.calls.done[0]),
-    /private-synthetic|private.example|prover-3/,
-  );
-  assert.doesNotMatch(h.state.get('message'), /private-synthetic|private.example|prover-3/);
+  for (const limit of [30000, 60000]) {
+    const h = await harness({
+      configured: true,
+      headers: [detail],
+      fail: true,
+      failureMessage: `setupProver timed out after ${limit}ms for prover-3 private-synthetic-secret https://private.example`,
+    });
+    h.plugin.main();
+    await h.plugin.checkResponse();
+    assert.equal(h.calls.done[0].errorCode, 'MPC_SETUP_TIMEOUT');
+    assert.equal(h.calls.done[0].releaseGate, 'NOT_CLEARED');
+    assert.doesNotMatch(
+      JSON.stringify(h.calls.done[0]),
+      /private-synthetic|private.example|prover-3/,
+    );
+    assert.doesNotMatch(h.state.get('message'), /private-synthetic|private.example|prover-3/);
+  }
 });
 
 test('oversized authentication request stops before MPC without leaking its values', async () => {

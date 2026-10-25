@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Bank-free TLSNotary setup check</title>
+    <style>
+      body {
+        font: 16px/1.5 system-ui;
+        margin: 0;
+        background: #f5f7fa;
+        color: #16202a;
+      }
+      main {
+        max-width: 1050px;
+        margin: 4vh auto;
+        padding: 24px;
+        background: white;
+        border-radius: 12px;
+      }
+      button {
+        font: inherit;
+        padding: 10px 16px;
+        margin: 4px;
+      }
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        background: #eef1f6;
+        padding: 14px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+      }
+      code {
+        overflow-wrap: anywhere;
+      }
+      .scroll {
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Check TLSNotary setup</h1>
+      <p>
+        Check whether your browser can finish setup with the cloud verifier. This uploads about
+        <strong>76 MB of synthetic data</strong>, makes no bank request and proves no payment. Keep
+        this tab visible. No bank login or extension is needed.
+      </p>
+      <p>Cloud verifier: <code id="cloud-target">Checking fixed target…</code></p>
+      <button id="single" disabled>Run bank-free cloud check</button
+      ><button id="stop" disabled>Stop</button
+      ><button id="export" disabled>Download summary</button>
+      <p>
+        The diagnostic waits up to 90 seconds and reports the 30-second and 60-second extension
+        deadlines separately. Public capacity is limited; a busy verifier may ask you to try later.
+      </p>
+      <details>
+        <summary>Owner: compare the Mac mini and cloud</summary>
+        <p>
+          Use the same MacBook Pro and network for both targets, with access to the private Mac mini
+          route. This sequence alternates three trials per host and uploads about
+          <strong>456 MB</strong>. A 130-second same-host cooldown avoids overlap with abandoned
+          verifier sessions. Expect several minutes and keep only one benchmark page running.
+        </p>
+        <pre id="targets">Checking fixed targets…</pre>
+        <button id="start" disabled>Run six bank-free comparison trials</button>
+      </details>
+      <pre id="status" role="status" aria-live="polite">Not started.</pre>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Trial</th>
+              <th>Target</th>
+              <th>Setup</th>
+              <th>30s</th>
+              <th>60s</th>
+              <th>Upload / received</th>
+              <th>Pending at 30s</th>
+              <th>Threads</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p id="conclusion">No check has run. Release gate: NOT_CLEARED.</p>
+      <script type="module" src="./benchmark.mjs"></script>
+    </main>
+  </body>
+</html>

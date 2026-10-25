@@ -4,7 +4,7 @@ The next useful milestone is one independently verified outgoing transfer. Finis
 
 ## 1. Close the payment-proof gate
 
-Run the fixed public extension check on Windows. If it passes, inspect the status and shape of one existing transfer response using the limited diagnostic. Update selectors only from that evidence.
+The current MacBook has passed the fixed public extension check against the mini and Fly and all six setup comparison trials. Inspect the status and shape of one existing transfer response under the owner's approval for the cloud verifier and exact disclosure. Update selectors only from that evidence.
 
 Done when the server accepts the intended completed outgoing payment and a changed recipient, wrong amount or incomplete state cannot pass policy. Keep bank values and raw proofs outside the repo.
 

@@ -8,13 +8,16 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test tlsn/*.test.mjs",
+    "test": "node --test tlsn/*.test.mjs tlsn/benchmark/*.test.mjs infra/proof-benchmark/*.test.mjs",
     "check": "node scripts/check.mjs",
     "start": "node --env-file=.env tlsn/launcher.mjs",
     "prepare:tlsn": "python3 scripts/prepare-tlsn.py",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:legacy": "npm --prefix archive/reclaim test"
+    "test:legacy": "npm --prefix archive/reclaim test",
+    "prepare:benchmark": "python3 scripts/prepare-proof-benchmark.py",
+    "test:benchmark-prep": "python3 -m unittest discover -s scripts -p \"test_prepare_proof_benchmark.py\"",
+    "prepare:extension-setup60": "python3 scripts/prepare-extension-setup60.py"
   },
   "devDependencies": {
     "prettier": "3.6.2"

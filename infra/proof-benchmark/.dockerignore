@@ -1,0 +1,11 @@
+target-tests/
+*.log
+node_modules/
+__pycache__/
+*.tar.gz
+.git/
+fly.toml
+README.md
+*.test.mjs
+render-fly-config.mjs
+provenance.json

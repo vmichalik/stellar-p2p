@@ -167,16 +167,18 @@ test('explicit action sends only the fixed public GET request and returns status
 });
 
 test('known setup timeout returns a fixed code without exception details', async () => {
-  const h = await harness({
-    proveError: 'setupProver timed out after 30000ms for private.example token=secret',
-  });
-  h.plugin.main();
-  await h.plugin.checkExtension();
-  assert.equal(h.calls.done[0].value.errorCode, 'MPC_SETUP_TIMEOUT');
-  assert.equal(h.calls.done[0].value.releaseGate, 'NOT_CLEARED');
-  assert.equal(h.calls.done[0].pendingAtCall, false);
-  assert.doesNotMatch(JSON.stringify(h.calls.done[0]), /private\.example|secret|30000/);
-  assert.doesNotMatch(h.state.get('message'), /private\.example|secret|30000/);
+  for (const limit of [30000, 60000]) {
+    const h = await harness({
+      proveError: `setupProver timed out after ${limit}ms for private.example token=secret`,
+    });
+    h.plugin.main();
+    await h.plugin.checkExtension();
+    assert.equal(h.calls.done[0].value.errorCode, 'MPC_SETUP_TIMEOUT');
+    assert.equal(h.calls.done[0].value.releaseGate, 'NOT_CLEARED');
+    assert.equal(h.calls.done[0].pendingAtCall, false);
+    assert.doesNotMatch(JSON.stringify(h.calls.done[0]), /private\.example|secret|30000|60000/);
+    assert.doesNotMatch(h.state.get('message'), /private\.example|secret|30000|60000/);
+  }
 });
 
 test('mux setup errors and all other errors collapse to the two fixed failure codes', async () => {

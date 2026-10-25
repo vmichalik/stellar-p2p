@@ -161,8 +161,8 @@
           const estimatedSetupSeconds = (76113802 * 8) / (mbps * 1000000);
           setStatus(
             connectionStatus,
-            `Connection check: ${mbps.toFixed(1)} Mbps effective upload; estimated setup upload ${Math.ceil(estimatedSetupSeconds)} seconds; extension limit 30 seconds. Estimate only; no payment proof was attempted.`,
-            estimatedSetupSeconds >= 30 ? 'error' : '',
+            `Connection check: ${mbps.toFixed(1)} Mbps effective upload; estimated setup upload ${Math.ceil(estimatedSetupSeconds)} seconds. Official extension limit: 30 seconds; local diagnostic copy: 60 seconds. Estimate only; no payment proof was attempted.`,
+            estimatedSetupSeconds >= 60 ? 'error' : '',
           );
         } catch {
           setStatus(
@@ -217,7 +217,7 @@
         if (summary?.diagnosticOnly === true && summary.mode === 'attempt-error') {
           const messages = {
             MPC_SETUP_TIMEOUT:
-              'Proof setup exceeded the extension’s 30-second limit. Use Check connection only before another bank test.',
+              'Proof setup exceeded this extension build’s limit. Use Check connection only before another bank test.',
             MPC_SETUP_FAILED: 'MPC setup could not start.',
             RESPONSE_FIELD_MISSING:
               'The response did not contain a required payment field. Use Check response only on a fresh run.',

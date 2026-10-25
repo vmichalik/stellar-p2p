@@ -2,7 +2,7 @@
 
 ## Latest: mainnet completion request, 25 October 2026
 
-The active continuation is the isolated `codex/pactlane-mainnet-completion` candidate. Network support, Freighter transport and the accepted TLS proof flow are integrated locally. A read-only mainnet USDC check passed; no mainnet transaction or deployment has occurred. Payment release remains **NOT_CLEARED** pending strict evidence ingestion/mapping and a configured trade. Read [the current mainnet handoff](release/mainnet-test.md) first; it supersedes the older bank pause and source-intake state below.
+The active continuation is the isolated `codex/pactlane-mainnet-completion` candidate. Network support, Freighter transport and the accepted TLS proof flow are integrated locally. A read-only mainnet USDC check passed; no mainnet transaction or deployment has occurred. Complete-record ingestion is implemented and its diagnostic page is deployed; owner-reviewed live record acceptance is pending. Payment release remains **NOT_CLEARED**. The owner confirmed a 1 USDC / EUR 0.89 test; durable operator composition and concrete transaction/fee review remain. Read [the current mainnet handoff](release/mainnet-test.md) first; it supersedes the older bank pause and source-intake state below.
 
 Objective: finish one Revolut-to-Stellar trade from the integrated Pactlane candidate.
 

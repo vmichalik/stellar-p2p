@@ -1,0 +1,83 @@
+{
+  "kind": "COMPLETE_RECORD_APPLICATION_DEPLOYMENT",
+  "sourceCommit": "3da2740faa880cd4d0112a3418bad17e93cb93ee",
+  "publicChecks": {
+    "checkedAt": "2026-10-25T23:03:07.435Z",
+    "sourceCommit": "3da2740faa880cd4d0112a3418bad17e93cb93ee",
+    "imageDigest": "sha256:d671ad22140f0e61e8e0f720a21bec0d343298dc79f94ba0a112856c654f5d29",
+    "/health": {
+      "status": 200,
+      "healthy": true
+    },
+    "/info": {
+      "status": 200,
+      "pins": {
+        "version": "0.1.0",
+        "git_hash": "68bbd380d6e1a89d79748e5294661c752f5d1205",
+        "tlsn_version": "0.1.0-alpha.15"
+      }
+    },
+    "/payment-check/": {
+      "status": 200,
+      "title": "Pactlane \u00b7 Review the complete transfer proof",
+      "nonceCsp": true,
+      "disclosure": true,
+      "noStore": true
+    },
+    "/payment-check/plugin.mjs": {
+      "status": 200,
+      "sha256": "6568c5483fbae109e867aa3744a862a580abeac32b7c075b2829d4e08ac23ba0",
+      "matchesSource": true,
+      "fullRecord": true
+    },
+    "/verified-payment": {
+      "status": 404
+    }
+  },
+  "privateChecks": {
+    "checkedAt": "2026-10-25T23:03:40.420Z",
+    "verifierStdoutSuppressed": true,
+    "verifierStderrSuppressed": true,
+    "privateCallbackConfigured": true,
+    "privateDatabaseMode": true,
+    "acceptedRecords": 0
+  },
+  "sameMachineAndInfrastructure": true,
+  "liveExchangeDeployed": false,
+  "mainnetTransactionSubmitted": false,
+  "paymentReleaseGate": "NOT_CLEARED",
+  "checks": {
+    "javascriptDistinctPassed": 382,
+    "unchangedExtensionWatchdogMatrixSkipped": 11,
+    "pythonStagingPassed": 8,
+    "syntaxChecksPassed": 123
+  },
+  "ownerApprovedTest": {
+    "maximumUSDC": "1",
+    "fiatCurrency": "EUR",
+    "fiatMinor": "89"
+  },
+  "scope": "New diagnostic receiver only. No mainnet transaction, bank proof execution or payment acceptance is established by these checks.",
+  "browserReview": [
+    {
+      "width": 1280,
+      "title": "Pactlane \u00b7 Review the complete transfer proof",
+      "bodyBackground": "rgba(0, 0, 0, 0)",
+      "font": "Manrope, \"Avenir Next\", Avenir, system-ui, sans-serif",
+      "horizontalOverflow": false,
+      "buttonDisabled": true,
+      "consentUnchecked": true,
+      "hasFullDisclosure": true
+    },
+    {
+      "width": 390,
+      "title": "Pactlane \u00b7 Review the complete transfer proof",
+      "bodyBackground": "rgba(0, 0, 0, 0)",
+      "font": "Manrope, \"Avenir Next\", Avenir, system-ui, sans-serif",
+      "horizontalOverflow": false,
+      "buttonDisabled": true,
+      "consentUnchecked": true,
+      "hasFullDisclosure": true
+    }
+  ]
+}

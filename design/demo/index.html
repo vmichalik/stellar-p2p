@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Pactlane — a clear trade</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: Manrope;
+        src: url('assets/manrope.woff2') format('woff2');
+        font-weight: 200 800;
+        font-display: block;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: #f7f5ee;
+        color: #2d382e;
+        font-family: Manrope, Arial, sans-serif;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+      }
+      .background {
+        position: absolute;
+        inset: 0;
+        background: #f7f5ee;
+      }
+      .background::after {
+        content: '';
+        position: absolute;
+        right: -210px;
+        top: 100px;
+        width: 1150px;
+        height: 1150px;
+        border: 1px solid #dedfd2;
+        border-radius: 50%;
+        opacity: 0.65;
+      }
+      .brand {
+        position: absolute;
+        top: 64px;
+        left: 80px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 43px;
+        font-weight: 650;
+        letter-spacing: -2.5px;
+        line-height: 1.1;
+        z-index: 20;
+      }
+      .brand-dot {
+        color: #ed7047;
+        margin-left: -10px;
+      }
+      .brand-symbol {
+        position: relative;
+        width: 38px;
+        height: 43px;
+        display: block;
+        margin-right: 4px;
+      }
+      .brand-symbol span {
+        position: absolute;
+        border: 2.6px solid #ed7047;
+        border-radius: 5px;
+        width: 21px;
+        height: 33px;
+        transform: rotate(-13deg);
+        left: 0;
+        top: 2px;
+      }
+      .brand-symbol span + span {
+        left: 14px;
+        top: 10px;
+        transform: rotate(10deg);
+        background: #f7f5ee;
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+      .stage {
+        position: absolute;
+        inset: 0;
+      }
+      .eyebrow {
+        font-size: 23px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-weight: 750;
+        color: #697064;
+        margin: 0 0 26px;
+      }
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+      h1,
+      h2 {
+        font-size: 68px;
+        line-height: 1.09;
+        letter-spacing: -3px;
+        font-weight: 650;
+        max-width: 680px;
+        text-wrap: balance;
+      }
+      .lead {
+        position: absolute;
+        left: 80px;
+        top: 255px;
+        width: 655px;
+      }
+      .support {
+        font-size: 30px;
+        line-height: 1.48;
+        color: #697064;
+        margin-top: 30px;
+        max-width: 610px;
+        text-wrap: pretty;
+      }
+      .support strong {
+        color: #2d382e;
+        font-weight: 650;
+      }
+      .mode {
+        position: absolute;
+        right: 80px;
+        top: 64px;
+        border: 1px solid #d9ddcd;
+        background: #eeeee4;
+        border-radius: 30px;
+        padding: 12px 22px;
+        font-size: 25px;
+        font-weight: 650;
+        line-height: 1.2;
+        color: #475443;
+        white-space: nowrap;
+      }
+      .mode.synthetic {
+        background: #fae4d8;
+        border-color: #edc7b5;
+        color: #904420;
+      }
+      .mode.rehearsal {
+        background: #e9efdf;
+        border-color: #ccd8bd;
+        color: #385b3e;
+      }
+      .photo-slot {
+        position: absolute;
+        left: 798px;
+        top: 170px;
+        width: 1042px;
+        height: 820px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .photo {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 16px 27px #2d382e0d);
+        border-radius: 26px;
+      }
+      .photo-layer {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .funding-after,
+      .lock-after,
+      .check-result,
+      .recovery-buyer,
+      .recovery-seller {
+        opacity: 0;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 30px;
+        padding: 14px 20px;
+        background: #e9efdf;
+        border-radius: 16px;
+        font-size: 26px;
+        color: #386344;
+        font-weight: 650;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 100%;
+        background: #386344;
+        display: inline-block;
+      }
+      .footer {
+        position: absolute;
+        left: 80px;
+        bottom: 40px;
+        right: 80px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 22px;
+        line-height: 1.2;
+        color: #697064;
+      }
+      .chapter {
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.4px;
+      }
+      .progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 7px;
+        background: #e7e7db;
+        z-index: 20;
+      }
+      .progress span {
+        display: block;
+        height: 100%;
+        width: 100%;
+        background: #ed7047;
+        transform-origin: left;
+      }
+      .amount {
+        font-size: 70px;
+        font-weight: 650;
+        letter-spacing: -3px;
+        line-height: 1.1;
+        margin-top: 34px;
+      }
+      .amount small {
+        font-size: 31px;
+        letter-spacing: -0.5px;
+        font-weight: 550;
+      }
+      .amount-note {
+        margin-top: 12px;
+        font-size: 24px;
+        color: #697064;
+      }
+      #scene1 .lead {
+        top: 252px;
+      }
+      #scene1 h1 {
+        font-size: 70px;
+      }
+      #scene1 .photo-slot {
+        left: 920px;
+        width: 850px;
+      }
+      #scene2 .photo-slot {
+        left: 850px;
+        width: 970px;
+      }
+      #scene2 .lead {
+        top: 277px;
+      }
+      #scene3 .lead {
+        top: 280px;
+      }
+      #scene3 .photo-slot {
+        top: 190px;
+        height: 775px;
+      }
+      #scene4 .photo-slot {
+        left: 810px;
+        width: 1030px;
+      }
+      #scene4 .lead {
+        top: 250px;
+      }
+      #scene4 .consent-image {
+        height: 820px;
+        width: auto;
+      }
+      #scene4 .checks-image {
+        width: 1030px;
+        height: auto;
+      }
+      .note {
+        position: absolute;
+        left: 80px;
+        bottom: 122px;
+        font-size: 23px;
+        line-height: 1.5;
+        color: #697064;
+        max-width: 650px;
+      }
+      #scene5 .lead {
+        top: 240px;
+      }
+      #scene5 h2 {
+        font-size: 65px;
+      }
+      .evidence-card {
+        position: absolute;
+        left: 850px;
+        top: 200px;
+        width: 970px;
+        padding: 46px 48px;
+        background: #fffefa;
+        border: 1px solid #dedfd2;
+        border-radius: 26px;
+        box-shadow: 0 16px 35px #2d382e08;
+      }
+      .evidence-kicker {
+        font-size: 22px;
+        text-transform: uppercase;
+        letter-spacing: 1.8px;
+        color: #697064;
+      }
+      .evidence-title {
+        font-size: 40px;
+        line-height: 1.15;
+        font-weight: 650;
+        letter-spacing: -1.4px;
+        margin: 14px 0 26px;
+      }
+      .evidence-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 22px;
+        border-top: 1px solid #dedfd2;
+        padding: 25px 0;
+        font-size: 28px;
+        line-height: 1.25;
+      }
+      .evidence-row strong {
+        font-weight: 650;
+        text-align: right;
+      }
+      .verified {
+        color: #386344;
+      }
+      .evidence-caption {
+        font-size: 23px;
+        line-height: 1.45;
+        color: #697064;
+        margin-top: 15px;
+      }
+      #scene6 .photo-slot {
+        left: 875px;
+        width: 920px;
+      }
+      #scene6 .lead {
+        top: 275px;
+      }
+      #scene7 .lead {
+        top: 240px;
+      }
+      #scene7 h2 {
+        font-size: 62px;
+      }
+      #scene7 .photo-slot {
+        left: 805px;
+        top: 175px;
+        width: 1030px;
+        height: 840px;
+      }
+      .recovery-sequence {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-top: 32px;
+        font-size: 24px;
+        font-weight: 650;
+      }
+      .recovery-sequence span {
+        background: #e9efdf;
+        color: #386344;
+        padding: 12px 16px;
+        border-radius: 12px;
+      }
+      #scene8 .lead {
+        top: 223px;
+      }
+      #scene8 h2 {
+        font-size: 62px;
+      }
+      #scene8 .photo-slot {
+        left: 885px;
+        top: 171px;
+        width: 900px;
+        height: 820px;
+      }
+      .allocation {
+        margin-top: 36px;
+        padding: 24px 0;
+        border-top: 1px solid #dedfd2;
+        border-bottom: 1px solid #dedfd2;
+        font-size: 23px;
+        color: #697064;
+      }
+      .allocation div {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 20px;
+      }
+      .allocation div + div {
+        margin-top: 15px;
+      }
+      .allocation strong {
+        font-size: 38px;
+        letter-spacing: -1.1px;
+        font-weight: 650;
+        color: #2d382e;
+        font-variant-numeric: tabular-nums;
+      }
+      .allocation-total {
+        margin-top: 14px;
+        font-size: 24px;
+        color: #697064;
+      }
+      .approval-cue {
+        position: absolute;
+        left: 825px;
+        top: 250px;
+        width: 980px;
+        border: 1px solid #dedfd2;
+        border-radius: 26px;
+        background: #fffefa;
+        padding: 50px;
+      }
+      .approval-line {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        font-size: 35px;
+        line-height: 1.35;
+      }
+      .approval-line + .approval-line {
+        margin-top: 36px;
+      }
+      .approval-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 64px;
+        height: 64px;
+        background: #e9efdf;
+        border-radius: 50%;
+        font-size: 28px;
+        color: #386344;
+        font-weight: 700;
+      }
+      .approval-line.final {
+        padding-top: 35px;
+        border-top: 1px solid #dedfd2;
+      }
+      .approval-cue p {
+        font-size: 26px;
+        color: #697064;
+        line-height: 1.5;
+        margin-top: 35px;
+      }
+      .receipt-label {
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 23px;
+        line-height: 1.2;
+        color: #697064;
+        background: #f7f5ee;
+        padding-top: 14px;
+      }
+      #scene9 .closing {
+        position: absolute;
+        left: 80px;
+        top: 238px;
+        width: 1600px;
+      }
+      #scene9 h2 {
+        font-size: 91px;
+        max-width: 1430px;
+        line-height: 1.05;
+        letter-spacing: -4.2px;
+      }
+      #scene9 .support {
+        font-size: 37px;
+        max-width: 1300px;
+        margin-top: 44px;
+      }
+      .closing-status {
+        display: inline-block;
+        background: #e9efdf;
+        color: #386344;
+        border: 1px solid #ccd8bd;
+        border-radius: 18px;
+        font-size: 29px;
+        padding: 18px 24px;
+        margin-top: 48px;
+        font-weight: 650;
+      }
+      .closing-note {
+        font-size: 29px;
+        line-height: 1.4;
+        color: #697064;
+        margin-top: 28px;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="pactlane"
+      data-start="0"
+      data-duration="90"
+      data-width="1920"
+      data-height="1080"
+      data-fps="30"
+    >
+      <div class="background"></div>
+      <div class="brand">
+        <span class="brand-symbol"><span></span><span></span></span>pactlane<span class="brand-dot"
+          >.</span
+        >
+      </div>
+
+      <section
+        id="scene1"
+        class="clip"
+        data-start="0"
+        data-duration="7"
+        data-track-index="0"
+        aria-label="Product introduction"
+      >
+        <div class="mode">Demo mode</div>
+        <div class="stage">
+          <div class="lead">
+            <p class="eyebrow">Your bank app. Your Stellar wallet.</p>
+            <h1>Euros to a person. Tokens to your wallet.</h1>
+            <p class="support">
+              Use Revolut. Choose a supplier. Receive in your own Stellar wallet.
+            </p>
+          </div>
+          <div class="photo-slot">
+            <img
+              class="photo"
+              src="assets/demo-offer-panel.png"
+              alt="Actual sample offer: pay 20 euros and receive 22 USDC from Ben"
+            />
+          </div>
+        </div>
+        <div class="footer">
+          <span>Built for a fair exchange.</span><span class="chapter">01 / 09 · The trade</span>
+        </div>
+      </section>
+
+      <section
+        id="scene2"
+        class="clip"
+        data-start="7"
+        data-duration="10"
+        data-track-index="0"
+        aria-label="Seller funds escrow"
+      >
+        <div class="mode">Demo mode</div>
+        <div class="stage">
+          <div class="lead">
+            <p class="eyebrow">Ben · seller</p>
+            <h2>Ben supplies the tokens.</h2>
+            <p class="support">
+              Ben sets his price and funds the offer. Ana can reserve it once the USDC is in escrow.
+            </p>
+            <p class="amount">22 <small>USDC</small> <small>for</small> €20</p>
+          </div>
+          <div class="photo-slot">
+            <div class="photo-layer funding-before">
+              <img
+                class="photo"
+                src="assets/demo-seller-funding-panel.png"
+                alt="Actual demo seller screen before funding"
+              />
+            </div>
+            <div class="photo-layer funding-after">
+              <img
+                class="photo"
+                src="assets/demo-funded-panel.png"
+                alt="Actual demo seller screen after the simulated deposit"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Fund → reserve → verify → release</span><span class="chapter">02 / 09 · Fund</span>
+        </div>
+      </section>
+
+      <section
+        id="scene3"
+        class="clip"
+        data-start="17"
+        data-duration="12"
+        data-track-index="0"
+        aria-label="Reservation and payment lock"
+      >
+        <div class="mode">Demo mode</div>
+        <div class="stage">
+          <div class="lead">
+            <p class="eyebrow">Ana · buyer</p>
+            <h2>Lock the trade before paying.</h2>
+            <p class="support">
+              Reserve the offer. Confirm the payment lock. Then see the payment instructions.
+            </p>
+            <div class="tag"><span class="dot"></span>Instructions follow confirmation</div>
+          </div>
+          <div class="photo-slot">
+            <div class="photo-layer lock-before">
+              <img
+                class="photo"
+                src="assets/demo-reserved-panel.png"
+                alt="Actual demo reservation screen asking Ana to lock the payment window"
+              />
+            </div>
+            <div class="photo-layer lock-after">
+              <img
+                class="photo"
+                src="assets/demo-payment-instructions-panel.png"
+                alt="Actual demo payment instructions stating that the payment lock is confirmed"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <span>Fund → reserve → verify → release</span><span class="chapter">03 / 09 · Lock</span>
+        </div>
+      </section>
+
+      <section
+        id="scene4"
+        class="clip"
+        data-start="29"
+        data-duration="10"
+        data-track-index="0"
+        aria-label="Payment record and policy checks"
+      >
+        <div class="mode synthetic">Demo mode</div>
+        <div class="stage">
+          <div class="lead">
+            <p class="eyebrow">Review your payment proof</p>
+            <h2>Check this payment against this trade.</h2>
+            <p class="support">Amount. Recipient. Payment status. Reuse.</p>
+            <p class="support">Review the transfer record and disclosure before approving.</p>
+          </div>
+          <div class="photo-slot">
+            <div class="photo-layer check-consent">
+              <img
+                class="photo consent-image"
+                src="assets/demo-consent-panel.png"
+                alt="Demo disclosure review for the complete transfer record"
+              />
+            </div>
+            <div class="photo-layer check-result">
+              <img
+                class="photo checks-image"
+                src="assets/demo-checks-panel.png"
+                alt="Actual demo result showing matching amount, recipient, completed status and unused payment"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Fund → reserve → verify → release</span><span class="chapter">04 / 09 · Check</span>
+        </div>
+      </section>
+
+      <section
+        id="scene5"
+        class="clip"
+        data-start="39"
+        data-duration="10"
+        data-track-index="0"
+        aria-label="Verified bank record and Stellar testnet results"
+      >
+        <div class="mode rehearsal">Verified milestones · 25 Oct</div>
+        <div class="stage">
+          <div class="lead">
+            <p class="eyebrow">Evidence you can inspect</p>
+            <h2>Bank proof meets Stellar escrow.</h2>
+            <p class="support wasm-second">
+              <strong>Authenticated record. On-chain results.</strong>
+            </p>
+            <p class="support">
+              The verifier accepted a real Revolut transfer. A separate Stellar testnet run
+              exercised release and recovery.
+            </p>
+          </div>
+          <div class="evidence-card">
+            <p class="evidence-kicker">Recorded results</p>
+            <p class="evidence-title">Two building blocks, checked.</p>
+            <div class="evidence-row">
+              <span>Revolut transfer record</span><strong class="verified">Accepted</strong>
+            </div>
+            <div class="evidence-row">
+              <span>Testnet escrow release</span><strong class="verified">Confirmed</strong>
+            </div>
+            <div class="evidence-row">
+              <span>Payment replay</span><strong class="verified">Rejected</strong>
+            </div>
+            <div class="evidence-row">
+              <span>Mutual recovery</span><strong class="verified">Confirmed</strong>
+            </div>
+            <p class="evidence-caption">
+              Bank record and PLTEST testnet receipts are linked in the repository.
+            </p>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Built with Stellar Smart Contracts and TLSNotary</span
+          ><span class="chapter">05 / 09 · Evidence</span>
+        </div>
+      </section>
+
+      <section
+        id="scene6"
+        class="clip"
+        data-start="49"
+        data-duration="9"
+        data-track-index="0"
+        aria-label="Synthetic product receipt"
+      >
+        <div class="mode">Demo mode</div>
+        <div class="stage">
+          <div class="lead">
+            <p class="eyebrow">Ana’s receipt</p>
+            <h2>A clear receipt for the trade.</h2>
+            <p class="support">Ana can see the amount paid, tokens received and where they went.</p>
+            <div class="tag"><span class="dot"></span>Exchange complete</div>
+          </div>
+          <div class="photo-slot">
+            <img
+              class="photo"
+              src="assets/demo-receipt-panel.png"
+              alt="Actual synthetic receipt showing 22 demo USDC received for 20 euros"
+            />
+          </div>
+        </div>
+        <div class="footer">
+          <span>Simulated receipt · separate from the local WASM run</span
+          ><span class="chapter">06 / 09 · Receipt</span>
+        </div>
+      </section>
+
+      <section
+        id="scene7"
+        class="clip"
+        data-start="58"
+        data-duration="12"
+        data-track-index="0"
+        aria-label="Second trade with two-party recovery"
+      >
+        <div class="mode rehearsal">Demo mode</div>
+        <div class="stage">
+          <div class="lead">
+            <p class="eyebrow">A second trade · funds held</p>
+            <h2>A clear recovery path.</h2>
+            <p class="support">
+              If verification stops, both people can agree how to divide the held USDC.
+            </p>
+            <div class="recovery-sequence">
+              <span>Review allocation</span><b>→</b><span>Both approve</span>
+            </div>
+          </div>
+          <div class="photo-slot">
+            <img
+              class="photo"
+              src="assets/recovery-review.png"
+              alt="Demo recovery proposal:11USDC to Ana and11USDC to Ben"
+            />
+          </div>
+        </div>
+        <p class="note">Both wallets approve the same allocation before funds move.</p>
+        <div class="footer">
+          <span>Actual browser and host · mocked wallet and chain</span
+          ><span class="chapter">07 / 09 · Recover together</span>
+        </div>
+      </section>
+
+      <section
+        id="scene8"
+        class="clip"
+        data-start="70"
+        data-duration="12"
+        data-track-index="0"
+        aria-label="Two approvals and exact recovery outcome"
+      >
+        <div class="mode rehearsal">Demo mode</div>
+        <div class="stage">
+          <div class="lead">
+            <p class="eyebrow">Second trade · agreed recovery</p>
+            <h2>Both approvals. One exact split.</h2>
+            <p class="support">Ana and Ben review the same trade and approve the same amounts.</p>
+            <div class="allocation">
+              <div><span>Buyer receives</span><strong>11.00</strong></div>
+              <div><span>Seller receives</span><strong>11.00</strong></div>
+            </div>
+            <p class="allocation-total">22 USDC in total</p>
+          </div>
+          <div class="approval-cue">
+            <div class="approval-line">
+              <span class="approval-number">1</span><span>Seller authorizes the exact split.</span>
+            </div>
+            <div class="approval-line final">
+              <span class="approval-number">2</span><span>Buyer signs the final transaction.</span>
+            </div>
+            <p>Each person stays in control of their approval.</p>
+          </div>
+          <div class="photo-slot">
+            <div class="photo-layer recovery-buyer">
+              <img
+                class="photo"
+                src="assets/recovery-receipt.png"
+                alt="Demo recovery receipt"
+              /><span class="receipt-label">Agreed allocation</span>
+            </div>
+            <div class="photo-layer recovery-seller">
+              <img
+                class="photo"
+                src="assets/recovery-receipt.png"
+                alt="Demo recovery receipt"
+              /><span class="receipt-label">Recovery complete</span>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Clear terms. Two approvals.</span
+          ><span class="chapter">08 / 09 · Exact outcome</span>
+        </div>
+      </section>
+
+      <section
+        id="scene9"
+        class="clip"
+        data-start="82"
+        data-duration="8"
+        data-track-index="0"
+        aria-label="Pactlane invitation"
+      >
+        <div class="mode">Pactlane</div>
+        <div class="stage">
+          <div class="closing">
+            <p class="eyebrow">Pactlane · built for a fair exchange</p>
+            <h2>Your next step into Stellar.</h2>
+            <p class="support">A familiar bank app. An upfront quote. USDC in your wallet.</p>
+            <div class="closing-status">Escrow · payment policy · two-party recovery</div>
+            <p class="closing-note">Try it at pactlane.io</p>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Peer-to-peer. On Stellar.</span><span class="chapter">09 / 09 · Get started</span>
+        </div>
+      </section>
+      <div class="progress"><span></span></div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const timeline = gsap.timeline({ paused: true });
+      const scenes = [...document.querySelectorAll('.clip')];
+      scenes.forEach((scene, i) => {
+        if (i > 0)
+          timeline.fromTo(
+            scene.querySelector('.stage'),
+            { y: 22, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.48, ease: 'power2.out' },
+            Number(scene.dataset.start),
+          );
+      });
+      const swap = (outgoing, incoming, time) => {
+        timeline.to(outgoing, { opacity: 0, duration: 0.22, ease: 'none' }, time);
+        timeline.fromTo(
+          incoming,
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, duration: 0.38, ease: 'power2.out' },
+          time + 0.12,
+        );
+      };
+      swap('.funding-before', '.funding-after', 12);
+      swap('.lock-before', '.lock-after', 22);
+      swap('.check-consent', '.check-result', 34);
+      timeline.fromTo(
+        '.wasm-second',
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.4 },
+        42.5,
+      );
+      timeline.to('.approval-cue', { opacity: 0, duration: 0.22 }, 73.1);
+      timeline.fromTo(
+        '.recovery-buyer',
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.38 },
+        73.25,
+      );
+      timeline.to('.recovery-buyer', { opacity: 0, duration: 0.22 }, 77.5);
+      timeline.fromTo(
+        '.recovery-seller',
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.38 },
+        77.65,
+      );
+      timeline.fromTo(
+        '.progress span',
+        { scaleX: 0 },
+        { scaleX: 1, duration: 90, ease: 'none' },
+        0,
+      );
+      window.__timelines.pactlane = timeline;
+    </script>
+  </body>
+</html>

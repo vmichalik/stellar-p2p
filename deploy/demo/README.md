@@ -1,45 +1,31 @@
-# Static demo deployment
+# Website deployment
 
-Latest social-image deployment: see [the live social handoff](../../docs/release/SOCIAL-IMAGES-HANDOFF.md). It records the currently published image assets, metadata, Worker version and verification. Older domain/proof observations below retain their historical scope.
-
-Canonical app: `https://pactlane.io`. `www.pactlane.io` and `app.pactlane.io` redirect to the apex with path/query preserved. The coordinator owns publication and domain routing. This lane prepares source and artifacts only.
+The existing Cloudflare Worker `pactlane-demo` serves [pactlane.io](https://pactlane.io/). The www and app aliases redirect to the canonical host while preserving path and query.
 
 ## Build and inspect
 
 ```sh
 npm run build:demo
-npm run check:demo -- --record
+npm run check:demo
 npm run preview:demo
 ```
 
-The build copies 26 allowlisted app/image assets, renders canonical/social metadata and writes the synthetic hash manifest, security headers, robots and sitemap into ignored `dist/demo`. No policy, proof source, bank data or signer is copied. The audit records every output file, including generated headers/metadata, with exact hashes and source dirty status in `.private/release/domain-bundle.json`. The preview binds only loopback; it is not a remote handoff.
+The build copies only the explicit public asset list into `dist/demo`, records SHA-256 hashes and writes the canonical metadata, security headers, robots and sitemap. Source, private configuration and payment evidence are not public assets.
 
-`deploy/demo/site.mjs` owns metadata, with reviewed image paths and alt text in `deploy/demo/social.mjs`. All seven social designs are included in PNG/JPEG; the primary OG and X JPEGs also have content-versioned filenames. The older `scripts/render-social.py` authoring tool is historical and is not used for the current image system. Building copies the checked-in images and does not require an image renderer. No analytics or external resource loading is added.
+`/?demo=1` loads the sample adapter with connections blocked. The default page loads the same-origin host client. The current static Worker returns503 for API routes until the configured exchange backend is attached; it never substitutes demo responses.
 
-## Workers Static Assets candidate
+Root `wrangler.jsonc` owns the existing Worker and domain routes. `deploy/demo/site.mjs` and `social.mjs` own metadata and reviewed image paths. ASSETS is the only binding; no signer or payment service runs inside this static Worker.
 
-Root `wrangler.jsonc` defines `pactlane-demo`, `dist/demo`, the built-in ASSETS binding and three custom domains. It disables workers.dev, preview URLs, source-map upload and observability. It configures no database, bucket, service, secret or schedule.
+## Publish
 
-The Worker runs before assets so aliases redirect rather than render duplicate sites. It serves only GET/HEAD and refuses unknown hosts, including the proof hostname. Shared security headers apply to assets, redirects and errors; `connect-src 'none'` remains unchanged. There is no proof, bank, wallet or policy fetch.
+Build from a clean reviewed commit. Check the exact asset inventory and current Worker version, upload a version, inspect its settings, then activate it on the existing routes. Verify HTTPS, redirects, MIME types, mode behavior and all published hashes. Record the source commit, version and rollback reference in the [handoff](../../docs/handoff.md).
 
-This matches Cloudflare's [Static Assets](https://developers.cloudflare.com/workers/static-assets/) and [custom-domain configuration](https://developers.cloudflare.com/workers/wrangler/configuration/#custom-domains). Worker-generated responses need their headers set in code, as described in [the header guide](https://developers.cloudflare.com/workers/static-assets/headers/).
-
-The existing CLI passed `wrangler deploy --dry-run`. The coordinator should inspect the exact manifest and config, resolve any existing Worker/domain collision, deploy with its existing authorized account, then verify HTTPS, alias redirects, content types, CSP and the complete synthetic flow from another device. No cloud resource was created here.
-
-## Proof domain remains pending
-
-The intended proof origin is `https://proof.pactlane.io`. Its DNS/certificate transition is not established. `SITE.proofDomainVerified` stays false; the help link retains `https://stellar-p2p-proof-vijay.fly.dev/extension-check/`. The static app never calls either proof service.
-
-See [domain handoff](../../docs/release/DOMAIN-HANDOFF.md) for the root-owned migration sequence and final candidate. App polish `572f2b9` and both recovery corrections are now integrated; publication and public reachability verification remain with the coordinator.
-
-## Optional reviewed video
-
-Media is absent by default. After the coordinator reviews the silent render, it can place exactly `demo.mp4` and `demo-script.txt` in a deliberately selected directory and run:
+## Reviewed media
 
 ```sh
 npm run build:demo -- --media-dir /absolute/path/to/reviewed-media
 ```
 
-Only those two filenames are read; other directory contents are never copied. MP4 must be a regular file under 25 MiB with the expected container header; script must be valid UTF-8 under 256 KiB. These are packaging checks, not video/audio review. Public manifest records hashes and byte sizes; the absolute source path stays only in ignored `.private/release/media-intake.json`. MP4 is ignored by Git.
+Only `demo.mp4` and `demo-script.txt` are copied from that directory. The manifest records their hashes and sizes. Review the actual footage before publication; the package check only validates file type and size. Keep the existing reviewed files when a UI-only deployment should preserve media.
 
-The exact video response permits `media-src 'self'`; `connect-src 'none'` remains. The absent/default build has no media permission or video UI link. Optional media may be delivered in a second deployment and must not delay the app. A media-free rebuild refuses stale optional files in its output rather than silently retaining them; use a fresh reviewed output or repeat the explicit media intake.
+The proof service remains at its verified Fly origin until a separate domain change is configured and checked. See [proof operations](../../docs/proof-handoff.md).

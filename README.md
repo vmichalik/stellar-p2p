@@ -1,88 +1,62 @@
 # Pactlane
 
-The local live stack supports explicit testnet/mainnet configuration with submission disabled by default. See [network support and operator requirements](docs/release/mainnet-support.md). This is implementation capability, not a deployed mainnet exchange or accepted payment proof.
+Buy USDC on Stellar with the bank app you already use.
 
-Buy USDC on Stellar with a payment from the bank app you already use.
+Pactlane connects people who want USDC with people who supply it. The seller sets a price and funds escrow. The buyer pays them through Revolut, then verifies the payment to release the USDC to their Stellar wallet.
 
-I’m building a small version of [ZKP2P](https://www.zkp2p.xyz/) for Stellar. A seller locks USDC in escrow, a buyer pays them in Revolut, and a payment-policy signature lets the escrow release once. The first version focuses on one EUR payment rail and one whole offer.
+[Try the demo](https://pactlane.io/?demo=1) · [Watch 90 seconds](https://pactlane.io/demo.mp4) · [How it works](docs/architecture.md) · [Build and verification](docs/status.md) · [Chrome extension](https://github.com/vmichalik/pactlane-tlsnotary)
 
-**Current stage: integrated local prototype.** The buyer/seller demo, payment-policy package and escrow using Stellar Smart Contracts are implemented. A local rehearsal connects the app’s order model to the real policy signer and compiled escrow WASM, using synthetic payment evidence. A real authenticated payment has not been accepted, and this branch has no testnet deployment or live settlement.
+## Why this is useful
 
-The local presentation candidate adds a buyer/supplier explanation, explicit illustrative pricing, exact-amount summaries, mobile navigation and a desktop/disclosure guide. See the [presentation reconciliation](docs/ui/handoff.md#presentation-reconciliation-25-october-2026) for provenance and the checks run on both browser entry points.
+Someone who already uses Revolut should have a direct way to fund a Stellar wallet. Pactlane makes the exchange easy to follow: who supplies the USDC, how many euros to pay, when the money is held and what happens next. Suppliers choose their own price and can include a margin for providing liquidity.
 
-## Try the demo
+The first use case is EUR to Stellar USDC. The longer-term goal is a marketplace where familiar payment apps connect people to the assets and applications they want to use.
+
+## Try one trade
+
+Demo mode uses sample wallets and payments. No installation is needed.
+
+1. Open **Sell USDC**, create Ben’s offer and approve the deposit.
+2. Open the buyer view, connect Ana’s wallet and reserve the funded offer.
+3. Confirm the payment lock, then review the Revolut payment instructions.
+4. Verify the payment and receive the USDC. Open **My trades** for the receipt.
+
+The settings button lets you try a failed payment check and recovery. Offers appear in the marketplace only after funding.
+
+## Why Stellar
+
+Stellar Smart Contracts hold the tokens and enforce the trade’s rules. Freighter handles wallet approvals. TLSNotary authenticates the bank response; Pactlane’s payment service matches it to the locked order and signs a release claim. The contract checks that signature, the order and the payment’s one-use identifier before transferring tokens.
+
+This builds on the proof-based peer-to-peer model pioneered by [ZKP2P](https://github.com/zkp2p), with a Stellar escrow, exact EUR amounts, payment locking and two-wallet recovery.
+
+## Evidence you can inspect
+
+- [Authenticated Revolut record](evidence/release/complete-record-accepted.json): a completed outgoing transfer was accepted by the verifier.
+- [Stellar testnet rehearsal](evidence/release/testnet-rehearsal-2026-10-25.json): escrow deployment, release, replay rejection and mutual recovery using the PLTEST test asset.
+- [Browser flow](evidence/release/demo-mode-browser-2026-10-25.json): funding through receipt, mode separation and mobile navigation.
+
+[Current status](docs/status.md) keeps these results and the remaining mainnet connection in one place.
+
+## Run locally
+
+Use Node.js 22.13 or later.
 
 ```sh
 npm ci --ignore-scripts
 npm run dev:app
 ```
 
-Open the address printed by the server on that machine. Create Ben’s 22 USDC offer, approve its demo deposit, switch to Ana, reserve it, and confirm the payment lock. Only then do the €20 Revolut instructions appear. Demo settings let you try unavailable or mismatched verification. Every wallet, payment and receipt in this app is simulated.
+Open the printed demo URL. For the full server and test suites, follow [setup](docs/setup.md).
 
-The server binds to loopback. A Mac-mini loopback address is not a preview link for another device. No public Pactlane app URL is established by this branch.
+## Explore the implementation
 
-## Live-service implementation
+| Area                                          | Start here                             |
+| --------------------------------------------- | -------------------------------------- |
+| Trade flow and trust model                    | [Architecture](docs/architecture.md)   |
+| Escrow and exact claim format                 | [Contract](contracts/escrow/README.md) |
+| Payment matching and replay protection        | [Policy](policy/README.md)             |
+| Wallets, chain reads and transaction recovery | [Integration](integration/README.md)   |
+| Judge’s walkthrough and criteria              | [HackMeridian](docs/hackathon.md)      |
+| Product direction                             | [Concept](docs/concept.md)             |
 
-`npm run dev:live` serves a separate live browser and host after integration dependencies are prepared. It starts unconfigured, with no wallet or transaction action enabled. The host/client implementation includes authenticated Freighter sessions, confirmed chain views, durable transaction recovery, mutual authorization and reconciled receipts. See [the live service handoff](docs/release/live-services.md) for configuration and current evidence.
-
-Local browser checks use fixture signatures and mocked chain services. A real payment, approved deployment and reachable hosted app remain unverified. New payment locks remain disabled while payment verification is unavailable. This entry point does not turn the synthetic demo into a live trade.
-
-## The trade
-
-1. The seller funds one fixed whole offer.
-2. The buyer reserves it, then confirms `begin_payment` before seeing payment instructions.
-3. The buyer pays the exact EUR amount in Revolut.
-4. TLSNotary supplies authenticated evidence to an operator-run payment-policy service.
-5. The policy checks source, recipient, amount, completed outgoing state, time and unused payment identity, then signs the canonical claim.
-6. The escrow checks the signature and order/domain bounds, consumes the payment nullifier and releases the tokens atomically.
-
-If proof is unavailable after the lock, funds stay held. A later valid proof may release them. Both wallets can instead agree to a release, refund or split. There is no unilateral timeout refund after the lock; an uncooperative party can leave funds locked.
-
-Steps 1–6 work together in the **local synthetic rehearsal**. The browser demo is separate. Its callbacks cannot reach a live signer or authorize a network transaction.
-
-## Check the integration
-
-Node.js 22.13 or later is required; this checkout was checked with Node 26.7.0.
-
-```sh
-npm run setup:integration
-npm run test:all
-npm run check
-npm run format:check
-# With the compatible Rust/Cargo toolchain available:
-npm run rehearse:local
-npm run build:demo
-```
-
-`test:all` checks source, app, policy, shared protocol and wallet/RPC boundaries. The Rust rehearsal executes the committed compiled WASM with a synthetic token and payment, not Stellar testnet. See [integration setup](integration/README.md).
-
-## Read next
-
-| Document                                         | What it covers                                                |
-| ------------------------------------------------ | ------------------------------------------------------------- |
-| [Concept](docs/concept.md)                       | Who this is for and why Revolut comes first                   |
-| [Architecture](docs/architecture.md)             | Trust, signing, identities and recovery                       |
-| [Status](docs/status.md)                         | Observed results and live gaps                                |
-| [Setup](docs/setup.md)                           | Local demo, checks and older private proof tooling            |
-| [Build plan](docs/build-plan.md)                 | Remaining work and completion checks                          |
-| [Pitch](docs/pitch.md)                           | Short pitch and honest demo outline                           |
-| [Verification](docs/verification.md)             | Checks actually run                                           |
-| [Handoff](docs/handoff.md)                       | Branch, components, blockers and next action                  |
-| [Submission](docs/release/submission-package.md) | Prepared media, evidence scope and remaining submission gates |
-
-## Code map
-
-```text
-app/                 Separate synthetic demo, live browser and Freighter client
-contracts/escrow/    Soroban escrow, canonical protocol, vectors and reviewed WASM
-policy/              Server evidence rules, signer boundary and SQLite replay registry
-integration/         Local WASM rehearsal, authenticated host and wallet/RPC services
-tlsn/                Earlier private proof launcher and bank-free diagnostics
-deploy/              Static/demo and testnet handoff instructions
-evidence/            Sanitized results; no bank values or raw proofs
-archive/reclaim/     Retired signature experiment, outside the active path
-```
-
-The contract trusts a configured payment-policy signer. It does not verify a raw TLS transcript. The operator sees disclosed fields; Revolut sees its payment; Stellar settlement remains public. See [the trust model](docs/architecture.md#trust-model).
-
-This private repo records the preparation spike and hackathon implementation without rewriting their history. Keep credentials, bank identifiers, raw proofs and private runtime logs outside Git.
+The contract trusts Pactlane’s configured payment signer. After the payment lock, a failed check keeps funds in escrow until a valid proof arrives or both wallets agree on recovery. See [payment privacy and recovery](docs/architecture/privacy-and-data.md).

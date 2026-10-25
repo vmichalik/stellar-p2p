@@ -1,0 +1,79 @@
+{
+  "checkedAt": "2026-10-25T23:52:52.925746+00:00",
+  "sourceBase": "421dcfc",
+  "scope": "integrated editorial, demo, live static routes and judge-facing evidence review",
+  "javascript": {
+    "passed": 401,
+    "skipped": 11,
+    "skipReason": "separate unchanged extension package absent"
+  },
+  "pythonPassed": 8,
+  "syntaxPassed": 138,
+  "formatting": "passed",
+  "browser": {
+    "checkedAt": "2026-10-25T23:47:02.498Z",
+    "scope": "LOCAL_BROWSER_SYNTHETIC_FLOW",
+    "tests": [
+      "live default has no demo data",
+      "draft/pending offers hidden",
+      "funded offer visible",
+      "reserved offer removed",
+      "simulated lock, verification and release",
+      "demo makes no API or wallet calls",
+      "mode reload removes demo state from live view",
+      "Why tab and sidebar extension placement",
+      "320/390/760/1024/1440 navigation and overflow"
+    ],
+    "simulatedBuyerAtoms": 220000000,
+    "simulatedSellerFiatMinor": 2000,
+    "pageErrors": [],
+    "liveBackendAvailable": false,
+    "paymentGate": "NOT_CLEARED"
+  },
+  "liveHost": {
+    "checkedAt": "2026-10-25T23:49:23.296Z",
+    "host": "local integrated Node host",
+    "modeEntryAndAssets": "passed",
+    "demoToggle": "passed",
+    "architectureWidths": [
+      320,
+      390,
+      1440
+    ],
+    "pageErrors": [],
+    "failedAssets": []
+  },
+  "capture": {
+    "checkedAt": "2026-10-25T23:50:24.025Z",
+    "mode": "Demo mode; sample wallets and payments",
+    "source": "current working tree",
+    "bankRequests": 0,
+    "networkTransactions": 0,
+    "pageErrors": []
+  },
+  "videoComposition": {
+    "snapshots": 18,
+    "clipping": 0,
+    "externalRequests": 0,
+    "pageErrors": 0,
+    "deterministicSeeking": true
+  },
+  "testnetRechecked": {
+    "release": {
+      "hash": "7acb287096e02b15c80b4c18b0485612efed95fd7b5e83c5e5b1be11cbe1ae5d",
+      "status": "SUCCESS",
+      "ledger": 5386293
+    },
+    "recovery": {
+      "hash": "866f81532c6cc42c21e9a98f751440c4917b77ee3aad97a7eb81774e41a85165",
+      "status": "SUCCESS",
+      "ledger": 5386297
+    },
+    "asset": "PLTEST",
+    "source": "read-only getTransaction at https://soroban-testnet.stellar.org"
+  },
+  "bankRequestsMade": false,
+  "walletSignaturesRequested": false,
+  "mainnetTransactionsSubmitted": false,
+  "paymentGate": "NOT_CLEARED"
+}

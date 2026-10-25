@@ -1,48 +1,22 @@
-# What works so far
+# Build and verification
 
-## Latest: mainnet completion request, 25 October 2026
+Checked on the Mac mini, 25 October 2026. This page is the current record; dated artifacts retain the scope of their original runs.
 
-The active continuation is the isolated `codex/pactlane-mainnet-completion` candidate. Network support, Freighter transport and the accepted TLS proof flow are integrated locally. A read-only mainnet USDC check passed; no mainnet transaction or deployment has occurred. Complete-record ingestion is implemented and its diagnostic page is deployed; the owner-reviewed complete record was accepted at 23:08:23 UTC. Payment release remains **NOT_CLEARED**. The owner confirmed a 1 USDC / EUR 0.89 test; durable operator composition and concrete transaction/fee review remain. Read [the current mainnet handoff](release/mainnet-test.md) first; it supersedes the older bank pause and source-intake state below.
+| Part                | Observed result                                                                                                   | Evidence                                                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Website             | Published at pactlane.io, with separate demo and live modes, mobile navigation and funded-offer filtering.        | [Website receipt](../evidence/release/demo-mode-live-2026-10-25.json)         |
+| Bank record         | Authenticated completed Revolut transfer accepted by the verifier at 23:08:23 UTC.                                | [Acceptance](../evidence/release/complete-record-accepted.json)               |
+| Stellar escrow      | Testnet deployment, release, replay rejection and mutual recovery passed using PLTEST.                            | [Testnet transactions](../evidence/release/testnet-rehearsal-2026-10-25.json) |
+| Product flow        | Seller funding through buyer receipt, including failure and recovery states.                                      | [Browser checks](../evidence/release/demo-mode-browser-2026-10-25.json)       |
+| Payment policy      | Exact amounts, order/time binding, durable replay protection and canonical signatures are implemented and tested. | [Policy](../policy/README.md)                                                 |
+| Live browser / host | Wallet sessions, transaction journaling, confirmed reads and two-party recovery are implemented.                  | [Integration](../integration/README.md)                                       |
 
-The current local candidate includes the separate live browser/host and two-party recovery transport. The complete local suite passed **309 JavaScript tests with zero skips**, eight Python checks and 91 syntax checks. Real HTTP/SDK signatures, SQLite and two-browser flows are exercised with mocked wallet/chain services. Historical native/WASM results retain their source provenance; contract source/artifact did not change. This is not an authenticated payment-to-testnet success. See [current recovery evidence](../evidence/release/mutual-recovery-checks.json) and [the continuation](release/live-services.md).
+## Mainnet connection
 
-| Part                        | Evidence                                                                                                                                                                                                          | Limit                                                                                                           |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Buyer/seller app            | Whole-offer funding, reserve, confirmed payment lock, failure/retry, mutual recovery and receipts; 14 model/adapter tests. Browser flow rehearsed in the integration source checkout; not repeated during intake. | Historical demo is simulated; separate live browser requires approved configuration and real wallet validation. |
-| Soroban escrow              | Historical integration evidence: 29 native and the same 29 compiled-WASM tests passed in the source checkout. Reviewed optimized artifact is tracked.                                                             | Local host and synthetic token; no deployed contract.                                                           |
-| Canonical protocol          | 11 SDK compatibility tests and policy snapshot hash check passed.                                                                                                                                                 | Encoding/signature compatibility does not prove bank semantics.                                                 |
-| Payment policy              | 55 tests passed, including replay/restart/concurrency, atomic chain checkpoints and recovery reconciliation.                                                                                                      | Live normalizer deliberately rejects with `TLSN_PAYMENT_SCHEMA_UNVERIFIED`.                                     |
-| Cross-component rehearsal   | Historical source-checkout rehearsal: app model → durable policy → canonical Ed25519 claim → compiled escrow WASM → one payout → replay rejection.                                                                | Synthetic payment and token, local execution, no network transaction.                                           |
-| Wallet/RPC and host modules | Actual SDK signatures/XDR, durable journals, HTTP authentication, consistent chain reads, event reconciliation and mutual recovery tested locally.                                                                | Live browser/host and seller recovery transport implemented; approved private service configuration remains.    |
-| Static demo package         | Source-checkout build: seven-file allowlist, hashes, synthetic manifest and no-external-connection headers.                                                                                                       | Local build only; no hosted app URL.                                                                            |
+The approved small-trade target is **1 USDC for EUR 0.89**. The public website’s exchange API is not attached yet, and no mainnet escrow release receipt is recorded here. Finish the durable operator configuration, wallet-to-bank bindings, signer and deployment/funding/lock before the new payment. Payment release remains `NOT_CLEARED` until that trade is verified and settled.
 
-## Live service continuation
+The accepted historical bank transfer and PLTEST rehearsal are separate results. The historical transfer predates the proposed new order and cannot pay for it. [Operator continuation](release/mainnet-test.md).
 
-The Node recovery collector, authenticated HTTP bridge, consistent chain reader and atomic event reconciliation are implemented locally. A separate live browser, Freighter client and runnable host now compose those services. Their APIs and current verification are recorded in [the continuation](release/live-services.md). The local checks do not establish a deployed live app.
+## Current review
 
-## Proof observations
-
-- **23 October, 17:53:56 UTC:** historical Mac-mini public `GET /robots.txt` proof accepted for `app.revolut.com`, HTTP 200. No login or payment data.
-- **25 October, 10:46:50 UTC:** the proof workstream recorded Mac mini verifier acceptance of the MacBook Pro public extension proof. This integration lane did not repeat it.
-- **25 October, 12:34:28 UTC:** Fly accepted the MacBook public proof on image `9bb965…`. The source and sanitized evidence are now imported; this acceptance remains public-fixture proof, not payment evidence.
-- **25 October, 12:54:26 UTC:** the owner-approved response-only attempt lost its control connection after disclosure approval. Fly platform evidence identifies a trial-enforced VM shutdown at that instant; no authenticated HTTP metadata, JSON schema or payment fields were accepted.
-- **25 October, 13:31 UTC:** owner-approved plugin mitigation was deployed from `f433423` as image `eb0e1d…`. Served-code, consent and health checks passed with no authenticated retry.
-- **25 October, 13:45:08 UTC:** after the owner reported a PAYG upgrade and the same VM was started at 13:38:36, a bank-free check observed **391.5 seconds** of uninterrupted uptime and HTTP 200 health. The former five-minute cutoff did not recur during that finite observation; indefinite availability is not established.
-- Older Windows setup and timeout results remain in [historical evidence](../evidence/prototype-status.json). The current owner browser device is the MacBook Pro.
-
-None establishes an authenticated transfer. The live payment gate remains **`NOT_CLEARED`**, and **bank tests remain paused pending the owner’s decision to resume** and normal per-attempt consent/disclosure review. A screenshot, callback, setup result, public proof or uploaded receipt cannot authorize release.
-
-The shipped QuickJS callback-ID overflow was independently reproduced. The deployed plugin retains the newest transfer and reduces repeated captured-header serialization while preserving explicit disclosure approval. It reduces callback allocation; it does not fix the runtime’s finite callback-ID space or separate disposal errors. The observed server disconnect is explained by the Fly shutdown, not established as a QuickJS consequence. Read the complete chronology in [the proof handoff](proof-handoff.md) and historical checks in [proof verification](proof-verification.md).
-
-## Remaining software
-
-1. After the owner resumes bank tests, establish the real response schema and source/account/recipient identities, exact units, direction, state and completion time. Then implement the live normalizer against accepted server evidence. Browser/host work below can continue independently while the pause remains.
-2. Configure the implemented live host and browser with an approved deployment, private offer binding and trusted policy/verifier ports. The separate synthetic demo remains available.
-3. Verify the implemented buyer-envelope/seller-Soroban recovery flow with actual authorized wallets, then complete the operator workflow for manual payment-identity reconciliation.
-4. Rehearse the complete path against a configured, authorized testnet deployment and reconcile actual transaction/balance evidence.
-
-## External prerequisites
-
-The official testnet RPC reported protocol 29 in a read-only check at 13:03 UTC on 25 October. That matches the artifact’s required protocol; it does not establish a deployment. Approved token/decimals, policy public key, existing deployer, fee limit and transaction authorization remain unconfigured. Public app hosting, private-repo reviewer access and final submission are also unestablished.
-
-Detailed provenance is in [verification](verification.md), [the release handoff](release/HANDOFF.md) and [the proof handoff](proof-handoff.md). Local source intake has not deployed the combined app or restarted or changed an existing proof service. Historical proof-workstream deployment and restart actions retain their own provenance above.
+The judge-facing documentation and demo are consolidated on `codex/pactlane-judge-review`. [Handoff](handoff.md) records the final commit, checks and publication receipt. [Verification](verification.md) is the short evidence index.

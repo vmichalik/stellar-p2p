@@ -1,60 +1,40 @@
-# Mainnet test continuation
+# Mainnet trade runbook
 
-Objective: finish a real Revolut-to-USDC trade on Stellar mainnet. The owner requested this on 25 October 2026. Current payment release gate: **NOT_CLEARED**. This is preparation, not a completed mainnet test.
+Target: the owner-approved **1 USDC for EUR 0.89** trade. The first supplied wallet is the seller and the second is the buyer. Their addresses and private configuration stay in the owner-input file. The price is the agreed test quote.
 
-Execution host: Mac mini. Owner wallet/bank browser: MacBook Pro. Active isolated checkout: `/private/tmp/pactlane-mainnet-completion-20261025`, branch `codex/pactlane-mainnet-completion`. Integration commit `8bf7465` merges the network candidate `2f6ab71` and wallet candidate `32b11a3` on the presentation/social candidate `8b904c0`. TLS intake commit `dd56b4f351f06612ca106258066af974dfdd308c` imports exact code/assets from `4bcbe65`; only the gateway's stale page-title assertion was corrected. Complete-record implementation commit: `3da2740faa880cd4d0112a3418bad17e93cb93ee`. Other worktrees are preserved. Private application source remains unpushed. The new combined app has not been deployed.
+The authenticated historical bank record has been accepted, and the escrow has completed release and recovery on Stellar testnet with PLTEST. [Evidence](../verification.md). The remaining task is to connect those components for the new mainnet order.
 
-## Implemented and checked
+## Prepare the operator
 
-The host's validated deployment now selects the browser wallet's network. The previous independent branches did not compose correctly: the host checks the network before the connector selects a wallet, and the connector's default was testnet. A lazy deployment-bound adapter now opens the wallet once, checks the selected network, and rejects missing/changed deployments before signing. No default testnet fallback is used for an unconfigured exchange. The connection-only `/wallet` page remains independent from trade authorization.
+1. Confirm the deployment account, exact Circle USDC asset, policy signer, RPC and fee cap with the owner. Recheck both wallets' trustlines and capacity before signing.
+2. Use durable evidence/replay/journal storage and owner-reviewed wallet-to-bank bindings. Keep replay history across deployments and signer changes.
+3. Configure the live policy port with the accepted-record store and confirmed chain reader. Attach the authenticated same-origin API to the public website.
+4. Review the exact escrow deployment, initialized configuration and optimized WASM hash before funding. Expected artifact: `8940569853b21a957fc5a81402666e95ed75f054ce2223926231ffc2c0c506dd`.
 
-281 combined application, integration, policy and protocol tests passed with zero skips. They include real fixture signatures through loopback HTTP on both networks and rejection of a wallet on the other network. Existing TLS checks passed 67/68 initially; the remaining failure was the renamed heading in the newly styled page. After correcting that assertion, all 22 gateway cases passed, giving 68 distinct passing TLS cases. Eight Python staging tests, 114 JavaScript/inline syntax checks and protocol snapshot consistency passed. The initial mainnet test fixture omitted required asset identity and was corrected; this was not a network or wallet failure. These tests use disposable keys and synthetic chain/bank data. No native/WASM contract suite or extension timeout matrix was rerun.
+[Operator inputs](mainnet-support.md), [host composition](live-services.md), [wallet readiness](wallet-readiness.md).
 
-At 22:30:31 UTC, mainnet RPC metadata and an unsigned read-only `decimals` simulation confirmed protocol 29 and seven decimals for Circle's exact USDC asset. The source account used for the read simulation was the public issuer account; it was not signed, submitted or charged. Source and results are in [mainnet preparation evidence](../../evidence/release/mainnet-preparation.json). The artifact hash remains `8940569853b21a957fc5a81402666e95ed75f054ce2223926231ffc2c0c506dd`. Gateway's publicly documented RPC responded; sorobanrpc.com returned 403 and Nodies returned 404. No provider account was created.
+## Run one trade
 
-## Payment evidence and remaining software
+| Step                 | Confirmation                                                                        |
+| -------------------- | ----------------------------------------------------------------------------------- |
+| Seller funds         | Exact 1 USDC deposit confirmed in the intended escrow.                              |
+| Buyer reserves       | Reservation bound to the receiving wallet.                                          |
+| Buyer locks payment  | Confirmed lock, exact EUR 0.89 instructions and verified recipient.                 |
+| Buyer pays           | New payment made after that lock.                                                   |
+| Buyer proves payment | Owner-approved disclosure accepted by the verifier and matched by the order policy. |
+| Buyer releases       | Reviewed wallet transaction confirmed, then token events and balances reconciled.   |
 
-The previous Fly proof service image was `b4b914…`; the complete-record application update described below now supersedes it. The owner approved and completed the earlier seven-field disclosure; the verifier accepted its authenticated fragments. [Proof handoff](../proof-handoff.md#accepted-seven-field-proof-and-pactlane-ui-alignment) has the sanitized provenance. An outgoing EUR amount is consistent with signed cents; do not apply absolute value without checking direction/state/type.
+The historical transfer predates this order and cannot pay for it. Do not send fiat before the confirmed lock. An unknown transaction outcome must be reconciled before another submission. After payment lock, a refund or split needs both parties' approval.
 
-The seven fragments do not independently bind the JSON path/common record, a stable payer identity or a new order. A strict full-response normalizer and a private verifier callback are now implemented locally. The live host still disables payment locks/instructions. The normalizer accepts only opaque records from the authenticated local receiver, validates full response coverage/framing/JSON context, and binds payer, recipient, exact amount/currency, transaction ID and completion time. The policy checks those fields against the chain order. Browser callbacks and boolean fields remain diagnostic only. An authenticated financial record must come from the trusted verifier path; session metadata and handler labels are client-controlled and cannot establish identity or JSON structure.
+## Record the result
 
-The owner supplied the normal-browser transaction response. Only field names and candidate semantics were used; actual bank values were not copied into fixtures or tracked files. The candidate mapping uses `registeredIdentityId` for payer scope and `recipient.identityId` for recipient identity, with account/type/direction/state consistency checks. This schema is not yet accepted from a complete authenticated live record. The complete-record page explicitly discloses the broader scope, including balance, identities, names and response headers/cookies. Request credentials stay redacted. Owner review is required before the next proof. Earlier pasted bank session credentials must not be used; the owner was instructed to revoke that web session before further bank activity.
+Keep deployment, funding, reservation, lock and release hashes for the same order; the exact network/asset; normalized policy acceptance; and buyer/seller/escrow balance changes. Never publish bank identifiers, raw responses, cookies or signing keys.
 
-## Inputs and next action
+Until that order's payment and receipt are verified, the release gate remains `NOT_CLEARED`. Current public deployment and source are recorded in [the handoff](../handoff.md).
 
-The owner supplied two distinct public wallets and approved a maximum of **1 USDC**. At 22:39:49 UTC both accounts had authorized Circle USDC trustlines and sufficient sending/receiving capacity for that amount. Addresses remain in the ignored owner-input file. The owner confirmed first wallet seller, second wallet buyer, the existing bank recipient as seller, and an agreed **EUR 0.89** test price for 1 USDC. This is a fixed owner-agreed test quote, not a market-rate claim. Deployment account, fee cap and real policy signer remain unconfigured. No production signer was created.
+## Existing receipts
 
-Smallest next action: complete-record server acceptance is confirmed below. Finish the durable operator/policy composition, owner-reviewed wallet-to-bank bindings and concrete mainnet transaction/fee review. Approval is for a concrete amount, asset, destination, fee cap and action. Do not infer a signing key or silently use any public fixture signer.
-
-The execution sequence is: deploy and verify the exact initialized escrow; fund the small offer; reserve with the other wallet; confirm the payment lock; make the new exact fiat payment; verify/bind it server-side; obtain wallet approval for release; reconcile the confirmed transaction and both token balances. **The historical transfer cannot pay for a newly locked order.** Its completion time precedes that lock. Do not send fiat before a confirmed lock. A deposit/refund-only test can establish an escrow path but cannot be reported as completion of the bank-proof trade. Unknown submission outcomes require reconciliation, not a retry.
-
-Mainnet submission flags remain off by default. No mainnet transaction, wallet prompt or autonomous bank request was made in this continuation. Only the application update to the already authorized Fly proof service was deployed; the combined live exchange is not deployed. Private source privacy is unchanged. `.private/` holds raw test output and continuation metadata; no bank values, cookies, IDs or transcripts were added to tracked evidence.
-
-## Complete-record implementation checks
-
-The integrated suite passed 381 JavaScript tests; the unchanged extension timeout matrix had 11 skips because its separate prepared build was not copied into this worktree. Those tests were not rerun or rebuilt. Eight Python staging tests and 123 syntax checks passed. A subsequent new complete-record consent/status test passed, bringing distinct passing JavaScript cases to 382. The actual shipped parser test covers Content-Length and chunked framing, full response byte coverage and exclusion of request credentials. A synthetic store-to-policy test verifies exact mainnet-domain signatures, payer/recipient/amount/time failures before signing, idempotence after restart and cross-order/deployment replay rejection. All signing uses a disposable local test key and synthetic records.
-
-The pinned verifier logs disclosed transcript bytes at INFO and ignores RUST_LOG. Complete-record mode therefore starts that unchanged binary with stdout/stderr suppressed. The parent emits only fixed acceptance/error codes. Its loopback webhook uses a per-boot internal secret, is not publicly routed, and persists only normalized policy fields. The diagnostic SQLite database is ephemeral and must never replace the durable cross-deployment replay database. The runtime does not construct a policy signer or enable escrow.
-
-Before mainnet funding, the remaining software composition must use durable evidence/replay/journal storage, an approved real policy signer, owner-reviewed bank-to-wallet bindings, and the configured live policy port. Do not enable payment locks based on a readiness boolean or a browser callback.
-
-## Deployed complete-record check, 23:03 UTC
-
-The existing Fly machine now runs application image `sha256:d671ad22140f0e61e8e0f720a21bec0d343298dc79f94ba0a112856c654f5d29`, built from `3da2740` on the previous image. The verifier binary, cryptographic runtime, extension, transcript budgets, origin allowlist, region, machine size and service routes are unchanged. The only new runtime setting enables the private diagnostic evidence directory. [Sanitized deployment evidence](../../evidence/release/complete-record-deployment.json) records the checks.
-
-At 23:03:07 UTC, HTTPS health returned 200, pinned verifier metadata matched, and the served complete-record plugin matched source hash `6568c5483fbae109e867aa3744a862a580abeac32b7c075b2829d4e08ac23ba0`. The consent page uses nonce CSP and no-store; the private callback route returned 404 publicly. At 23:03:40 UTC, read-only process inspection confirmed both verifier output streams point to `/dev/null`, the loopback callback and internal authentication are configured, and its database mode is 0600. There were zero accepted complete records at that check. No secret or raw record was printed.
-
-Owner action is pending at https://stellar-p2p-proof-vijay.fly.dev/payment-check/ . The page and extension require fresh disclosure consent. Its browser result is diagnostic only; the operator must confirm private server acceptance. No historical payment may unlock the new 1 USDC order.
-
-## Accepted complete record, 23:08 UTC
-
-The owner completed the broader disclosure. The private receiver accepted one schema-v1 completed outgoing EUR record at 23:08:23.290 UTC, independently checked at 23:09:06.901 UTC. TLS source, transaction semantics, integer cents and both bank identities passed. Only sanitized booleans/time/count were copied into [acceptance evidence](../../evidence/release/complete-record-accepted.json). This is the historical transfer, not payment for a new escrow. Wallet-to-bank binding, real policy signer, durable mainnet composition, deployment/funding/lock and the new EUR 0.89 payment remain. Release gate stays NOT_CLEARED.
-
-The owner's next steering request is the public website: explicit demo toggle, clean live copy, simpler homepage, separate Why Pactlane tab, sidebar extension installation and no visible unfunded offers. Website work is isolated at `/private/tmp/pactlane-demo-toggle-20261025`, branch `codex/pactlane-demo-toggle`, based on the current production website source `37ebed4`. Mainnet and proof progress above must be preserved during that work.
-
-
-## Website update published, 23:23 UTC
-
-The requested website changes are live at https://pactlane.io/ with explicit simulated mode at https://pactlane.io/?demo=1. Published source is `a492f13557cd88b97b9ecf49f619084982238e25` in `/private/tmp/pactlane-demo-toggle-20261025`, branch `codex/pactlane-demo-toggle`. Cloudflare Worker `pactlane-demo` version `c7154099-63c9-4c7b-987d-cb0b7f706aa4` is active at 100%. Its 102 app/release tests, full local simulated trade, public mode/navigation checks and 42 published asset hashes passed. Why is a separate tab; extension installation is in the sidebar; unfunded offers remain private to seller preparation. Media/social assets were preserved.
-
-The public Worker remains ASSETS-only and explicitly returns503 for live API requests. There is no invented live market or simulated fallback when demo mode is off. Mainnet integration must carry this frontend into the configured host and update its static allowlist, then attach authenticated same-origin API routes. The combined host, policy signer, durable replay/evidence store, wallet-to-bank bindings and actual deployment/funding/lock remain the next mainnet work. The website deployment did not touch the Fly proof service, launch an authenticated request, sign a transaction or change `NOT_CLEARED`.
+- [Mainnet read-only preparation](../../evidence/release/mainnet-preparation.json): protocol and asset decimals checked on 25 October 2026.
+- [Complete-record deployment](../../evidence/release/complete-record-deployment.json): unchanged pinned verifier and private callback.
+- [Accepted record](../../evidence/release/complete-record-accepted.json): 23:08:23.290 UTC on 25 October 2026, independently checked at 23:09:06.901 UTC.
+- [Testnet rehearsal](../../evidence/release/testnet-rehearsal-2026-10-25.json): PLTEST release, replay rejection and mutual recovery.

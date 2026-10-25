@@ -1,6 +1,6 @@
 # Pactlane escrow
 
-Local contract baseline for one seller-funded offer and one buyer, using a configured SEP-41 token and an immutable Ed25519 payment-policy signer. The current terms support EUR/Revolut only. This has passed synthetic native and WASM tests; it has not been deployed, audited or connected to an authenticated payment proof.
+Escrow for one seller-funded offer and one buyer, using a configured SEP-41 token and an immutable Ed25519 payment-policy signer. The current terms support EUR/Revolut. The reviewed WASM passed native and compiled tests, then a Stellar testnet release and mutual recovery with PLTEST. See [verification](../../docs/verification.md).
 
 The contract authenticates the configured signer's claim. The signer remains responsible for verifying the bank source, completed outgoing payment, recipient, exact amount/currency, payment timestamp and stable payment ID. Neither a browser callback nor TLSNotary setup is sufficient to issue a claim.
 
@@ -37,7 +37,7 @@ stateDiagram-v2
 
 **The app must wait for `begin_payment` to confirm before instructing the buyer to send fiat.** A `Reserved` order can expire into a seller refund. A `Paying` order cannot. Paying before this lock is confirmed is outside the contract's protection.
 
-Recovery policy approved by Vijay on 25 October 2026 for the first escrow: if payment proof is unavailable after the payment lock, hold funds until both parties authorize a full refund, release or split. A later valid payment-policy claim can still release the order. This permits a buyer to lock funds indefinitely and requires both wallets to remain available. There is no arbitrator, forced timeout, admin withdrawal, signer rotation or upgrade entry point. Approval covers this first-version recovery policy; it does not establish production readiness.
+Recovery policy: if payment proof is unavailable after the payment lock, hold funds until both parties authorize a full refund, release or split. A later valid payment-policy claim can still release the order. This permits a buyer to lock funds indefinitely and requires both wallets to remain available. There is no arbitrator, forced timeout, admin withdrawal, signer rotation or upgrade entry point.
 
 ## Claim and signature
 
@@ -60,7 +60,7 @@ The payment timestamp must be at or after the payment lock, strictly before `pay
 
 The frozen [protocol v1 specification](PROTOCOL.md) defines exact domain-separated recipient commitments, account-scoped payment nullifiers and canonical claim XDR. The JS reference and public synthetic vectors are in [protocol/](protocol/). A payment nullifier depends on the verified rail/account/payment identity, never on the order ID. Contract-level replay protection covers this deployment only. A policy service serving multiple escrow deployments must also prevent reuse across deployments. Hashes do not by themselves make bank activity anonymous.
 
-Mutual resolution has no payment claim and consumes no nullifier. If parties resolve an actual payment manually, the policy service must record that payment as consumed before considering it for another order. This reconciliation is part of the outstanding signer integration.
+Mutual resolution has no payment claim and consumes no nullifier. If parties resolve an actual payment manually, the policy service must record that payment as consumed before considering it for another order. The policy registry and chain reconciler retain this payment identity across recovery.
 
 ## Storage and operations
 
@@ -93,6 +93,6 @@ npm --prefix contracts/escrow/protocol test
 
 Policy code can import `recipientCommitment`, `paymentNullifier` and `claimDigest` directly from `contracts/escrow/protocol/protocol.mjs` after preparing those dependencies, or vendor the frozen implementation with its pinned SDK and hashes. Each function returns raw bytes in a Node `Buffer`. The release integrator owns any additions to the root package scripts. `npm --prefix contracts/escrow/protocol run vectors:generate` explicitly regenerates fixtures; normal tests never rewrite them.
 
-The checked-in [WASM artifact](artifacts/pactlane_escrow.wasm) is the same optimized binary tested in WASM mode. [Deployment candidate parameters](artifacts/deployment-candidate.json) contain the exact hashes and unresolved configuration; the public fixture key is deliberately absent from that template. No deployment has been attempted. Live testnet protocol compatibility could not be checked from this restricted network and remains a deployment prerequisite.
+The checked-in [WASM artifact](artifacts/pactlane_escrow.wasm) is the same optimized binary tested in WASM mode. [Deployment candidate parameters](artifacts/deployment-candidate.json) contain the exact hashes and unresolved configuration; the public fixture key is deliberately absent from that template. The recorded testnet deployment used protocol29. Verify the target network and exact configuration for each deployment.
 
-Tests cover funding and conservation, real authorization rejection with mocking disabled, exact dual-wallet settlement authorization, time boundaries, term mismatches, wrong signers, signature mutation, cross-network/contract/order replay, duplicate payment claims, and rollback of deposits, releases and split settlements when token transfers fail. The 29 contract scenarios run in both native and WASM modes, including byte-for-byte shared XDR/digest/signature compatibility and release of the frozen JS-signed EUR 20 / 22 USDC whole offer. The scoped JS suite has 11 tests, including integer boundaries above JavaScript's safe-number range. Live RPC integration, a production signing service and external review remain outstanding.
+Tests cover funding and conservation, real authorization rejection with mocking disabled, exact dual-wallet settlement authorization, time boundaries, term mismatches, wrong signers, signature mutation, cross-network/contract/order replay, duplicate payment claims, and rollback of deposits, releases and split settlements when token transfers fail. The 29 contract scenarios run in both native and WASM modes, including byte-for-byte shared XDR/digest/signature compatibility and release of the frozen JS-signed EUR 20 / 22 USDC whole offer. The scoped JS suite has 11 tests, including integer boundaries above JavaScript's safe-number range. The [operator runbook](../../docs/release/mainnet-test.md) records the signer and network configuration for the next deployment.

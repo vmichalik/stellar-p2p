@@ -1,51 +1,47 @@
-# Integration
+# Wallet and host integration
 
-This folder has a complete local synthetic rehearsal and a testnet wallet/RPC service candidate. Neither automatically sends a bank request or network transaction.
+The Node host connects the browser, wallet, Stellar RPC and payment service. It supports explicit Stellar testnet or mainnet configuration and serves the same mode-aware interface as the public website.
 
-## Install and check
-
-From the root with Node >=22.13:
+## Run and check
 
 ```sh
 npm ci --ignore-scripts
 npm run setup:integration
 npm run test:all
+npm run dev:live
 ```
 
-Setup runs locked, script-disabled installs in `policy/`, `contracts/escrow/protocol/` and `integration/`.
+From the repository root, `setup:integration` installs the locked policy, protocol and integration dependencies. [Setup](../docs/setup.md) also covers the standalone demo and compiled-WASM rehearsal.
 
-## Local compiled-WASM rehearsal
+## Main modules
 
-Requires Cargo/Rust compatible with Soroban SDK 29.0.1 and the pinned locks; checked with Rust 1.99.1. It never falls back to native contract registration.
+| Module                    | Job                                                                |
+| ------------------------- | ------------------------------------------------------------------ |
+| `live-server.mjs`         | Explicit static-asset routes and authenticated same-origin API.    |
+| `host-runtime.mjs`        | Compose configuration, views, private order data and policy ports. |
+| `browser-bridge.mjs`      | Authenticate wallet sessions and dispatch scoped actions.          |
+| `stellar-rpc-adapter.mjs` | Prepare, validate, submit and reconcile wallet transactions.       |
+| `chain-reader.mjs`        | Read a consistent confirmed deployment and order view.             |
+| `chain-reconciler.mjs`    | Process events and update replay checkpoints.                      |
+| `transaction-journal.mjs` | Retain operation identity across retries and restarts.             |
+| `operator.example.mjs`    | Show where server-owned policy and offer adapters enter.           |
+
+Wallet requests carry the exact network and transaction. The server checks the returned envelope and signer before submission. Unknown outcomes retain the transaction hash for reconciliation. Receipts require confirmed identity and matching transfer events.
+
+Mutual recovery collects the seller’s smart-contract authorization and the buyer’s final envelope for the same allocation. The host cannot replace a missing wallet approval.
+
+## Configure a live operator
+
+Provide the reviewed deployment, token, policy signer, fee cap, private recipient and payer bindings, durable transaction/replay stores and trusted evidence reader. The example operator is a configuration guide; replace it with the actual approved server adapters. Payment instructions require a confirmed lock and ready verification service.
+
+[Mainnet runbook](../docs/release/mainnet-test.md) records the small test trade and remaining configuration. [Architecture](../docs/architecture.md) explains the trust and data flow.
+
+## Compiled-WASM rehearsal
 
 ```sh
 npm run rehearse:local
-# Rebuild with Stellar CLI 28.1.0; require byte-identical output:
 npm run rehearse:local -- --rebuild
-# Save sanitized evidence:
 npm run rehearse:local -- --record
 ```
 
-The harness creates the app’s €20 / 22 USDC order, funds a local synthetic token, reserves it and confirms `begin_payment` in the compiled escrow. The Node bridge reads that snapshot, checks synthetic evidence through the real policy and disk SQLite, then signs the frozen claim. Rust independently reproduces the digest, submits the signature to WASM and checks a 220,000,000-base-unit payout.
-
-Contract replay, cross-order payment reuse and duplicate UI settlement are rejected. Proof completed after `pay_by` is allowed for a payment made inside the locked interval. The report records hashes, revision, source dirty status, balances and the open live gate. Public fixture seeds must never become deployment keys.
-
-## Wallet/RPC service candidate
-
-`stellar-rpc-adapter.mjs` uses Stellar SDK 17.1.0 and wraps Freighter API 6.0.1 response shapes. It runs on a Node host because it requires disk SQLite. It cannot be imported directly into the static demo.
-
-The host provides:
-
-- Explicit testnet deployment: HTTPS RPC, escrow/token addresses, seven decimals, policy public key and maximum fee in stroops.
-- Wallet port: connect, selected address, network and signed envelope. The authenticated browser bridge and `app/host-client.mjs` route these to Freighter; `freighterWalletPort` also defines the direct adapter shape.
-- `TransactionJournal` with a private persistent disk path. Atomic reservations precede wallet prompts. Unknown and legacy preparing transactions never expire automatically. Proven preparation failures and explicit wallet refusal retain history and permit a new user-requested attempt; signed/unknown outcomes require reconciliation. Deleting the journal is not recovery.
-- Trusted proof/status/authorization ports and source-bound private recipient reader.
-- Explicit `submissionEnabled: true` only when network submission is authorized. Default is false.
-
-Funding, reserve, payment lock, signed release, unlocked-expiry refund and receipts are implemented. Network/config checks, fee cap, unchanged envelope and account signature precede submission. Receipts require confirmed transaction identity and matching token events. Unknown submission reuses its journaled hash.
-
-**Implemented Node modules:** authenticated browser transport, consistent chain reader, event reconciliation with atomic replay checkpoints, and buyer-envelope plus seller-Soroban recovery authorization. See [live service continuation](../docs/release/live-services.md) for their APIs and boundaries.
-
-**Live entry point:** `npm run dev:live` composes the host, public view, Freighter client and separate live UI, initially unconfigured. **Missing:** approved private offer/policy composition, accepted TLSNotary normalization and deployment configuration. The live broker routes exact seller authorization to the authenticated seller, followed by the buyer envelope. `resolve()` requires a configured seller authorization port. Tests mock RPC/wallet while using real SDK signing/encoding, loopback HTTP and disk/restart journals.
-
-These are software/configuration gaps. Deployment authorization alone would not finish them. See [testnet handoff](../deploy/testnet/README.md).
+With the compatible Rust toolchain installed, this executes the actual escrow WASM against the policy and test token, checks payout and rejects replay. It does not fall back to native registration. The separately recorded [testnet run](../evidence/release/testnet-rehearsal-2026-10-25.json) retains its original source hashes and PLTEST receipts.

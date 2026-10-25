@@ -7,9 +7,16 @@ import { walletConfiguration, walletBundle } from './wallet-assets.mjs';
 
 const app = resolve(import.meta.dirname, '../app');
 const routes = new Map([
-  ['/', ['live.html', 'text/html; charset=utf-8']],
+  ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/wallet', ['wallet-setup.html', 'text/html; charset=utf-8']],
   ...[
+    'entry.mjs',
+    'site-ui.mjs',
+    'marketplace.mjs',
+    'app.mjs',
+    'model.mjs',
+    'demo-adapter.mjs',
+    'presentation.mjs',
     'live-app.mjs',
     'live-view-adapter.mjs',
     'host-client.mjs',
@@ -20,10 +27,11 @@ const routes = new Map([
     'wallet-setup.mjs',
   ].map((name) => [`/${name}`, [name, 'text/javascript; charset=utf-8']]),
 
-  ...['styles.css', 'live-styles.css'].map((name) => [
+  ...['styles.css', 'live-styles.css', 'site-shell.css'].map((name) => [
     `/${name}`,
     [name, 'text/css; charset=utf-8'],
   ]),
+  ['/assets/favicon.svg', ['assets/favicon.svg', 'image/svg+xml']],
   ['/assets/fonts/manrope.woff2', ['assets/fonts/manrope.woff2', 'font/woff2']],
 ]);
 
@@ -78,7 +86,17 @@ export async function createLiveServer({
           return;
         }
         const url = new URL(request.url, publicOrigin);
-        if (url.origin !== publicOrigin || url.search || url.hash) throw Error();
+        if (
+          url.origin !== publicOrigin ||
+          url.hash ||
+          (url.search && !(url.pathname === '/' && ['?demo=1', '?demo=0'].includes(url.search)))
+        )
+          throw Error();
+        const responseHeaders = { ...headers };
+        if (url.searchParams.get('demo') === '1')
+          responseHeaders['Content-Security-Policy'] = responseHeaders[
+            'Content-Security-Policy'
+          ].replace(/connect-src[^;]*/, "connect-src 'none'");
         let body, type;
         if (url.pathname === '/wallet-config.json') {
           body = JSON.stringify(walletConfig);
@@ -98,7 +116,7 @@ export async function createLiveServer({
           type = entry[1];
         }
         response
-          .writeHead(200, { ...headers, 'Content-Type': type })
+          .writeHead(200, { ...responseHeaders, 'Content-Type': type })
           .end(request.method === 'HEAD' ? undefined : body);
       } catch {
         response.writeHead(404, headers).end('Not found');

@@ -1,10 +1,6 @@
 # Live service continuation
 
-Current network-support continuation: see [explicit testnet/mainnet configuration](mainnet-support.md). The historical checks below describe their original testnet revisions. Mainnet capability is local and submission remains disabled by default.
-
-Objective: connect Pactlane to confirmed Stellar state and wallet approvals. Execution host: Mac mini; isolated checkout `/private/tmp/pactlane-coordinator-review-20261025`, branch `codex/pactlane-mutual-recovery`. This continuation starts from checked live browser/host commit `4cb97bf0d96d284fbcaeec813f9371fe9df8b8ce`. Check `git rev-parse HEAD` and `git status --short` for the current revision and local changes.
-
-The separate live browser entry point, authenticated host and wallet client are implemented locally. `npm run dev:live` serves them on loopback, initially unconfigured. `npm run dev:app` remains the synthetic demo. Neither command deploys a contract or enables transactions. Bank tests remain paused, and accepted payment evidence is still missing.
+The host connects wallet approvals, confirmed Stellar reads, transaction journals and the payment policy. Both browser modes use the shared website entry point; demo mode loads its own sample adapter. [Current source and deployment](../handoff.md).
 
 ## Host setup
 
@@ -14,7 +10,7 @@ The configured factory requires the validated `deployment` (network passphrase, 
 
 `PACTLANE_LIVE_PORT` defaults to 17861. The listener binds only `127.0.0.1`; `PACTLANE_PUBLIC_ORIGIN` must exactly match the browser origin, with HTTPS required except for loopback. A remote device needs an authorized reachable route; the local listener is not that handoff. The server serves an explicit file allowlist and the installed Freighter 6.0.1 bundle, pinned by version and SHA-256, with a restrictive CSP. Configuration and SQLite files are not routes.
 
-Payment verification remains unavailable. The runtime refuses every new `beginPayment` call and reports `paymentProof: false`; the UI withholds the payment-lock action and fiat instructions. Existing locked trades show held funds. Changing a browser flag cannot enable the host action. Future payment enablement needs an accepted normalizer, trusted policy composition and another reviewed change.
+The complete-record receiver and normalizer are implemented and have accepted an authenticated record. Payment locking stays disabled until the host has the approved durable policy composition and bank-to-wallet bindings. The browser cannot enable it with a flag. [Mainnet composition](mainnet-test.md).
 
 ## Browser and wallet
 
@@ -46,12 +42,8 @@ Requests expire within 45 seconds, the buyer operation deadline and both partici
 
 `createChainReconciler` scans contiguous bounded event ranges from the confirmed deployment ledger. Full pages split; saturated single ledgers and missing retained history stop without advancing. It atomically records recovery holds and checkpoints, including order ID `0`. Every `Resolved` event creates the existing conservative global hold. Clearing it requires a trusted complete nonempty payment-identity manifest; the operator workflow is still unfinished. These reads trust the configured RPC and are not independent consensus proofs.
 
-## Evidence and remaining work
+## Verification
 
-The previous service-only checks remain recorded in [live-service-checks.json](../../evidence/release/live-service-checks.json), including the read-only public testnet observation at 14:08:46 UTC. That observation established API response shapes, not a Pactlane deployment or approved trade asset. The new browser/host checks are recorded separately in [live-browser-host-checks.json](../../evidence/release/live-browser-host-checks.json): 286 JavaScript tests, eight Python checks and 87 syntax checks passed, with zero skips. RPC and wallet dependencies are mocked; real SDK signatures/XDR, loopback HTTP and SQLite restart paths are exercised. Native/WASM contract suites were not rerun because their source and artifact did not change. Historical evidence is not silently relabeled.
+The integrated tests cover the browser, authenticated HTTP bridge, runtime, recovery broker and collector with fixture signatures and controlled RPC responses. They check that both approvals precede recovery, receipt amounts match token events, and reconciliation never submits a second transaction. [Current verification](../verification.md).
 
-The actual browser/HTTP rehearsal passed at desktop, 390px and 320px widths: seller funding, buyer reservation, disabled locking while verification is unavailable, then a disposable mock runtime enabled the future lock/instructions/policy/release/receipt path. Reload required explicit receipt reconciliation. There was one release, no stored private destination, no page errors or horizontal overflow. Two anonymous session reads returned the expected 401. Freighter, policy and chain behavior were mocked with public fixture keys; this is not an authenticated payment or live-chain success.
-
-Remaining work: approved deployment/private offer/policy configuration; accepted TLS payment semantics and normalization; complete manual-payment reconciliation; real authorized wallet/testnet validation; a reachable hosted handoff; silent video/deck and submission. The local app is useful integration progress, not payment-to-chain success. No real wallet signature, transaction, bank retry or deployment was performed by this continuation.
-
-The mutual-recovery continuation passed **309 JavaScript tests**, eight Python checks and 91 syntax checks with zero skips. Its composition test uses the actual client, HTTP bridge, runtime, broker and collector with fixture signatures and mocked RPC; it proves no submission before the buyer signature, one confirmed split, exact receipt amounts and no second submission on repetition. A separate two-browser UI rehearsal passed at 1440/390/320px with payment verification unavailable. See [recovery evidence](../../evidence/release/mutual-recovery-checks.json). No native/WASM rerun or real-wallet/testnet claim is implied.
+The [PLTEST rehearsal](../../evidence/release/testnet-rehearsal-2026-10-25.json) separately records on-chain release and mutual recovery. [The mainnet runbook](mainnet-test.md) covers the remaining operator connection for the approved 1 USDC trade.

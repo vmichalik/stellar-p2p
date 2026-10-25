@@ -1,35 +1,36 @@
-# Development handoff
+# Project handoff
 
-## Latest: mainnet completion request, 25 October 2026
+## Objective and source
 
-The active continuation is the isolated `codex/pactlane-mainnet-completion` candidate. Network support, Freighter transport and the accepted TLS proof flow are integrated locally. A read-only mainnet USDC check passed; no mainnet transaction or deployment has occurred. Complete-record ingestion is implemented and its diagnostic page is deployed; the owner-reviewed complete record was accepted at 23:08:23 UTC. Payment release remains **NOT_CLEARED**. The owner confirmed a 1 USDC / EUR 0.89 test; durable operator composition and concrete transaction/fee review remain. Read [the current mainnet handoff](release/mainnet-test.md) first; it supersedes the older bank pause and source-intake state below.
+Make Pactlane easy for users and HackMeridian judges to understand: a clear buyer/supplier story, realistic product demo, readable implementation docs and directly linked evidence.
 
-Objective: finish one Revolut-to-Stellar trade from the integrated Pactlane candidate.
+Execution host: Vijay's Mac mini. Owner browser: MacBook Pro. Review checkout: `/private/tmp/pactlane-judge-review-20261025`, branch `codex/pactlane-judge-review`. Integrated base `421dcfc` combines mainnet/proof source `abcd980` and published website source `890b336`. The final review commit follows that base. The Documents checkout remains untouched because macOS denies access on this host.
 
-Execution host: Mac mini, Apple Silicon macOS. Current owner browser device: MacBook Pro. These devices do not share local files, browser profiles or loopback addresses.
+The application repository remains private. The extension repository remains public. No bank request, wallet signature or fund movement was performed by this review.
 
-Repository: private [vmichalik/stellar-p2p](https://github.com/vmichalik/stellar-p2p). Integration source worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`, branch `codex/pactlane-integration`, snapshot `c8f44752b82b1fe8f766028a782e7759caef2cc7`. Current isolated intake checkout: `/private/tmp/pactlane-coordinator-review-20261025`, branch `codex/pactlane-mutual-recovery` (based on checked live browser/host `4cb97bf`). Base: `807412686da2cdad494ee284675dbefc35110257`. Runtime integration commit: `006ab023e4d44600d03f320f220457e5b5545f0e`. The TLS source snapshot is `2c98f8e86ee3fb6c9f89c14883c43b0a0d38f03a`; its deployed plugin source is `f433423`. Use `git rev-parse HEAD`, `git status --short` and, during intake, `git rev-parse MERGE_HEAD` to distinguish the committed base from local merge changes. Combined local verification passed 183 JavaScript tests with zero skips, eight benchmark-preparation tests and 65 syntax checks. A remote push or combined-app deployment is not established by source intake.
+## Changes
 
-Main's dirty proof docs/evidence and coordinator note were preserved. Component owners' worktrees and running proof services were not changed. This branch can be reviewed or merged separately; do not reset main over those changes.
+The README, pitch, submission answers and architecture now lead with the user and one trade. Old coordination essays link to the current record. The criteria guide maps the product to the official rubric. The operator runbooks preserve exact configuration, payment-lock, disclosure, retry and recovery requirements.
 
-The [live service continuation](release/live-services.md) adds the Node browser bridge, chain reader/indexer and mutual-recovery authorization. A separate live browser, Freighter client and host composition are now implemented; seller recovery transport is now wired and locally checked. Approved configuration and deployed validation remain outstanding.
+The demo uses normal product copy with a visible Demo mode switch. Only funded offers are shown. The live host now serves the shared mode entry, navigation module, stylesheet and required assets; demo mode blocks connections even when mobile relays are configured. Live mode never falls back to sample balances or offers.
 
-## Resume
+The new 90-second film uses fresh product captures and a current evidence card. The accepted Revolut record and separate PLTEST testnet transactions retain their actual scope. Editable source is in `design/demo`; [the shot list](demo/shot-list.md) identifies morning replacements.
 
-1. Read [status](status.md), [release handoff](release/HANDOFF.md) and [proof handoff](proof-handoff.md). Bank tests remain paused.
-2. Run `npm ci --ignore-scripts` and `npm run setup:integration`; prepare the pinned ignored TLS runtime assets using [setup](setup.md). Then run `npm run test:all` (including Python benchmark-preparation checks) and `npm run check`. Require zero skipped runtime tests; record the combined candidate revision and actual results.
-3. Start the synthetic browser demo with `npm run dev:app`, or the unconfigured live host with `npm run dev:live`. Both listen locally; neither provides a remote-device handoff.
-4. With compatible Rust available, run `npm run rehearse:local`; it uses the tracked WASM and synthetic evidence, and submits no network transaction.
-5. Finish the live software gaps in [integration](../integration/README.md), then prepare the configured, authorized testnet rehearsal.
+## Checks
 
-## Current boundary
+- Combined suite: 401 JavaScript tests passed, 11 extension-watchdog cases skipped because the separate prepared package is absent; 8 Python checks passed.
+- Syntax: 138 module/inline scripts passed before the final media addition.
+- Browser: complete sample funding/reservation/lock/verification/receipt; recovery with two approvals; live/demo isolation; mobile widths 320, 390, 760, 1024, 1440; no page errors.
+- Live host: shared entry, asset loading and demo toggle passed. Architecture overview passed at 320, 390 and 1440 pixels.
+- Video: 18 composition snapshots, no clipped text or external requests, deterministic random-access seeking. Final export and public hashes are recorded with publication.
+- Documentation:current relative file links resolve. Review diff and publication receipts for the final source/hash.
 
-App, policy and escrow work together locally. The browser demo is simulated. Live TLSNotary payment ingestion rejects unverified records. No accepted authenticated payment, deployed escrow, network receipt or public app URL is established by this branch.
+The unchanged escrow was not rebuilt. The recorded testnet release and recovery were freshly queried through RPC and both returned `SUCCESS` at their recorded ledgers. [Verification](verification.md).
 
-The Node wallet/RPC service candidate is implemented and unit checked, with local browser-transport, trusted chain-reader/indexer and two-wallet authorization modules now implemented. The live host and browser are implemented. Approved private offer/policy composition and the live normalizer remain. Seller approval transport is implemented and checked with fixture wallets. These need implementation and evidence as well as deployment authorization. Sanitized cloud source and the plugin/deployment chronology are imported in [the proof handoff](proof-handoff.md). The failed server connection is explained by Fly’s five-minute trial shutdown; the later 391.5-second bank-free uptime observation passed the former cutoff. The separately reproduced QuickJS defect is mitigated, not fully fixed. None clears the payment gate or resumes bank tests. Local import does not deploy the combined app or authorize changing the existing proof runtime.
+## Publication and next action
 
-## Checks and artifacts
+Publication receipts will identify the final GitHub source and existing Cloudflare Worker version. The Fly proof image and extension binaries are unchanged by this editorial review. The extension documentation update points to the existing Pactlane.2 asset.
 
-[Verification](verification.md) records integration-source suites and limits; [proof verification](proof-verification.md) preserves the separate TLS history. The combined local JavaScript/Python/syntax checks passed; the previous native/WASM escrow suites and local WASM rehearsal were not rerun during this intake. [Local rehearsal evidence](../evidence/release/local-wasm-rehearsal.json) pins source/artifact hashes. Synthetic screenshots are under `evidence/release/screenshots/`. `npm run build:demo` prepares ignored `dist/demo`, with an explicit asset/hash manifest. It does not publish anything.
+Next technical action: follow [the mainnet runbook](release/mainnet-test.md) to connect the durable operator, policy signer, wallet-to-bank bindings and public exchange API for the approved 1 USDC / EUR 0.89 trade. No mainnet receipt is available in this checkout; payment release remains `NOT_CLEARED`.
 
-Private keys, bank identities, raw proofs and runtime logs remain outside Git. Review staged content before every push. Existing repository privacy must remain unchanged. Hosting, token/key/deployer configuration, network signing, reviewer access and final submission need their existing specific authorizations checked before execution.
+Next submission action: check the portal fields and judge access, replace the specified screenshots with actual available evidence, and retain the submission receipt. [Judging guide](hackathon.md).

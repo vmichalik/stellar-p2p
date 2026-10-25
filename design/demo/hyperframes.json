@@ -1,0 +1,5 @@
+{
+  "paths": { "assets": "assets", "blocks": "compositions" },
+  "media": { "autoProxy": false },
+  "authoringSkill": "product-launch-video"
+}

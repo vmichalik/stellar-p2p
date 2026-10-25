@@ -1,29 +1,17 @@
-# Finish the hackathon build
+# Next milestones
 
-The app, policy and escrow worked together in the recorded local WASM rehearsal. TLS source and sanitized deployment evidence are now imported; verify the combined candidate before a new release claim. The next milestone is the same trade through real host services and an authorized testnet deployment. Browser/host implementation and local rehearsals can continue while bank tests remain paused.
+## Complete the small mainnet trade
 
-## 1. Resolve payment evidence
+Connect the durable exchange host to the public app. Configure the policy signer and approved bank-to-wallet bindings. Review the exact deployment and funding transactions, confirm escrow locking, then make the new EUR 0.89 payment for 1 USDC. Verify it and reconcile release with both wallet balances. [Execution details](release/mainnet-test.md).
 
-Bank tests remain paused. The failed cloud connection was explained by the Fly trial shutdown; a post-upgrade bank-free check passed the former cutoff for 391.5 seconds. The plugin allocation mitigation is deployed, but the QuickJS callback limit and disposal issue are not fixed. See [the proof handoff](proof-handoff.md).
+## Make the first corridor repeatable
 
-Only after the owner decides to resume, use the existing response-only flow with normal per-attempt consent/disclosure review. Establish HTTP success, selected transfer association, exact units/sign, completed outgoing state/type, completion timestamp, stable payer scope, recipient and transfer identity. Do not change selectors without source evidence or open a second bank diagnostic from this lane.
+Run ten small trades with a few repeat suppliers. Record completion time, quote availability, proof failures, recovery and repeat use. Improve the steps that cost people time before increasing trade sizes.
 
-Done when the server accepts a real completed transfer, live normalization has source-backed rules, and wrong recipient/amount/state/time cases fail. Keep values and raw proofs private.
+## Reduce disclosure and onboarding effort
 
-## 2. Connect app and host
+Narrow authenticated disclosure while preserving enough response context for payment validation. Simplify wallet setup and transfer selection. Add another payment rail when its records and identities can support the same payment rules.
 
-Keep the demo usable. The separate live browser, authenticated host, chain reader/indexer and two-party recovery transport are implemented and locally checked. [Configure their ports](release/live-services.md) with approved deployment, private offer bindings and trusted policy/verifier services. Use the existing durable journals and reconciliation.
+## Prepare the submission
 
-Done when the UI uses confirmed service results, instructions appear only after the lock, unknown submission cannot duplicate a transaction, late proof remains possible, and receipts match chain evidence.
-
-## 3. Execute a testnet trade when authorized
-
-Confirm token/decimals, policy key, existing deployer and fee budget. Use the reviewed artifact. Record deployment, funding, reserve, lock and release transactions and balances. Use a separate order for recovery.
-
-Done when the buyer receives once, replay causes no second transfer, and receipt amounts agree with token events. Synthetic testnet evidence still does not establish a bank payment.
-
-## 4. Rehearse and submit
-
-Agree on public hosting and reviewer access. Record the implemented flow, signer trust model and a separate held-funds recovery scenario. Keep video silent for Vijay’s dub. Check portal cutoff/timezone and format limits before final export/submission.
-
-If authenticated evidence remains blocked, show the local compiled-WASM result and labeled browser simulation accurately. Do not narrate a real payment or network release that has not happened.
+Follow the [judge’s reading path](hackathon.md), replace the [morning capture slots](demo/shot-list.md), and submit the current repository and materials before noon Lisbon time.

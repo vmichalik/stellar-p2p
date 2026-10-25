@@ -13,3 +13,10 @@ policy/vendor/escrow-protocol.mjs
 policy/test/fixtures/protocol-vectors.json
 contracts/escrow/interface.json
 contracts/escrow/artifacts/
+
+# Pinned upstream browser bundles.
+app/vendor/
+design/demo/assets/vendor/
+
+# Preserve the bytes of the original published-domain receipt.
+evidence/release/public-domain-2026-10-25.json

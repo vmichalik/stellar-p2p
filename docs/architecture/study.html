@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>How Pactlane works</title>
+    <style>
+      @font-face {
+        font-family: Manrope;
+        src: url('../../app/assets/fonts/manrope.woff2');
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #f7f5ee;
+        color: #2d382e;
+        font-family: Manrope, system-ui, sans-serif;
+        line-height: 1.7;
+      }
+      main {
+        max-width: 1000px;
+        margin: auto;
+        padding: 48px 24px;
+      }
+      a {
+        color: #a94321;
+      }
+      h1 {
+        font-size: clamp(32px, 6vw, 54px);
+        line-height: 1.15;
+        letter-spacing: -2px;
+      }
+      h2 {
+        font-size: 24px;
+        letter-spacing: -0.7px;
+      }
+      p {
+        max-width: 72ch;
+      }
+      .brand {
+        font-size: 24px;
+        font-weight: 700;
+      }
+      .brand span {
+        color: #ed7047;
+      }
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin: 36px 0;
+      }
+      .card,
+      section {
+        padding: 24px;
+        background: #fffefa;
+        border: 1px solid #dedfd0;
+        border-radius: 18px;
+      }
+      .card b {
+        display: block;
+        color: #a94321;
+        margin-bottom: 10px;
+      }
+      .card strong {
+        display: block;
+      }
+      section {
+        margin: 18px 0;
+      }
+      nav {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin: 28px 0;
+      }
+      footer {
+        margin-top: 36px;
+        color: #5a6556;
+      }
+      @media (max-width: 700px) {
+        .flow {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        main {
+          padding: 24px 18px;
+        }
+      }
+      @media (max-width: 380px) {
+        .flow {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="brand" href="../../README.md">pactlane<span>.</span></a>
+      <h1>From a bank payment<br />to a Stellar wallet.</h1>
+      <p>
+        The seller supplies USDC. The buyer pays through Revolut. Pactlane connects the payment
+        record to the escrow that holds the tokens.
+      </p>
+      <nav aria-label="Architecture">
+        <a href="system-map.md">Source map</a><a href="../verification.md">Evidence</a
+        ><a href="privacy-and-data.md">Privacy and recovery</a
+        ><a href="https://pactlane.io/?demo=1">Try the demo ↗</a>
+      </nav>
+      <div class="flow" aria-label="Trade sequence">
+        <div class="card">
+          <b>01 · Fund</b><strong>Seller deposits</strong>The offer appears after escrow is funded.
+        </div>
+        <div class="card">
+          <b>02 · Lock</b><strong>Buyer reserves</strong>Payment instructions follow the confirmed
+          lock.
+        </div>
+        <div class="card">
+          <b>03 · Verify</b><strong>Match the payment</strong>Authenticated bank evidence is checked
+          against the order.
+        </div>
+        <div class="card">
+          <b>04 · Receive</b><strong>Release once</strong>The Stellar contract checks the signed
+          claim and transfers tokens.
+        </div>
+      </div>
+      <section>
+        <h2>Two checks connect the trade.</h2>
+        <p>
+          TLSNotary authenticates the bank response. Pactlane’s payment service checks who paid
+          whom, the exact amount, timing and payment identity. The contract then verifies the
+          service’s signature and its own stored trade rules.
+        </p>
+        <a href="policy-and-claims.md">Read about claims and replay protection →</a>
+      </section>
+      <section>
+        <h2>Recovery needs both wallets.</h2>
+        <p>
+          If a payment check fails after locking, the tokens stay held. A later valid proof can
+          complete the trade, or both wallets can approve a release, refund or split. Neither
+          participant can take a unilateral timeout refund after the lock.
+        </p>
+        <a href="escrow-contract.md">See the escrow lifecycle →</a>
+      </section>
+      <section>
+        <h2>Inspect the implementation.</h2>
+        <p>
+          The repository links the accepted authenticated Revolut record, the Stellar testnet
+          release and recovery transactions, and the browser-flow checks. Each result keeps its
+          original network and evidence type.
+        </p>
+        <a href="../verification.md">Open the verification record →</a>
+      </section>
+      <footer>Peer-to-peer. On Stellar.</footer>
+    </main>
+  </body>
+</html>

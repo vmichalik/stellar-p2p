@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Pactlane: a payment-proof and Stellar escrow hackathon prototype.",
+  "description": "Pactlane: peer-to-peer Stellar exchange with authenticated bank-payment evidence.",
   "engines": {
     "node": ">=22.13"
   },

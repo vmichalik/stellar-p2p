@@ -154,6 +154,15 @@ test('serves only the live asset allowlist and exact installed Freighter bytes w
   const f = await fixture(t);
   for (const path of [
     '/',
+    '/entry.mjs',
+    '/site-ui.mjs',
+    '/site-shell.css',
+    '/marketplace.mjs',
+    '/app.mjs',
+    '/demo-adapter.mjs',
+    '/model.mjs',
+    '/presentation.mjs',
+    '/assets/favicon.svg',
     '/live-app.mjs',
     '/live-view-adapter.mjs',
     '/host-client.mjs',
@@ -200,7 +209,6 @@ test('denies repository/private paths, alternate origins and static mutations', 
     '/.private/orders.sqlite',
     '/%2e%2e/integration/host-runtime.mjs',
     '/styles.css?secret=synthetic',
-    '/demo-adapter.mjs',
   ]) {
     const response = await f.request(path);
     assert.equal(response.status, 404, path);
@@ -304,4 +312,17 @@ test('mobile assets are opt-in, locally bundled and do not widen the default CSP
   const publicConfig = JSON.parse((await enabled.request('/wallet-config.json')).body.toString());
   assert.equal(publicConfig.enabled, true);
   assert.deepEqual(Object.keys(publicConfig).sort(), ['appUrl', 'enabled', 'projectId']);
+});
+
+test('the shared demo entry blocks all connections, including enabled wallet relays', async (t) => {
+  const f = await fixture(t, { walletConnect: { projectId: 'a'.repeat(32) } });
+  const page = await f.request('/?demo=1');
+  assert.equal(page.status, 200);
+  assert.match(page.body.toString(), /src=".\/entry.mjs"/);
+  assert.match(page.headers['content-security-policy'], /connect-src 'none'/);
+  assert.doesNotMatch(
+    page.headers['content-security-policy'],
+    /connect-src 'self'|relay.walletconnect/,
+  );
+  assert.equal((await f.request('/?demo=1&origin=elsewhere')).status, 404);
 });

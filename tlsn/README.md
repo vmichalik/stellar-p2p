@@ -1,19 +1,21 @@
-# TLSNotary prototype
+# Bank payment proofs
 
-The active code is here. Start with [setup](../docs/setup.md), then read [status](../docs/status.md) before running a bank test.
+Pactlane uses TLSNotary to authenticate a Revolut transfer response. The owner selects the transfer and reviews its disclosure in the Chrome extension. The verifier’s private receiver parses the authenticated record for the payment service.
 
-| File                                | Job                                                                         |
-| ----------------------------------- | --------------------------------------------------------------------------- |
-| `launcher.mjs`, `launcher.html`     | Private gateway, pinned readiness checks and transfer-test UI               |
-| `revolut.plugin.mjs`                | Explicit-click proof of a selected transfer or limited response-shape check |
-| `extension-check.*`                 | Fixed public GET proof through the installed extension                      |
-| `setup-check.*`                     | Browser-worker MPC setup without a bank request                             |
-| `browser-setup-smoke.mjs`           | Optional isolated Playwright setup/public-request diagnostic                |
-| `setup-smoke.rs`                    | Optional native setup-only diagnostic                                       |
-| `prepare-verifier.py`               | Narrow restrictions for the pinned upstream source                          |
-| `verifier-local-restrictions.patch` | Reviewable copy of those source changes                                     |
-| `*.test.mjs`                        | Synthetic behavior and boundary checks                                      |
+| File                            | Purpose                                                                 |
+| ------------------------------- | ----------------------------------------------------------------------- |
+| `revolut.plugin.mjs`            | Capture the selected transfer request and generate the requested proof. |
+| `payment-record.html`           | Complete-record consent and result page.                                |
+| `payment-check.mjs`             | Validate proof-session output for the payment check.                    |
+| `benchmark/gateway.mjs`         | Route the configured verifier and bounded public diagnostics.           |
+| `extension-check.*`             | Public connection proof using GET /robots.txt.                          |
+| `response-check.*`              | HTTP and JSON response inspection.                                      |
+| `setup-check.*`                 | MPC setup timing without a bank request.                                |
+| `../policy/src/tlsn-record.mjs` | Validate framing, response context and transfer semantics.              |
+| `../policy/src/tlsn-store.mjs`  | Store accepted normalized evidence behind a private interface.          |
 
-Plugins run in the extension’s QuickJS environment. They have no DOM `URL` class; keep their destination checks compatible with that runtime. Their `VERIFIER_ORIGIN` and transport constants stay empty in source and are filled only by the configured gateway.
+Plugins run in the extension’s QuickJS runtime. Keep URL and request matching compatible with that environment. The gateway fills verifier/transport settings from its configured origins; they are not browser-selected destinations.
 
-All current callbacks are diagnostic. `NOT_CLEARED` must remain the outcome until an independent payment-policy service verifies an order-bound claim.
+The complete-record path was accepted on 25 October. [Proof status](../docs/proof-status.md). Setup and public checks remain separate diagnostics. The payment service must bind an accepted transfer to a locked order before release.
+
+[Install the extension](https://github.com/vmichalik/pactlane-tlsnotary) · [Operator continuation](../docs/release/mainnet-test.md) · [Data handling](../docs/architecture/privacy-and-data.md)

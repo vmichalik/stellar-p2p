@@ -22,8 +22,8 @@ export const DEMO_OFFERS = [
     maxMinor: 2000,
   },
 ];
-const buyerWallet = () => ({ name: 'Ana', label: 'Ana’s demo wallet', network: 'testnet' });
-const sellerWallet = () => ({ name: 'Ben', label: 'Ben’s demo wallet', network: 'testnet' });
+const buyerWallet = () => ({ name: 'Ana', label: 'Ana’s wallet', network: 'testnet' });
+const sellerWallet = () => ({ name: 'Ben', label: 'Ben’s wallet', network: 'testnet' });
 
 export function parseEuro(value) {
   if (!/^\d{1,7}(\.\d{1,2})?$/.test(String(value)))
@@ -50,7 +50,7 @@ export function sellerQuote(value) {
   const [whole, decimal = ''] = String(value).split('.');
   const tokenAtoms = Number(whole) * TOKEN_SCALE + Number(decimal.padEnd(7, '0'));
   if (tokenAtoms < 55_000_000) throw new Error('Deposit at least 5.50 USDC.');
-  if (tokenAtoms > 220_000_000) throw new Error('Ben’s demo wallet has 22.00 USDC available.');
+  if (tokenAtoms > 220_000_000) throw new Error('Ben’s wallet has 22.00 USDC available.');
   if (tokenAtoms % 110_000 !== 0)
     throw new Error('Choose a USDC amount that converts exactly to EUR cents at this rate.');
   return { tokenAtoms, maxMinor: tokenAtoms / 110_000 };
@@ -104,14 +104,14 @@ export function transition(previous, event) {
       state.wallet = buyerWallet();
       break;
     case 'seller_create': {
-      if (!state.seller.wallet) throw new Error('Connect Ben’s demo wallet first.');
+      if (!state.seller.wallet) throw new Error('Connect Ben’s wallet first.');
       if (!['new', 'created'].includes(state.seller.status))
         throw new Error('This offer is already funded.');
       const { tokenAtoms, maxMinor } = sellerQuote(event.amount);
       if (!/^@[a-zA-Z0-9._]{3,30}$/.test(event.tag))
         throw new Error('Enter a Revolut tag such as @ben.');
       if (tokenAtoms > state.seller.balanceAtoms)
-        throw new Error('The demo wallet has insufficient USDC.');
+        throw new Error('Your wallet has insufficient USDC.');
       Object.assign(state.seller, { status: 'created', offerAtoms: tokenAtoms, tag: event.tag });
       Object.assign(state.offers[0], { tag: event.tag, minMinor: maxMinor, maxMinor });
       break;
@@ -133,7 +133,7 @@ export function transition(previous, event) {
       state.offers[0].availableAtoms = state.seller.offerAtoms;
       break;
     case 'reserve': {
-      if (!state.wallet) throw new Error('Connect your demo wallet first.');
+      if (!state.wallet) throw new Error('Connect your wallet first.');
       if (state.orders.some((item) => OPEN_STATES.includes(item.status)))
         throw new Error('Finish your current trade before reserving another offer.');
       if (!event.id || state.orders.some((item) => item.id === event.id))

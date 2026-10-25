@@ -245,3 +245,17 @@
     padding: 10px 16px;
   }
 }
+
+.disclosure-details {
+  margin: 18px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.disclosure-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.disclosure-details p {
+  margin-top: 10px;
+  color: var(--muted);
+}

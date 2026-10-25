@@ -1,6 +1,6 @@
 # Explicit network support
 
-This local change supports configuring the live host for Stellar testnet or mainnet. It does not establish a deployment, accepted bank payment, live-wallet trade or mainnet readiness. Testnet remains the default. Mainnet requires `network: 'mainnet'`; unknown names or inconsistent passphrases fail. Submission defaults off; mainnet additionally requires `allowMainnetSubmission: true` alongside the host's `submissionEnabled: true`. Those settings must reflect separate authorization for actual execution.
+The live host supports Stellar testnet and explicit mainnet configuration. Testnet is the default; mainnet requires `network: 'mainnet'`. Unknown names or inconsistent passphrases fail. Submission defaults off; mainnet requires both `allowMainnetSubmission: true` and the host's `submissionEnabled: true`, with the reviewed deployment and trade configuration.
 
 ## Implemented boundary
 
@@ -10,7 +10,7 @@ Issued assets require their exact code and issuer. The SDK derives the network-s
 
 Receiving checks apply before new issued-asset reservations, releases and agreed recovery signatures and before the lower-level payment-instruction reader. Existing journaled outcomes reconcile before mutable receiving-capacity checks. Unknown signing/submission outcomes remain blocked across restart; no automatic retry is introduced. Historical testnet custom-token configuration remains available for local fixtures, but cannot yield fiat instructions without explicit asset identity.
 
-The live host still disables **both payment locks and fiat instructions** while accepted payment evidence is unavailable, including for an externally created `Paying` order. `normalizeLiveTlsnPayment` still rejects. A mainnet setting never enables or fabricates payment proof. The frozen claim protocol, escrow WASM, exact amounts, two-party recovery allocation and no-unilateral-refund rule are unchanged.
+The complete-record normalizer now accepts authenticated records from the trusted verifier store. The host keeps new payment locks and instructions disabled until the durable live policy composition is connected. Network selection cannot enable proof acceptance. See [the current runbook](mainnet-test.md).
 
 ## Required operator inputs
 
@@ -37,10 +37,8 @@ Checked 25 October 2026: official mainnet Horizon metadata and testnet RPC repor
 
 No SDF mainnet RPC endpoint is assumed. Verify provider access and the asset issuer with primary sources: [Stellar deployment guidance](https://developers.stellar.org/docs/build/smart-contracts/getting-started/deploy-increment-contract#run-your-own-networknode), [SAC identity](https://developers.stellar.org/docs/tokens/stellar-asset-contract), [trustlines and liabilities](https://developers.stellar.org/docs/learn/fundamentals/stellar-data-structures/accounts#trustlines), [authorization flags](https://developers.stellar.org/docs/tokens/control-asset-access), [Circle's current USDC addresses](https://developers.circle.com/stablecoins/usdc-contract-addresses), [Freighter signing](https://docs.freighter.app/extension-freighter-api/signing.md). A symbol alone does not identify USDC.
 
-## Remaining acceptance and execution
+## Validation
 
-Focused checks use mocks, disposable fixture identities, real SDK XDR/signature validation, loopback HTTP and local SQLite. The combined affected suite passed 252 tests; a final 36-test configuration/signing run includes one additional direct Freighter guard regression, for 253 distinct passing tests. Both networks complete the mocked two-wallet HTTP recovery flow. Syntax checks passed for 97 modules/inline scripts, with protocol consistency, scoped formatting and diff checks. See [the recorded scope](../../evidence/release/network-support-checks.json). These checks establish local behavior only; historical media, native/WASM and TLS tests were not rerun or relabeled.
+Network checks exercise both networks with disposable identities, SDK signatures/XDR, loopback HTTP and SQLite restart paths. [Dated network evidence](../../evidence/release/network-support-checks.json). [Current verification](../verification.md) records the integrated suite and chain receipts.
 
-Before any real execution: approve actual deployment, asset, signer, RPC and fee values; verify the deployed configuration; restore/inspect existing durable stores; authorize testnet wallet validation and inspect resulting chain transactions and balances. Mainnet execution needs its own explicit authorization and real acceptance evidence. Payment locks remain unavailable until accepted bank semantics and the live normalizer are separately implemented and reviewed. No transaction, trustline creation, funding, deployment, publication or bank action is part of this change.
-
-TLS remains a separate lane. Its newer handoff reports successful public proof, a cryptographically verified bank HTTP 401 and a normal-browser HTTP 200. At this source review, that handoff also records the owner-authorized `6e02a3a` header correction as deployed, with the response-only retry pending. Those observations do not establish an accepted payment. This network-support change does not import or retry that work, and does not alter the video/deck.
+Use the [mainnet runbook](mainnet-test.md) for the approved small trade. Preserve unknown transactions and replay history when changing configuration.

@@ -1,62 +1,55 @@
-# Architecture
+# How Pactlane works
 
-Pactlane has four boundaries: the browser, bank-proof verifier, payment-policy signer and Soroban escrow. A browser progress callback cannot replace a server or chain check.
+Pactlane connects a bank payment to a Stellar escrow. Each part has one job: the bank records the payment, TLSNotary authenticates the response, the payment service matches it to the trade, and the contract moves the tokens.
 
 ```mermaid
 sequenceDiagram
-    participant Seller
-    participant Buyer
-    participant Bank as Revolut
-    participant Proof as TLSNotary verifier
-    participant Policy as Payment policy + signer
-    participant Escrow as Soroban escrow
-    Seller->>Escrow: Fund fixed whole offer
-    Buyer->>Escrow: Reserve, then begin_payment
-    Escrow-->>Buyer: Confirm payment lock
-    Buyer->>Bank: Pay exact EUR amount
-    Buyer->>Proof: Approve selected transfer disclosure
-    Proof->>Policy: Authenticated source and fields
-    Policy->>Policy: Match locked order, time and unused identity
-    Policy-->>Buyer: Canonical signed claim
-    Buyer->>Escrow: release(claim, signature)
-    Escrow->>Escrow: Validate and consume nullifier atomically
-    Escrow-->>Buyer: Transfer token once
+    participant S as Seller
+    participant E as Stellar escrow
+    participant B as Buyer
+    participant R as Revolut
+    participant V as Proof verifier
+    participant P as Payment service
+    S->>E: Fund offer
+    B->>E: Reserve and confirm payment lock
+    B->>R: Send exact EUR amount
+    B->>V: Review and prove transfer record
+    V->>P: Authenticated record
+    P->>P: Match order and check payment reuse
+    P-->>B: Signed release claim
+    B->>E: Submit claim
+    E-->>B: Transfer USDC once
 ```
 
-The local WASM rehearsal runs order, policy and escrow together with synthetic evidence. The browser demo is separate; live proof ingestion rejects unverified records.
+## A funded offer comes first
 
-## Contract and claim
+The seller commits the token amount, EUR price, payment recipient and expiry. Funding transfers tokens into escrow. The marketplace reads confirmed funded orders; a draft or pending deposit is kept in the seller workspace.
 
-`contracts/escrow/` implements funding, reservation, payment lock, signed release, pre-lock expiry refund and mutual resolution. One funded offer has one fixed amount and one buyer. It is never partially filled or recycled.
+A buyer reserves one whole offer. The `begin_payment` transaction locks it before the recipient and payment instructions are shown. This matters because a reservation can expire back to the seller, while a payment-locked order stays held during verification.
 
-The frozen [protocol](../contracts/escrow/PROTOCOL.md) is `pactlane.protocol.v1`. It uses canonical ScVal-XDR, lexical map keys, exact integer widths and Ed25519. Claims bind network, contract, order, buyer, seller, token/amount, EUR minor units, rail, recipient commitment, payment nullifier and time bounds. JS, policy and Rust share exact vectors.
+## The payment is checked against the order
 
-The recipient commitment binds provider-issued destination identity and private offer salt. The observed destination must independently come from verified evidence; expected seller configuration cannot replace it. The nullifier binds source namespace, verified payer scope and stable transfer ID, independently of order/network/deployment. Cross-deployment replay prevention also needs the durable policy registry and complete chain reconciliation.
+The accepted Revolut response identifies the transfer, payer and recipient, completed outgoing state, currency, amount and completion time. EUR is handled as integer cents: an outgoing amount of `-500` is a EUR5.00 debit. Completion milliseconds are converted under the documented time rule; payment must fall inside the locked order’s window.
 
-## Policy and storage
+The policy reads the order and evidence through server adapters. It checks the private recipient commitment, the approved payer binding and whether the payment identity has already been used. It reserves that identity durably before asking the signer to authorize release.
 
-The public policy method accepts only `{orderId,evidenceId}`. Trusted host readers supply evidence, chain snapshot and private offer data. Policy checks exact completed outgoing payment semantics and confirmed locked-order terms.
+## The contract checks the claim
 
-Disk SQLite reserves payment identity before signing. Restart, signing failure, expired claims and uncertain delivery never free it automatically. Complete confirmed manual-recovery manifests consume associated payments even when tokens were refunded or split. Unknown manual resolution holds signing until reconciliation.
-
-Synthetic stores and public fixture keys are separated from live bootstrap. `normalizeLiveTlsnPayment` rejects until the real schema is established. Synthetic fixtures do not define real bank semantics.
-
-## Wallet and RPC
-
-`integration/stellar-rpc-adapter.mjs` is a testnet-only Node service candidate matching [the app interface](../app/live-adapter.d.ts). It validates network/configuration, prepares capped-fee transactions, checks the unchanged wallet-signed envelope, persists its hash before submission and reconciles RPC success. A disk journal reserves each action atomically across concurrent instances. Unknown outcomes remain blocked across restart.
-
-Instructions require a confirmed `Paying` order and independently bound destination. Release requires trusted non-synthetic authorization and a canonical signature. Receipts require the exact contract/order transaction and matching token-transfer events.
-
-Authenticated HTTP transport, consistent chain reads, atomic event reconciliation and buyer-envelope/seller-Soroban recovery are implemented as Node modules; see [live service continuation](release/live-services.md). The separate live browser, Freighter client and host composition are also implemented. Authenticated seller approval transport is implemented with one-use claims and exact preimage signatures, followed by the buyer envelope. Approved deployment/private offer/policy configuration remains. `resolve` requires the configured seller authorization port and never submits unilateral recovery.
-
-## Recovery and deadlines
-
-An expired unlocked reservation can refund the seller. After `begin_payment`, proof failure holds funds. A payment made before `pay_by` may be verified later; after that deadline the app stops showing instructions for a new payment.
-
-Both parties may authorize the same release, refund or split. A later valid signed claim may release a held order. There is no arbitrator or hidden admin path; either party can keep funds locked by refusing to cooperate.
+The signed claim binds network, contract, order, buyer, seller, asset, amounts, recipient and time. The contract checks its configured signer and consumes the payment’s one-use identifier atomically with the token transfer. That identifier is called a _nullifier_.
 
 ## Trust model
 
-TLSNotary authenticates the server and transcript. The operator-run policy interprets disclosed fields and signs the order claim. The contract trusts its configured key and does not verify the full TLS transcript. A compromised or incorrect operator can authorize an incorrect claim within the contract’s bounds.
+The contract trusts the operator’s payment signer to interpret authenticated evidence correctly. It enforces the stored trade terms independently. The verifier sees the disclosed transfer response; Revolut sees the payment; Stellar transactions are public.
 
-Selective disclosure does not hide the payment from Revolut or make Stellar settlement private. Credentials, raw transcripts, private salts and signing keys belong outside Git. The earlier `tlsn/` launcher pins routes/origin but provides no public-service authentication. The cloud snapshot is under `tlsn/benchmark/` and `infra/proof-benchmark/`, with explicit pinned origins and bounded public admission. Product domains do not change the frozen bank source namespace. Custom proof-origin configuration is prepared but disabled until root verifies DNS/certificate and derived transports.
+After payment locks, a failed proof leaves tokens held. A later valid proof can complete the trade, or both wallets can agree to a release, refund or split. There is no unilateral post-lock timeout refund.
+
+## Read the relevant layer
+
+- [System map](architecture/system-map.md): source files and responsibilities.
+- [Escrow](architecture/escrow-contract.md): states, authorization and token movement.
+- [Policy](architecture/policy-and-claims.md): signatures, replay and recovery.
+- [Bank evidence](architecture/tlsnotary-evidence.md): parsing and payment meaning.
+- [Data and privacy](architecture/privacy-and-data.md): who sees what.
+- [Operations](architecture/operations-and-readiness.md): deployment and durable state.
+
+[Verification](verification.md) links the accepted bank record and separate Stellar testnet results. [Status](status.md) records the mainnet connection.

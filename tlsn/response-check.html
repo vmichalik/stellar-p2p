@@ -4,50 +4,28 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="tlsn-public-origin" content="__TLSN_PUBLIC_ORIGIN__" />
-    <title>Check an existing transfer response</title>
-    <style>
-      body {
-        font: 16px/1.5 system-ui;
-        background: #f5f7fa;
-        color: #16202a;
-        margin: 0;
-      }
-      main {
-        max-width: 740px;
-        margin: 5vh auto;
-        padding: 28px;
-        background: white;
-        border: 1px solid #d9e0e8;
-        border-radius: 14px;
-      }
-      button {
-        font: inherit;
-        padding: 10px 16px;
-        cursor: pointer;
-      }
-      pre {
-        white-space: pre-wrap;
-        background: #f0f3f7;
-        padding: 16px;
-        overflow-wrap: anywhere;
-      }
-      code {
-        overflow-wrap: anywhere;
-      }
-      label {
-        display: block;
-        margin: 20px 0;
-      }
-    </style>
+    <title>Pactlane · Check the transfer response</title>
+    <meta name="theme-color" content="#f7f5ee" />
+    <link rel="icon" href="/assets/pactlane-mark.svg" />
+    <link rel="stylesheet" href="/assets/pactlane.css" />
   </head>
   <body>
-    <main>
-      <h1>Check an existing transfer response</h1>
-      <p>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="proof-header">
+      <a class="wordmark" href="https://pactlane.io/" aria-label="Pactlane home"
+        ><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span
+        >pactlane<span class="brand-dot">.</span></a
+      >
+      <span class="header-label">Payment verification</span>
+    </header>
+    <main id="main" tabindex="-1">
+      <p class="eyebrow">Response check</p>
+      <h1>Check the transfer response</h1>
+      <p class="intro">
         This authenticated diagnostic checks HTTP status and JSON structure for one existing
         outgoing Revolut-to-Revolut transfer. It creates no payment and cannot authorize settlement.
       </p>
-      <p>Verifier: <code id="verifier-origin"></code></p>
+      <p class="verifier-card">Verifier: <code id="verifier-origin"></code></p>
       <p>
         The approved disclosure is the transfer request path (including its transaction ID), HTTP
         status, Content-Type, the JSON root marker and selected field names. Cookie and
@@ -213,5 +191,9 @@ Checking the pinned extension and verifier…</pre
         initialize();
       </script>
     </main>
+    <footer class="proof-footer">
+      <span>From your bank app to your Stellar wallet.</span
+      ><span>Proof checks by Pactlane · Powered by TLSNotary</span>
+    </footer>
   </body>
 </html>

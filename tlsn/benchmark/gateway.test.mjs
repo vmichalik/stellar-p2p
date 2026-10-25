@@ -199,7 +199,7 @@ stagedTest(
     assert.equal(h.gateway.server.address().address, '127.0.0.1');
     const page = await get(h.port, '/benchmark/');
     assert.equal(page.status, 200);
-    assert.match(page.body.toString(), /Check TLSNotary setup/);
+    assert.match(page.body.toString(), /<h1>Check your connection<\/h1>/);
     assert.equal(page.headers['cross-origin-opener-policy'], 'same-origin');
     assert.equal(page.headers['cross-origin-embedder-policy'], 'require-corp');
     assert.equal(page.headers['cross-origin-resource-policy'], 'same-origin');
@@ -701,6 +701,46 @@ stagedTest(
     ])
       assert.equal((await get(h.port, path)).status, 404);
     assert.equal((await get(h.port, '/response-check/', { method: 'POST' })).status, 404);
+    assert.equal(h.calls.length, 0);
+  },
+);
+
+stagedTest(
+  'payment page has explicit routes, fresh CSP nonce, no-store and the operator-pinned plugin',
+  async (t) => {
+    const h = await fixture(t);
+    const first = await get(h.port, '/payment-check/', { headers: { Host: 'untrusted.invalid' } });
+    const second = await get(h.port, '/payment-check/');
+    assert.equal(first.status, 200);
+    assert.match(first.headers['cache-control'], /no-store/);
+    const nonce = first.headers['content-security-policy'].match(/script-src 'nonce-([^']+)'/)[1];
+    assert.ok(first.body.toString().includes(`nonce="${nonce}"`));
+    assert.notEqual(
+      first.headers['content-security-policy'],
+      second.headers['content-security-policy'],
+    );
+    assert.match(first.body.toString(), /id="consent" type="checkbox"/);
+    assert.doesNotMatch(
+      first.body.toString(),
+      /untrusted\.invalid|__TLSN_PUBLIC_ORIGIN__|__TLSN_SCRIPT_NONCE__/,
+    );
+    const plugin = await get(h.port, '/payment-check/plugin.mjs');
+    assert.equal(plugin.status, 200);
+    assert.match(plugin.body.toString(), /const RESPONSE_SHAPE_ONLY = false;/);
+    assert.ok(
+      plugin.body
+        .toString()
+        .includes(`const VERIFIER_ORIGIN = ${JSON.stringify(TARGETS[0].origin)};`),
+    );
+    for (const path of [
+      '/payment-check/window',
+      '/payment-check/?x=1',
+      '/payment-check/plugin.mjs?x=1',
+      '/plugin.mjs',
+      '/revolut.plugin.mjs',
+    ])
+      assert.equal((await get(h.port, path)).status, 404);
+    assert.equal((await get(h.port, '/payment-check/', { method: 'POST' })).status, 404);
     assert.equal(h.calls.length, 0);
   },
 );

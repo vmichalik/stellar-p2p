@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { validateTargets } from './core.mjs';
 import { isExtensionRoute, readExtensionRoute } from '../extension-check.mjs';
 import { isResponseRoute, readResponseRoute } from '../response-check.mjs';
+import { isPaymentRoute, readPaymentRoute } from '../payment-check.mjs';
+import { isProofUiRoute, readProofUiRoute } from '../proof-ui.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const VERIFIER_GIT_HASH = '68bbd380d6e1a89d79748e5294661c752f5d1205';
@@ -69,7 +71,7 @@ export function gatewayHeaders(targets, type = 'text/plain; charset=utf-8') {
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer',
     'X-Frame-Options': 'DENY',
-    'Content-Security-Policy': `default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self' ${sockets}; style-src 'unsafe-inline'; img-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`,
+    'Content-Security-Policy': `default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self' ${sockets}; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`,
     'Cross-Origin-Opener-Policy': 'same-origin',
     'Cross-Origin-Embedder-Policy': 'require-corp',
     'Cross-Origin-Resource-Policy': 'same-origin',
@@ -216,13 +218,15 @@ export async function createBenchmarkGateway(options = {}) {
 
   async function extensionAsset(rawUrl, response) {
     try {
-      const asset = isResponseRoute(rawUrl)
-        ? await readResponseRoute(rawUrl, options.publicOrigin)
-        : await readExtensionRoute(rawUrl, options.publicOrigin);
+      const asset = isPaymentRoute(rawUrl)
+        ? await readPaymentRoute(rawUrl, options.publicOrigin)
+        : isResponseRoute(rawUrl)
+          ? await readResponseRoute(rawUrl, options.publicOrigin)
+          : await readExtensionRoute(rawUrl, options.publicOrigin);
       const nonce = randomBytes(18).toString('base64');
       const headers = gatewayHeaders(targets, asset.contentType);
       headers['Content-Security-Policy'] =
-        `default-src 'self'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`;
+        `default-src 'self'; script-src 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`;
       delete headers['Cross-Origin-Embedder-Policy'];
       response.writeHead(200, headers);
       response.end(
@@ -236,12 +240,19 @@ export async function createBenchmarkGateway(options = {}) {
   const server = createServer((incoming, response) => {
     const rawUrl = incoming.url ?? '';
     if (incoming.method !== 'GET') return send(response, 404, 'Not found');
+    if (isProofUiRoute(rawUrl)) {
+      void readProofUiRoute(rawUrl).then(
+        (asset) => send(response, 200, asset.body, asset.contentType),
+        () => send(response, 503, 'Presentation asset unavailable'),
+      );
+      return;
+    }
     if (rawUrl === '/') {
       response.writeHead(302, { ...gatewayHeaders(targets), Location: '/benchmark/' });
       response.end();
       return;
     }
-    if (isExtensionRoute(rawUrl) || isResponseRoute(rawUrl)) {
+    if (isExtensionRoute(rawUrl) || isResponseRoute(rawUrl) || isPaymentRoute(rawUrl)) {
       void extensionAsset(rawUrl, response);
       return;
     }

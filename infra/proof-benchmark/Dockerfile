@@ -24,6 +24,9 @@ COPY --from=verifier-build /build/target/release/tlsn-verifier-server /app/bin/t
 COPY benchmark /app/benchmark
 COPY extension-check.mjs extension-check.html extension-check.plugin.mjs /app/
 COPY response-check.mjs response-check.html revolut.plugin.mjs /app/
+COPY payment-check.mjs payment-check.html /app/
+COPY proof-ui.mjs extension-check-window.html /app/
+COPY assets /app/assets
 COPY runtime/config.yaml /app/runtime/config.yaml
 COPY configuration.mjs start.mjs /app/
 RUN chmod 0444 /app/runtime/config.yaml

@@ -16,7 +16,7 @@ export async function readExtensionRoute(path, publicOrigin) {
     };
   if (path === '/extension-check/window')
     return {
-      body: '<!doctype html><meta charset="utf-8"><title>Public request check</title><h1>Public request check</h1><p>Use the TLSNotary overlay button to check a public GET response. No bank login is needed.</p>',
+      body: await readFile(resolve(HERE, 'extension-check-window.html')),
       contentType: 'text/html; charset=utf-8',
     };
   if (path !== '/extension-check/plugin.mjs') throw new Error('Unsupported diagnostic route');

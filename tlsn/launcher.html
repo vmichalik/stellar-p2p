@@ -4,86 +4,24 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="tlsn-public-origin" content="__TLSN_PUBLIC_ORIGIN__" />
-    <title>Stellar P2P · Check a Revolut payment</title>
-    <style>
-      :root {
-        color-scheme: light;
-        font:
-          16px/1.5 system-ui,
-          sans-serif;
-        color: #16202a;
-        background: #f5f7fa;
-      }
-      body {
-        margin: 0;
-      }
-      main {
-        max-width: 760px;
-        margin: 5vh auto;
-        padding: 28px;
-        background: white;
-        border: 1px solid #d9e0e8;
-        border-radius: 14px;
-      }
-      h1 {
-        margin-top: 0;
-        font-size: 1.6rem;
-      }
-      p {
-        max-width: 70ch;
-      }
-      .status {
-        padding: 12px 14px;
-        border-radius: 8px;
-        background: #f0f3f7;
-        margin: 12px 0;
-      }
-      .status[data-state='ready'] {
-        background: #e8f5ec;
-      }
-      .status[data-state='error'] {
-        background: #fff0ed;
-      }
-      button {
-        padding: 11px 16px;
-        border: 0;
-        border-radius: 7px;
-        color: white;
-        background: #155eef;
-        font: inherit;
-        cursor: pointer;
-      }
-      button:disabled {
-        background: #8b98a8;
-        cursor: not-allowed;
-      }
-      ul {
-        padding-left: 1.3rem;
-      }
-      details {
-        margin-top: 24px;
-      }
-      pre {
-        overflow: auto;
-        padding: 14px;
-        background: #101820;
-        color: #e7edf4;
-        border-radius: 8px;
-        white-space: pre-wrap;
-      }
-      .small {
-        color: #526171;
-        font-size: 0.92rem;
-      }
-      code {
-        overflow-wrap: anywhere;
-      }
-    </style>
+    <title>Pactlane · Check a Revolut payment</title>
+    <meta name="theme-color" content="#f7f5ee" />
+    <link rel="icon" href="/assets/pactlane-mark.svg" />
+    <link rel="stylesheet" href="/assets/pactlane.css" />
   </head>
   <body>
-    <main>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="proof-header">
+      <a class="wordmark" href="https://pactlane.io/" aria-label="Pactlane home"
+        ><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span
+        >pactlane<span class="brand-dot">.</span></a
+      >
+      <span class="header-label">Payment verification</span>
+    </header>
+    <main id="main" tabindex="-1">
+      <p class="eyebrow">Transfer proof</p>
       <h1>Check a Revolut payment</h1>
-      <p>
+      <p class="intro">
         Choose an <strong>existing outgoing Revolut-to-Revolut transfer</strong> to test its payment
         proof. This check does not move money.
       </p>
@@ -94,8 +32,9 @@
         approve it only if you trust the verifier operator.
       </p>
       <p class="small">
-        A valid proof authenticates Revolut’s response. Payment checks and escrow release still need
-        to be built. The planned contract will trust the verifier’s signing key.
+        A valid proof authenticates Revolut’s response. The payment still needs to match an escrow
+        order before funds can be released. The contract trusts the configured verifier’s signing
+        key.
       </p>
 
       <div id="extension" class="status" role="status">Checking TLSNotary extension…</div>
@@ -410,5 +349,9 @@
       window.addEventListener('tlsn_loaded', checkExtension);
       initialize();
     </script>
+    <footer class="proof-footer">
+      <span>From your bank app to your Stellar wallet.</span
+      ><span>Proof checks by Pactlane · Powered by TLSNotary</span>
+    </footer>
   </body>
 </html>

@@ -3,63 +3,34 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Bank-free TLSNotary setup check</title>
-    <style>
-      body {
-        font: 16px/1.5 system-ui;
-        margin: 0;
-        background: #f5f7fa;
-        color: #16202a;
-      }
-      main {
-        max-width: 1050px;
-        margin: 4vh auto;
-        padding: 24px;
-        background: white;
-        border-radius: 12px;
-      }
-      button {
-        font: inherit;
-        padding: 10px 16px;
-        margin: 4px;
-      }
-      pre {
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
-        background: #eef1f6;
-        padding: 14px;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 14px;
-      }
-      th,
-      td {
-        text-align: left;
-        padding: 8px;
-        border-bottom: 1px solid #ddd;
-      }
-      code {
-        overflow-wrap: anywhere;
-      }
-      .scroll {
-        overflow: auto;
-      }
-    </style>
+    <title>Pactlane · Check your connection</title>
+    <meta name="theme-color" content="#f7f5ee" />
+    <link rel="icon" href="/assets/pactlane-mark.svg" />
+    <link rel="stylesheet" href="/assets/pactlane.css" />
   </head>
   <body>
-    <main>
-      <h1>Check TLSNotary setup</h1>
-      <p>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="proof-header">
+      <a class="wordmark" href="https://pactlane.io/" aria-label="Pactlane home"
+        ><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span
+        >pactlane<span class="brand-dot">.</span></a
+      >
+      <span class="header-label">Payment verification</span>
+    </header>
+    <main id="main" tabindex="-1" class="wide">
+      <p class="eyebrow">Browser setup</p>
+      <h1>Check your connection</h1>
+      <p class="intro">
         Check whether your browser can finish setup with the cloud verifier. This uploads about
         <strong>76 MB of synthetic data</strong>, makes no bank request and proves no payment. Keep
         this tab visible. No bank login or extension is needed.
       </p>
-      <p>Cloud verifier: <code id="cloud-target">Checking fixed target…</code></p>
-      <button id="single" disabled>Run bank-free cloud check</button
-      ><button id="stop" disabled>Stop</button
-      ><button id="export" disabled>Download summary</button>
+      <p class="verifier-card">Verifier: <code id="cloud-target">Checking fixed target…</code></p>
+      <div class="actions">
+        <button id="single" disabled>Run bank-free cloud check</button
+        ><button class="secondary" id="stop" disabled>Stop</button
+        ><button class="secondary" id="export" disabled>Download summary</button>
+      </div>
       <p>
         The diagnostic waits up to 90 seconds and reports the 30-second and 60-second extension
         deadlines separately. Public capacity is limited; a busy verifier may ask you to try later.
@@ -96,5 +67,9 @@
       <p id="conclusion">No check has run. Release gate: NOT_CLEARED.</p>
       <script type="module" src="./benchmark.mjs"></script>
     </main>
+    <footer class="proof-footer">
+      <span>From your bank app to your Stellar wallet.</span
+      ><span>Proof checks by Pactlane · Powered by TLSNotary</span>
+    </footer>
   </body>
 </html>

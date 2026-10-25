@@ -40,7 +40,7 @@ const KEYS_REGEX = '"(?:' + SHAPE_KEYS.join('|') + ')"\\s*:';
 const MAX_SENT_DATA = 4096;
 const MAX_RECV_DATA = 16384;
 const config = {
-  name: RESPONSE_SHAPE_ONLY ? 'Inspect a Revolut response' : 'Check a Revolut payment',
+  name: RESPONSE_SHAPE_ONLY ? 'Pactlane · Response check' : 'Pactlane · Transfer proof',
   description: RESPONSE_SHAPE_ONLY
     ? 'Inspect HTTP status and JSON structure for one existing transfer. No payment-field disclosure.'
     : 'Check one existing transfer. This test does not move money.',
@@ -76,12 +76,15 @@ function main() {
           right: '12px',
           width: '300px',
           zIndex: '2147483647',
-          backgroundColor: 'white',
-          color: '#111',
-          padding: '16px',
-          borderRadius: '12px',
-          fontFamily: 'system-ui',
-          fontSize: '14px',
+          backgroundColor: '#fffefa',
+          color: '#2d382e',
+          padding: '20px',
+          borderRadius: '18px',
+          border: '1px solid #dedfd2',
+          maxWidth: 'calc(100vw - 24px)',
+          fontFamily: 'Manrope, Avenir Next, Avenir, system-ui, sans-serif',
+          fontSize: '13px',
+          lineHeight: '1.6',
         },
       },
       ['Proof in progress. Review the TLSNotary disclosure prompt when it appears.'],
@@ -111,17 +114,20 @@ function main() {
         right: '12px',
         width: '300px',
         zIndex: '2147483647',
-        backgroundColor: 'white',
-        color: '#111',
-        padding: '16px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 24px #0004',
-        fontFamily: 'system-ui',
-        fontSize: '14px',
+        backgroundColor: '#fffefa',
+        color: '#2d382e',
+        padding: '20px',
+        borderRadius: '18px',
+        border: '1px solid #dedfd2',
+        maxWidth: 'calc(100vw - 24px)',
+        boxShadow: '0 7px 24px #38422a18',
+        fontFamily: 'Manrope, Avenir Next, Avenir, system-ui, sans-serif',
+        fontSize: '13px',
+        lineHeight: '1.6',
       },
     },
     [
-      div({ style: { fontWeight: '700', marginBottom: '8px' } }, ['Revolut proof test']),
+      div({ style: { fontWeight: '700', marginBottom: '8px' } }, ['Pactlane · Transfer proof']),
       div({}, [
         latest
           ? 'Transfer found. Review it before generating a proof.'
@@ -129,13 +135,53 @@ function main() {
       ]),
       div({}, [message]),
       latest && !pending && !RESPONSE_SHAPE_ONLY
-        ? button({ onclick: 'generateProof' }, ['Generate proof for the last opened transfer'])
+        ? button(
+            {
+              onclick: 'generateProof',
+              style: {
+                backgroundColor: '#ed7047',
+                color: '#2f281b',
+                border: '1px solid #ed7047',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                minHeight: '44px',
+                width: '100%',
+                marginTop: '14px',
+                fontFamily: 'inherit',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              },
+            },
+            ['Generate proof for the last opened transfer'],
+          )
         : div({}, [pending ? 'Generating proof…' : 'No proof has started.']),
       latest && !pending
-        ? button({ onclick: 'checkResponse' }, ['Check response only'])
+        ? button(
+            {
+              onclick: 'checkResponse',
+              style: {
+                backgroundColor: '#fffefa',
+                color: '#2d382e',
+                border: '1px solid #dedfd2',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                minHeight: '44px',
+                width: '100%',
+                marginTop: '14px',
+                fontFamily: 'inherit',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              },
+            },
+            ['Check response only'],
+          )
         : div({}, []),
       div({ style: { marginTop: '8px', fontSize: '12px' } }, [
-        'Response check shares HTTP metadata, JSON root type and selected field names.',
+        RESPONSE_SHAPE_ONLY
+          ? 'Response check shares HTTP metadata, JSON root type and selected field names.'
+          : 'Generate proof shares amount, currency, recipient code, transaction ID, state, completion time and type. Review these values before approving.',
       ]),
     ],
   );
@@ -178,6 +224,11 @@ async function generateProof(mode = RESPONSE_SHAPE_ONLY ? 'response-shape' : 'pa
     'accept-language',
     'origin',
     'referer',
+    // Preserve captured application/device context without disclosing its values.
+    'x-browser-application',
+    'x-client-version',
+    'x-device-id',
+    'x-timezone',
   ];
   for (const header of selected.requestHeaders || []) {
     const name = header.name.toLowerCase();
@@ -311,10 +362,20 @@ async function generateProof(mode = RESPONSE_SHAPE_ONLY ? 'response-shape' : 'pa
         }),
       );
       // Presence is diagnostic only. Do not return the private response to a launcher.
-      const summary = { diagnosticOnly: true, releaseGate: 'NOT_CLEARED', fieldsPresent: present };
+      const responseLine = results.find((row) => row.type === 'RECV' && row.part === 'START_LINE');
+      const status =
+        typeof responseLine?.value === 'string'
+          ? responseLine.value.match(/^HTTP\/\d(?:\.\d)?\s+([1-5]\d{2})(?:\s|$)/)
+          : null;
+      completedSummary = {
+        diagnosticOnly: true,
+        mode: 'payment-fields',
+        releaseGate: 'NOT_CLEARED',
+        httpStatus: status ? Number(status[1]) : null,
+        fieldsPresent: present,
+      };
       if (Object.values(present).every(Boolean)) {
         setState('selected', null);
-        completedSummary = summary;
       } else {
         setState(
           'message',

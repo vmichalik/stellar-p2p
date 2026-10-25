@@ -1,10 +1,6 @@
-# TLS proof verification history
+# Packaging checks
 
-These are historical proof-workstream results recorded on 25 October 2026 on the remote Apple Silicon Mac mini, imported from `2c98f8e86ee3fb6c9f89c14883c43b0a0d38f03a`. The sections preserve the successive packaging, parser, plugin and deployment checkpoints. They are not combined-candidate reruns; current integration checks belong in [verification](verification.md). The release gate remains `NOT_CLEARED` and bank tests remain paused.
-
-## Initial proof packaging checkpoint
-
-These initial checks validated the proof package and synthetic fixtures. They did not repeat the historical public proof or establish an authenticated payment.
+Run on 25 October 2026 on the remote Apple Silicon Mac mini. These checks validate the packaged source and synthetic fixtures. They do not repeat the historical public proof or establish an authenticated payment.
 
 | Check                                             | Result                                                                                                      |
 | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
@@ -23,7 +19,7 @@ Tool versions: Node.js 26.7.0, Rust 1.99.1 and Stellar CLI 28.1.0. Rust checks r
 
 The initial direct Cargo WASM build failed because this SDK requires Stellar CLI spec preparation. The archive instructions now use the supported CLI build, which passed. No protocol timeout, trust setting or verifier protection was relaxed.
 
-The archived unified-diff file retains the single-space context lines required by that format. Source whitespace checks exclude that patch artifact. No downloaded proof tooling, native binaries or proof WASM modules were committed in that packaging snapshot. The separately reviewed escrow WASM artifact is tracked by the integrated candidate.
+The archived unified-diff file retains the single-space context lines required by that format. Source whitespace checks exclude that patch artifact. No downloaded tooling, native binaries or WASM modules are committed.
 
 No bank login, new payment, live proof attempt, contract deployment or escrow release was performed while packaging this repo. The prior private test services were left in place.
 
@@ -45,7 +41,7 @@ The response-only deployment, image `sha256:2c6da2b1669d8592fe072439a225872d6530
 
 The initial default-sandbox test run could not open synthetic loopback listeners. Rerunning with normal listener permissions passed. A fresh checkout without prepared assets skips the released-runtime and bundle integration cases; it is not equivalent to the zero-skip run above. Archived Reclaim checks were not repeated because their source was unchanged.
 
-No authenticated bank response, payment-policy acceptance, escrow deployment or release is established by these checks. A subsequent owner-approved cloud attempt failed after disclosure approval; its sanitized observations are in [the handoff](proof-handoff.md#failed-cloud-response-check-25-october-2026). Keep the private request path and raw verifier transcript out of tool output, Git and chat.
+No authenticated bank response, payment-policy acceptance, escrow deployment or release is established by these checks. A subsequent owner-approved cloud attempt failed after disclosure approval; its sanitized observations are in [the handoff](handoff.md#failed-cloud-response-check-25-october-2026). Keep the private request path and raw verifier transcript out of tool output, Git and chat.
 
 ## Parser coverage correction, 25 October 2026
 
@@ -70,7 +66,7 @@ The host allocator starts at `-32768` and increments a JavaScript number. At all
 
 The real MacBook allocation count was not recorded. The callback-boundary reproduction above does not establish a fix or permission for another authenticated attempt.
 
-## Local plugin mitigation and proof-workstream checks
+## Local plugin mitigation and final checks
 
 The plugin now retains only the newest matching transfer and skips captured-header serialization while pending. `tlsn/extension-plugin-runtime.test.mjs` executes the actual rendered response-only plugin through the shipped host, evaluator, serializer and QuickJS. Captured headers are synthetic objects created in the serializer's own realm. Worker startup, WebSocket and fetch are prohibited. Only the final `onProve` operation is synthetic; callback allocation, plugin evaluation and disclosure UI use released code.
 
@@ -78,7 +74,7 @@ Two tests pass: latest selection and bounded idle callback growth; pending behav
 
 These checks assert runtime health during operation. The shipped SDK can separately log its `JS_FreeRuntime` disposal assertion in the synthetic host even below the callback limit, so teardown is not claimed fixed. The finite callback-ID limit also remains. At this checkpoint the application mitigation was local and undeployed; these results do not establish a completed live proof.
 
-Proof-workstream run at the mitigation checkpoint: **93/93 tests passed, zero skipped**, and **37 JavaScript modules and inline scripts** passed syntax checks. Independent review found no blocking issue and passed seventeen focused tests plus a deferred-proof selection check. At this local checkpoint the deployed image, extension package, protocol budgets and infrastructure were unchanged.
+Final local run: **93/93 tests passed, zero skipped**, and **37 JavaScript modules and inline scripts** passed syntax checks. Independent review found no blocking issue and passed seventeen focused tests plus a deferred-proof selection check. At this local checkpoint the deployed image, extension package, protocol budgets and infrastructure were unchanged.
 
 ## Plugin-only deployment, 25 October 2026
 
@@ -93,3 +89,17 @@ The initial machine-state read raced the first public request starting the updat
 The owner reported adding a card and upgrading to PAYG. The running VM, which had started before that report, still stopped at `13:36:27Z` with the trial-stop message. The agent started the same stopped VM once. No image, resource, configuration or billing change accompanied that start.
 
 Machine-API observations tracked the same instance from its start at `2026-10-25T13:38:36.916Z`. The final observation at `13:45:08.707784Z` confirmed **391.5 seconds of continuous uptime**, no intervening stop/restart, the deployed `eb0e1d…` image and HTTP 200 from `/health`. The check registered no proof session and made no bank request. This passes beyond the former five-minute cutoff; it does not establish indefinite uptime or resolve the payment gate. Bank tests remain paused.
+
+## Payment-field page validation, 25 October 2026
+
+Code `0e3df2099673c1c8c485b96d96fccb981a725dfb`: 48 focused JavaScript tests passed, zero skips; eight Python staging tests passed; 40 modules/inline scripts passed syntax checks. The actual checksum-pinned WASM parser accepted all seven existing payment selectors on synthetic arrays with Content-Length and chunked framing and rejected a missing recipient code. Consent, disclosure separation, sanitized callbacks, route/origin restrictions and missing-field completion were tested. This is not bank evidence. The live response-only HTTP 200 acceptance is recorded separately in the handoff and prototype status.
+
+Live deployment readback at 17:05:19 UTC passed: exact rendered payment page and payment/response/public plugin hashes; fresh CSP nonces and no-store; denied raw/query paths; pinned runtime health; approved and rejected extension-origin admission; complete machine configuration unchanged except image. Image `dc913f…` inherits the prior runtime and replaces only four application files. These checks started no proof or bank request. Owner execution was pending at that checkpoint; the accepted result is recorded below.
+
+## Pactlane UI and accepted field disclosure, 25 October 2026
+
+Application `2a5423c`: 65 relevant existing regression tests passed with zero skips; eight staging tests and 41 syntax checks passed. Seven page surfaces were checked at desktop/mobile widths in isolated Chrome, with a synthetic consent/result flow and no bank/proof execution. The live website’s actual CSS variables and typography were compared directly. Fly deployment readback passed at 22:11 UTC; initial registry BLOB_UNKNOWN left the previous image healthy and one later retry succeeded. Native extension presentation at `4fbdb58` passed package byte/permission checks, one unchanged watchdog case, two actual extension screens and a synthetic scoped overlay check.
+
+The accepted real seven-field proof is separate evidence: server completion at 21:54:10 UTC, 24.406-second whole session, HTTP 200, all disclosed ranges authenticated. Order-policy acceptance and release remain unestablished.
+
+Published extension verification: GitHub targets `4fbdb58` and the ZIP digest matches `9a27e54c…`; all 18 JavaScript/WASM assets equal Pactlane.1. Taildrop reported completion to the owner’s MacBook at 22:20:32 UTC. Installation and visual review on the receiving device remain unverified.

@@ -122,6 +122,11 @@ def copy_runtime(root, stage):
         shutil.copyfile(root / 'tlsn' / name, stage / name)
     for name in ('response-check.mjs', 'response-check.html', 'revolut.plugin.mjs'):
         shutil.copyfile(root / 'tlsn' / name, stage / name)
+    for name in ('payment-check.mjs', 'payment-check.html'):
+        shutil.copyfile(root / 'tlsn' / name, stage / name)
+    for name in ('proof-ui.mjs', 'extension-check-window.html'):
+        shutil.copyfile(root / 'tlsn' / name, stage / name)
+    shutil.copytree(root / 'tlsn/assets', stage / 'assets')
     infra = root / 'infra/proof-benchmark'
     for name in ('Dockerfile', '.dockerignore', 'configuration.mjs', 'start.mjs', 'render-fly-config.mjs'):
         data = (infra / name).read_text()

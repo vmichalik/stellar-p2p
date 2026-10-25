@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { isSetupRoute, readSetupRoute } from './setup-check.mjs';
 import { isExtensionRoute, readExtensionRoute } from './extension-check.mjs';
+import { isProofUiRoute, readProofUiRoute } from './proof-ui.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const UPSTREAM_HOST = '127.0.0.1';
@@ -146,7 +147,7 @@ export function makeGatewayResponseHeaders(publicOrigin) {
     nonce,
     headers: {
       ...fixedContentHeaders('text/html; charset=utf-8'),
-      'Content-Security-Policy': `default-src 'self'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`,
+      'Content-Security-Policy': `default-src 'self'; script-src 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`,
       'Content-Type': 'text/html; charset=utf-8',
       'X-Frame-Options': 'DENY',
       'Cross-Origin-Opener-Policy': 'same-origin',
@@ -167,6 +168,16 @@ export function createLauncherServer(options = {}) {
 
   async function handleHttp(request, response) {
     const rawUrl = request.url ?? '';
+    if (request.method === 'GET' && isProofUiRoute(rawUrl)) {
+      try {
+        const asset = await readProofUiRoute(rawUrl);
+        response.writeHead(200, fixedContentHeaders(asset.contentType));
+        response.end(asset.body);
+      } catch {
+        sendText(response, 503, 'Presentation asset unavailable');
+      }
+      return;
+    }
     if (request.method === 'GET' && isExtensionRoute(rawUrl)) {
       try {
         const asset = await readExtensionRoute(rawUrl, publicOrigin);
@@ -187,7 +198,7 @@ export function createLauncherServer(options = {}) {
         const { nonce, headers } = makeGatewayResponseHeaders(publicOrigin);
         // Only this bank-free WASM diagnostic enables WASM evaluation/workers.
         headers['Content-Security-Policy'] =
-          `default-src 'self'; script-src 'nonce-${nonce}' 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'unsafe-inline'; connect-src 'self' ${publicOrigin.replace(/^https:/, 'wss:')}; img-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`;
+          `default-src 'self'; script-src 'nonce-${nonce}' 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' ${publicOrigin.replace(/^https:/, 'wss:')}; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`;
         headers['Cross-Origin-Embedder-Policy'] = 'require-corp';
         headers['Content-Type'] = asset.contentType;
         response.writeHead(200, headers);

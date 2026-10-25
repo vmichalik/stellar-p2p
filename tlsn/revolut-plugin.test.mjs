@@ -61,15 +61,18 @@ async function harness({
       return { results };
     }
     return {
-      results: args[1].handlers
-        .filter((h) => h.part === 'BODY')
-        .slice(missing ? 1 : 0)
-        .map((h) => ({
-          type: h.type,
-          part: h.part,
-          action: { kind: 'REVEAL' },
-          value: JSON.stringify(h.params.path.split('.').pop()) + ':"synthetic-value"',
-        })),
+      results: [
+        { type: 'RECV', part: 'START_LINE', value: 'HTTP/1.1 200 Test' },
+        ...args[1].handlers
+          .filter((h) => h.part === 'BODY')
+          .slice(missing ? 1 : 0)
+          .map((h) => ({
+            type: h.type,
+            part: h.part,
+            action: { kind: 'REVEAL' },
+            value: JSON.stringify(h.params.path.split('.').pop()) + ':"synthetic-value"',
+          })),
+      ],
     };
   };
   globalThis.done = async (value) => {
@@ -146,15 +149,55 @@ test('explicit click uses latest detail and limits headers/disclosures/callback'
     false,
   );
   assert.equal(h.calls.done[0].releaseGate, 'NOT_CLEARED');
+  assert.equal(h.calls.done[0].httpStatus, 200);
   assert.doesNotMatch(JSON.stringify(h.calls.done[0]), /synthetic-value|synthetic-cookie|00000000/);
 });
 
-test('missing required field prevents successful callback', async () => {
+test('missing required field finishes with a diagnostic result and keeps the gate closed', async () => {
   const h = await harness({ configured: true, headers: [detail], missing: true });
   h.plugin.main();
   await h.plugin.generateProof();
-  assert.equal(h.calls.done.length, 0);
+  assert.equal(h.calls.done.length, 1);
+  assert.equal(h.calls.done[0].fieldsPresent['0.amount'], false);
+  assert.equal(h.calls.done[0].releaseGate, 'NOT_CLEARED');
+  assert.equal(h.calls.done[0].diagnosticOnly, true);
   assert.match(h.state.get('message'), /missing/);
+});
+
+test('response replay preserves captured application headers without widening disclosure', async () => {
+  const context = [
+    ['X-Browser-Application', 'synthetic-browser-context'],
+    ['X-Client-Version', 'synthetic-client-context'],
+    ['X-Device-Id', 'synthetic-device-context'],
+    ['X-Timezone', 'synthetic-timezone-context'],
+  ];
+  const captured = {
+    ...detail,
+    requestHeaders: [
+      ...detail.requestHeaders,
+      ...context.map(([name, value]) => ({ name, value })),
+      { name: 'Baggage', value: 'synthetic-telemetry-context' },
+      { name: 'Sentry-Trace', value: 'synthetic-trace-context' },
+    ],
+  };
+  const h = await harness({ configured: true, headers: [captured] });
+  h.plugin.main();
+  await h.plugin.checkResponse();
+  assert.equal(h.calls.prove.length, 1);
+  const [request, options] = h.calls.prove[0];
+  for (const [name, value] of context) assert.equal(request.headers[name.toLowerCase()], value);
+  for (const name of ['x-unrelated', 'baggage', 'sentry-trace'])
+    assert.equal(request.headers[name], undefined);
+  assert.equal(request.headers['Accept-Encoding'], 'identity');
+  assert.equal(options.maxSentData, 4096);
+  assert.equal(options.maxRecvData, 16384);
+  assert.deepEqual(
+    options.handlers.filter((row) => row.type === 'SENT'),
+    [{ type: 'SENT', part: 'START_LINE', action: 'REVEAL' }],
+  );
+  assert.equal(h.calls.done.length, 1);
+  assert.equal(h.calls.done[0].releaseGate, 'NOT_CLEARED');
+  assert.doesNotMatch(JSON.stringify(h.calls.done[0]), /synthetic-|context/);
 });
 
 test('failures do not propagate private error text', async () => {

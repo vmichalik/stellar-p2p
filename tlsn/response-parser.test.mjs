@@ -5,6 +5,7 @@ import { access, readFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import test from 'node:test';
 import { readResponseRoute } from './response-check.mjs';
+import { readPaymentRoute } from './payment-check.mjs';
 
 const ROOT = new URL('../.private/benchmark-stage/benchmark/', import.meta.url);
 const HASHES = {
@@ -47,7 +48,11 @@ const body = Buffer.from(
 );
 
 function response(bytes, { framing = 'length', encoding, type = 'application/json' } = {}) {
-  const headers = ['HTTP/1.1 200 Test', `content-type: ${type}`];
+  const headers = [
+    'HTTP/1.1 200 Test',
+    `content-type: ${type}`,
+    'date: Sun, 25 Oct 2026 12:00:00 GMT',
+  ];
   if (encoding) headers.push(`content-encoding: ${encoding}`);
   if (framing === 'length') headers.push(`content-length: ${bytes.length}`);
   if (framing === 'chunked') headers.push('transfer-encoding: chunked');
@@ -62,9 +67,13 @@ function response(bytes, { framing = 'length', encoding, type = 'application/jso
     : Buffer.concat([head, bytes]);
 }
 
-async function shapeHandlers() {
+async function shapeHandlers(payment = false) {
   const source = String(
-    (await readResponseRoute('/response-check/plugin.mjs', 'https://fixture.example.test')).body,
+    (
+      await (payment
+        ? readPaymentRoute('/payment-check/plugin.mjs', 'https://fixture.example.test')
+        : readResponseRoute('/response-check/plugin.mjs', 'https://fixture.example.test'))
+    ).body,
   );
   const state = new Map([
     [
@@ -92,7 +101,8 @@ async function shapeHandlers() {
   const plugin = (
     await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'))
   ).default;
-  await plugin.checkResponse();
+  if (payment) await plugin.generateProof();
+  else await plugin.checkResponse();
   return handlers;
 }
 
@@ -158,5 +168,43 @@ parserTest(
         () => runtime.compute_reveal(sent, recv, handlers),
         /failed to parse HTTP response/,
       );
+  },
+);
+
+parserTest(
+  'actual payment selectors reveal seven synthetic values with the shipped parser',
+  async () => {
+    const handlers = await shapeHandlers(true);
+    const record = {
+      amount: -123,
+      currency: 'EUR',
+      recipient: { code: 'synthetic-recipient', hidden: 'not-selected' },
+      id: 'synthetic-payment',
+      state: 'COMPLETED',
+      completedDate: 1792929600000,
+      type: 'SYNTHETIC_TRANSFER',
+      hidden: 'not-selected',
+    };
+    for (const framing of ['length', 'chunked']) {
+      const recv = response(Buffer.from(JSON.stringify([record])), { framing });
+      const result = runtime.compute_reveal(sent, recv, handlers);
+      const disclosed = result.recv_ranges_with_handlers.map(({ start, end }) =>
+        recv.subarray(start, end).toString(),
+      );
+      for (const field of ['amount', 'currency', 'id', 'state', 'completedDate', 'type'])
+        assert.ok(
+          disclosed.includes(JSON.stringify(field) + ':' + JSON.stringify(record[field])),
+          field,
+        );
+      assert.ok(disclosed.includes('"code":"synthetic-recipient"'));
+      assert.ok(disclosed.some((value) => value.startsWith('HTTP/1.1 200')));
+      assert.doesNotMatch(disclosed.join('\n'), /not-selected/);
+      assert.equal(result.sent_ranges_with_handlers.length, 1);
+    }
+    const missing = [{ ...record, recipient: {} }];
+    assert.throws(
+      () => runtime.compute_reveal(sent, response(Buffer.from(JSON.stringify(missing))), handlers),
+      /JSON path '0.recipient.code' not found/,
+    );
   },
 );

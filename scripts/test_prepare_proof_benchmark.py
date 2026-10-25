@@ -92,7 +92,7 @@ class PrepareBenchmarkTests(unittest.TestCase):
                 prepare.publish_stage(stage, destination, metadata)
             self.assertEqual(sentinel.read_text(), 'existing owner data')
 
-    def test_runtime_staging_includes_shape_renderer_source_but_not_full_transfer_launcher(self):
+    def test_runtime_staging_includes_consent_pages_but_not_legacy_transfer_launcher(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'source'
             stage = Path(directory) / 'stage'
@@ -101,9 +101,13 @@ class PrepareBenchmarkTests(unittest.TestCase):
             stage.mkdir()
             (root / 'tlsn/benchmark/gateway.mjs').write_text('// synthetic gateway')
             public = ('extension-check.mjs', 'extension-check.html', 'extension-check.plugin.mjs',
-                      'response-check.mjs', 'response-check.html')
+                      'response-check.mjs', 'response-check.html',
+                      'payment-check.mjs', 'payment-check.html',
+                      'proof-ui.mjs', 'extension-check-window.html')
             for name in public:
                 (root / 'tlsn' / name).write_text('synthetic public diagnostic')
+            (root / 'tlsn/assets').mkdir()
+            (root / 'tlsn/assets/pactlane.css').write_text('/* synthetic stylesheet */')
             (root / 'tlsn/revolut.plugin.mjs').write_text('synthetic authenticated transfer code')
             (root / 'tlsn/launcher.html').write_text('synthetic authenticated transfer UI')
             for name in ('Dockerfile', '.dockerignore', 'render-fly-config.mjs'):
@@ -112,6 +116,7 @@ class PrepareBenchmarkTests(unittest.TestCase):
                 (root / 'infra/proof-benchmark' / name).write_text("import '../../tlsn/benchmark/core.mjs';")
             prepare.copy_runtime(root, stage)
             self.assertTrue(all((stage / name).exists() for name in public))
+            self.assertTrue((stage / 'assets/pactlane.css').exists())
             self.assertTrue((stage / 'revolut.plugin.mjs').exists())
             self.assertFalse((stage / 'launcher.html').exists())
             self.assertFalse((stage / 'plugin.mjs').exists())

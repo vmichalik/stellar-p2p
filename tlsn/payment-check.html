@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="tlsn-public-origin" content="__TLSN_PUBLIC_ORIGIN__" />
+    <title>Pactlane · Prove an existing transfer</title>
+    <meta name="theme-color" content="#f7f5ee" />
+    <link rel="icon" href="/assets/pactlane-mark.svg" />
+    <link rel="stylesheet" href="/assets/pactlane.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="proof-header">
+      <a class="wordmark" href="https://pactlane.io/" aria-label="Pactlane home"
+        ><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span
+        >pactlane<span class="brand-dot">.</span></a
+      >
+      <span class="header-label">Payment verification</span>
+    </header>
+    <main id="main" tabindex="-1">
+      <p class="eyebrow">Payment fields</p>
+      <h1>Prove an existing transfer</h1>
+      <p class="intro">
+        Choose the existing outgoing Revolut-to-Revolut transfer you just checked. This does not
+        make a payment.
+      </p>
+      <p class="verifier-card">Verifier: <code id="verifier-origin"></code></p>
+      <p>
+        This proof shares the transfer’s amount, currency, recipient code, transaction ID, state,
+        completion time and type with your verifier. It also shares the request path, HTTP status
+        line and response date. Review the actual values in the extension before approving.
+      </p>
+      <p>
+        Cookies, authorization values and device-header values are not selected for disclosure. This
+        page shows only HTTP status and whether the requested fields were returned.
+      </p>
+      <p>
+        The proof is evidence for the payment checks. It does not confirm that an escrow order was
+        paid or authorize a release.
+      </p>
+      <p class="small">
+        The disclosure preview shows the bank’s raw data. EUR amounts can be shown in cents, with a
+        minus sign for money sent. Review the currency and transfer details together.
+      </p>
+      <label
+        ><input id="consent" type="checkbox" /> I am the account owner and approve sharing these
+        transfer values with the verifier shown above for this check.</label
+      >
+      <button id="run" type="button" disabled>Open payment field check</button>
+      <pre id="result" role="status" aria-live="polite">Checking the extension and verifier…</pre>
+      <p><a href="/response-check/">Back to the response-only check</a></p>
+      <details>
+        <summary>Review the plugin</summary>
+        <pre id="source"></pre>
+      </details>
+      <script nonce="__TLSN_SCRIPT_NONCE__">
+        const publicOrigin = document.querySelector('meta[name="tlsn-public-origin"]')?.content;
+        const button = document.querySelector('#run');
+        const consent = document.querySelector('#consent');
+        const output = document.querySelector('#result');
+        const sourceView = document.querySelector('#source');
+        document.querySelector('#verifier-origin').textContent = publicOrigin || 'Unavailable';
+        const FIELDS = [
+          '0.amount',
+          '0.currency',
+          '0.recipient.code',
+          '0.id',
+          '0.state',
+          '0.completedDate',
+          '0.type',
+        ];
+        const ERRORS = [
+          'MPC_SETUP_TIMEOUT',
+          'MPC_SETUP_FAILED',
+          'RESPONSE_FIELD_MISSING',
+          'HTTP_REQUEST_TIMEOUT',
+          'VERIFICATION_RESPONSE_TIMEOUT',
+          'PROOF_FAILED',
+        ];
+        let source = '',
+          verifierReady = false,
+          running = false;
+        function ready() {
+          const supported =
+            window.tlsn?.version === '0.1.0.1501' && typeof window.tlsn?.execCode === 'function';
+          button.disabled = !supported || !verifierReady || !source || !consent.checked || running;
+          if (!running && !supported)
+            output.textContent = 'This check needs Pactlane TLSNotary or TLSNotary 0.1.0.1501.';
+          else if (!running && supported && verifierReady && source)
+            output.textContent = consent.checked
+              ? 'Ready. No proof has been requested.'
+              : 'Review the disclosure and tick the checkbox to continue.';
+        }
+        window.addEventListener('tlsn_loaded', ready);
+        consent.addEventListener('change', ready);
+        function renderResult(value) {
+          let data;
+          try {
+            data = typeof value === 'string' ? JSON.parse(value) : value;
+          } catch {
+            data = null;
+          }
+          let message = 'UNRECOGNIZED_DIAGNOSTIC';
+          if (data?.diagnosticOnly === true && data.releaseGate === 'NOT_CLEARED') {
+            if (
+              data.mode === 'payment-fields' &&
+              data.fieldsPresent &&
+              typeof data.fieldsPresent === 'object'
+            ) {
+              const count = FIELDS.filter((field) => data.fieldsPresent[field] === true).length;
+              const status =
+                Number.isInteger(data.httpStatus) &&
+                data.httpStatus >= 100 &&
+                data.httpStatus <= 599
+                  ? data.httpStatus
+                  : 'unknown';
+              const missing = FIELDS.filter((field) => data.fieldsPresent[field] !== true);
+              message =
+                `HTTP ${status}; fields ${count}/${FIELDS.length} present` +
+                (missing.length ? `; missing ${missing.join(', ')}` : '');
+            } else if (data.mode === 'attempt-error') {
+              message = ERRORS.includes(data.errorCode) ? data.errorCode : 'PROOF_FAILED';
+            } else if (data.mode === 'response-shape') {
+              message = 'RESPONSE_ONLY_COMPLETED; payment values were not requested';
+            }
+          }
+          output.textContent = `Payment field check: ${message}. Payment remains unverified. Release gate: NOT_CLEARED.`;
+        }
+        async function initialize() {
+          try {
+            const [plugin, health, info] = await Promise.all([
+              fetch('/payment-check/plugin.mjs', {
+                cache: 'no-store',
+                signal: AbortSignal.timeout(8000),
+              }),
+              fetch('/health', { cache: 'no-store', signal: AbortSignal.timeout(8000) }),
+              fetch('/info', { cache: 'no-store', signal: AbortSignal.timeout(8000) }),
+            ]);
+            if (!plugin.ok || !health.ok || !info.ok || (await health.text()).trim() !== 'ok')
+              throw new Error('not-ready');
+            const version = await info.json();
+            if (
+              version.git_hash !== '68bbd380d6e1a89d79748e5294661c752f5d1205' ||
+              version.tlsn_version !== '0.1.0-alpha.15'
+            )
+              throw new Error('not-ready');
+            source = await plugin.text();
+            if (!source.includes('const RESPONSE_SHAPE_ONLY = false;'))
+              throw new Error('wrong-mode');
+            sourceView.textContent = source;
+            verifierReady = true;
+            ready();
+          } catch {
+            output.textContent = 'The payment field check or verifier is unavailable.';
+          }
+        }
+        button.addEventListener('click', async () => {
+          if (button.disabled || !consent.checked || running || !verifierReady || !source) return;
+          running = true;
+          consent.disabled = true;
+          button.disabled = true;
+          output.textContent =
+            'In the extension, open the existing transfer and click Generate proof for the last opened transfer. Review the values before approving.';
+          try {
+            renderResult(
+              await window.tlsn.execCode(source, { requestId: 'payment-fields-' + Date.now() }),
+            );
+          } catch {
+            output.textContent =
+              'Payment field check: PROOF_FAILED. Payment remains unverified. Release gate: NOT_CLEARED.';
+          } finally {
+            running = false;
+            consent.checked = false;
+            consent.disabled = false;
+            button.disabled = true;
+          }
+        });
+        initialize();
+      </script>
+    </main>
+    <footer class="proof-footer">
+      <span>From your bank app to your Stellar wallet.</span
+      ><span>Proof checks by Pactlane · Powered by TLSNotary</span>
+    </footer>
+  </body>
+</html>

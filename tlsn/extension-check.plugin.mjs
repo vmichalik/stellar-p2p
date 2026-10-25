@@ -14,7 +14,7 @@ const MAX_SENT_DATA = 4096;
 const MAX_RECV_DATA = 16384;
 
 const config = {
-  name: 'TLSNotary extension connection check',
+  name: 'Pactlane · Extension check',
   description: 'Proves a public GET response only. Does not access bank data.',
   urls: [WINDOW_URL],
   requests: [
@@ -59,22 +59,44 @@ function main() {
         bottom: '12px',
         zIndex: '2147483647',
         width: '320px',
-        padding: '16px',
-        borderRadius: '12px',
-        backgroundColor: 'white',
-        color: '#111',
-        boxShadow: '0 4px 24px #0004',
-        fontFamily: 'system-ui',
-        fontSize: '14px',
+        padding: '20px',
+        borderRadius: '18px',
+        border: '1px solid #dedfd2',
+        maxWidth: 'calc(100vw - 24px)',
+        backgroundColor: '#fffefa',
+        color: '#2d382e',
+        boxShadow: '0 7px 24px #38422a18',
+        fontFamily: 'Manrope, Avenir Next, Avenir, system-ui, sans-serif',
+        fontSize: '13px',
+        lineHeight: '1.6',
       },
     },
     [
-      div({ style: { fontWeight: '700', marginBottom: '8px' } }, ['TLSNotary connection check']),
+      div({ style: { fontWeight: '700', marginBottom: '8px' } }, ['Pactlane · Extension check']),
       div({}, ['Public endpoint: GET https://app.revolut.com/robots.txt']),
       div({}, ['No bank login, cookies, or authorization headers are used.']),
       div({ style: { marginTop: '8px' } }, [message]),
       configured && !pending
-        ? button({ onclick: 'checkExtension' }, ['Run public connection check'])
+        ? button(
+            {
+              onclick: 'checkExtension',
+              style: {
+                backgroundColor: '#ed7047',
+                color: '#2f281b',
+                border: '1px solid #ed7047',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                minHeight: '44px',
+                width: '100%',
+                marginTop: '14px',
+                fontFamily: 'inherit',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              },
+            },
+            ['Run public connection check'],
+          )
         : div({}, [pending ? 'Checking connection…' : 'No request was made.']),
     ],
   );

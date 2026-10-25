@@ -86,7 +86,7 @@ export function createChainReader({
   }
 
   async function snapshot(orderId, nullifier = null) {
-    const id = integer(orderId);
+    const id = orderId === null ? null : integer(orderId);
     check(nullifier === null || hex32(nullifier), 'INVALID_NULLIFIER');
     const network = await remote.getNetwork();
     check(
@@ -97,7 +97,9 @@ export function createChainReader({
     );
     const keys = [
       dataKey(cfg.contract, xdr.ScVal.scvLedgerKeyContractInstance()),
-      dataKey(cfg.contract, enumKey('Order', nativeToScVal(id, { type: 'u64' }))),
+      ...(id === null
+        ? []
+        : [dataKey(cfg.contract, enumKey('Order', nativeToScVal(id, { type: 'u64' })))]),
     ];
     if (nullifier !== null)
       keys.push(
@@ -130,8 +132,11 @@ export function createChainReader({
       found.set(key, data.val);
     }
     const instance = found.get(keys[0].toXDR('base64'));
-    const rawOrder = found.get(keys[1].toXDR('base64'));
-    check(instance?.type === 'scvContractInstance' && rawOrder, 'ORDER_OR_CONTRACT_UNAVAILABLE');
+    const rawOrder = id === null ? null : found.get(keys[1].toXDR('base64'));
+    check(
+      instance?.type === 'scvContractInstance' && (id === null || rawOrder),
+      'ORDER_OR_CONTRACT_UNAVAILABLE',
+    );
     const contract = instance.instance;
     check(
       contract.executable.type === 'contractExecutableWasm' &&
@@ -148,46 +153,49 @@ export function createChainReader({
       config.token === cfg.token && config.signer === cfg.policySignerPublicKeyHex,
       'CONTRACT_CONFIGURATION_MISMATCH',
     );
-    const order = plain(scValToNative(rawOrder));
-    check(
-      Array.isArray(order.state) &&
-        order.state.length === 1 &&
-        ['Funded', 'Reserved', 'Paying', 'Released', 'Refunded', 'Resolved'].includes(
-          order.state[0],
-        ),
-      'INVALID_ORDER_STATE',
-    );
-    order.state = order.state[0];
-    order.id = orderId;
-    check(
-      StrKey.isValidEd25519PublicKey(order.terms.seller) ||
-        StrKey.isValidContract(order.terms.seller),
-      'INVALID_ORDER_PARTY',
-    );
-    check(
-      order.buyer === null ||
-        StrKey.isValidEd25519PublicKey(order.buyer) ||
-        StrKey.isValidContract(order.buyer),
-      'INVALID_ORDER_PARTY',
-    );
-    check(
-      order.terms.currency === 'EUR' &&
-        order.terms.rail === 'revolut' &&
-        hex32(order.terms.recipient),
-      'INVALID_ORDER_TERMS',
-    );
-    check(
-      integer(order.terms.token_amount, 127) > 0n && integer(order.terms.fiat_minor, 127) > 0n,
-      'INVALID_ORDER_TERMS',
-    );
-    for (const value of [
-      order.reserved_at,
-      order.pay_by,
-      order.locked_at,
-      order.terms.offer_expires_at,
-      order.terms.reservation_seconds,
-    ])
-      integer(value);
+    let order = null;
+    if (id !== null) {
+      order = plain(scValToNative(rawOrder));
+      check(
+        Array.isArray(order.state) &&
+          order.state.length === 1 &&
+          ['Funded', 'Reserved', 'Paying', 'Released', 'Refunded', 'Resolved'].includes(
+            order.state[0],
+          ),
+        'INVALID_ORDER_STATE',
+      );
+      order.state = order.state[0];
+      order.id = orderId;
+      check(
+        StrKey.isValidEd25519PublicKey(order.terms.seller) ||
+          StrKey.isValidContract(order.terms.seller),
+        'INVALID_ORDER_PARTY',
+      );
+      check(
+        order.buyer === null ||
+          StrKey.isValidEd25519PublicKey(order.buyer) ||
+          StrKey.isValidContract(order.buyer),
+        'INVALID_ORDER_PARTY',
+      );
+      check(
+        order.terms.currency === 'EUR' &&
+          order.terms.rail === 'revolut' &&
+          hex32(order.terms.recipient),
+        'INVALID_ORDER_TERMS',
+      );
+      check(
+        integer(order.terms.token_amount, 127) > 0n && integer(order.terms.fiat_minor, 127) > 0n,
+        'INVALID_ORDER_TERMS',
+      );
+      for (const value of [
+        order.reserved_at,
+        order.pay_by,
+        order.locked_at,
+        order.terms.offer_expires_at,
+        order.terms.reservation_seconds,
+      ])
+        integer(value);
+    }
     let paymentUsed = null;
     if (nullifier !== null) {
       const used = found.get(keys[2].toXDR('base64'));
@@ -245,6 +253,9 @@ export function createChainReader({
   }
 
   return Object.freeze({
+    async readDeployment() {
+      return boundary(() => snapshot(null));
+    },
     async readSnapshot({ orderId, nullifier = null }) {
       return boundary(() => snapshot(orderId, nullifier));
     },

@@ -292,3 +292,27 @@ test('the real reader and reconciler persist a recovery hold before returning th
     store.close();
   }
 });
+
+test('verifies deployed code/config and freshness before the first order exists', async () => {
+  const f = fixture({ missing: 1 });
+  const result = await f.reader.readDeployment();
+  assert.equal(result.confirmed, true);
+  assert.equal(result.order, null);
+  assert.equal(result.ledgerSequence, '100');
+  assert.deepEqual(
+    f.calls.map((keys) => keys.length),
+    [1],
+  );
+  await assert.rejects(
+    fixture({ wasm: '00'.repeat(32) }).reader.readDeployment(),
+    /CONTRACT_CODE_MISMATCH/,
+  );
+  await assert.rejects(
+    fixture({ signer: '00'.repeat(32) }).reader.readDeployment(),
+    /CONTRACT_CONFIGURATION_MISMATCH/,
+  );
+  await assert.rejects(
+    fixture({ timestamp: '800' }).reader.readDeployment(),
+    /STALE_LEDGER_SNAPSHOT/,
+  );
+});

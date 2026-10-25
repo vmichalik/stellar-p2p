@@ -1,0 +1,100 @@
+{
+  "scope": "Mocked chain, policy and Freighter; real same-origin HTTP bridge, signatures from public fixture keys and actual live UI. No bank or Stellar RPC call.",
+  "networkTransactionsSubmitted": false,
+  "bankRequestsMade": false,
+  "metrics": [
+    {
+      "name": "mocked-seller-draft-desktop",
+      "scroll": 1440,
+      "width": 1440,
+      "body": 1440,
+      "documentHeight": 1000,
+      "viewportHeight": 1000,
+      "appRoots": 1,
+      "headers": 1
+    },
+    {
+      "name": "mocked-marketplace-mobile",
+      "scroll": 390,
+      "width": 390,
+      "body": 390,
+      "documentHeight": 1334,
+      "viewportHeight": 844,
+      "appRoots": 1,
+      "headers": 1,
+      "bottomScrollY": 490
+    },
+    {
+      "name": "mocked-verification-unavailable-mobile",
+      "scroll": 390,
+      "width": 390,
+      "body": 390,
+      "documentHeight": 1452,
+      "viewportHeight": 844,
+      "appRoots": 1,
+      "headers": 1,
+      "bottomScrollY": 608
+    },
+    {
+      "name": "mocked-locked-payment-desktop",
+      "scroll": 1440,
+      "width": 1440,
+      "body": 1440,
+      "documentHeight": 1000,
+      "viewportHeight": 1000,
+      "appRoots": 1,
+      "headers": 1
+    },
+    {
+      "name": "mocked-receipt-desktop",
+      "scroll": 1440,
+      "width": 1440,
+      "body": 1440,
+      "documentHeight": 1000,
+      "viewportHeight": 1000,
+      "appRoots": 1,
+      "headers": 1
+    },
+    {
+      "name": "mocked-receipt-mobile",
+      "scroll": 390,
+      "width": 390,
+      "body": 390,
+      "documentHeight": 1527,
+      "viewportHeight": 844,
+      "appRoots": 1,
+      "headers": 1,
+      "bottomScrollY": 683
+    },
+    {
+      "name": "mocked-receipt-narrow",
+      "scroll": 320,
+      "width": 320,
+      "body": 320,
+      "documentHeight": 1567,
+      "viewportHeight": 900,
+      "appRoots": 1,
+      "headers": 1,
+      "bottomScrollY": 667
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  ],
+  "privateInstructionsPersisted": false,
+  "fundingSellerOmittedOnWire": [true],
+  "events": [
+    "fund",
+    "reserve",
+    "beginPayment",
+    "instructions",
+    "policyStatus",
+    "policyStatus",
+    "release",
+    "receipt",
+    "receipt"
+  ],
+  "releaseOperations": 1
+}

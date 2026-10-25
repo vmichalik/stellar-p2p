@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-25T14:29:46.943828+00:00",
+  "executionHost": "Mac mini",
+  "worktree": "/private/tmp/pactlane-coordinator-review-20261025",
+  "branch": "codex/pactlane-live-services",
+  "baseRevision": "60883fe9f4d8f1e589d81384f1e8709c4beaf82b",
+  "scope": "Separate live browser, Freighter client, authenticated host composition, public view, durable safe retries and confirmed receipt continuity. Unconfigured by default.",
+  "javascript": {
+    "root": 137,
+    "policy": 55,
+    "canonicalProtocol": 11,
+    "integration": 83,
+    "total": 286,
+    "failures": 0,
+    "skipped": 0
+  },
+  "pythonBenchmarkPreparation": {
+    "tests": 8,
+    "failures": 0
+  },
+  "syntaxModulesAndInlineScripts": 87,
+  "syntaxIncludesGeneratedDemoCopies": true,
+  "frozenProtocolSync": true,
+  "formatting": "Whole-repository Prettier passed",
+  "integrationEvidence": {
+    "rpcAndWallets": "mocked",
+    "signatureEncoding": "actual pinned Stellar SDK Ed25519, SEP-53 and transaction XDR",
+    "http": "actual loopback servers",
+    "storage": "SQLite private disk and restart paths",
+    "receiptRestart": "actual runtime refund wrapper with synthetic SDK signatures and mocked RPC; confirmed metadata survives restart and remains owner-only"
+  },
+  "browser": {
+    "unconfigured": {
+      "widths": [1440, 390, 320],
+      "horizontalOverflow": false,
+      "pageErrors": 0,
+      "walletControlsDisabled": true
+    },
+    "configuredMockedFlow": {
+      "report": "live-browser-flow.json",
+      "passed": true,
+      "widths": [1440, 390, 320],
+      "horizontalOverflow": false,
+      "pageErrors": 0,
+      "console": "Two expected unauthenticated /api/session 401 responses; no application page errors",
+      "scope": "Mocked chain, policy and Freighter; real same-origin HTTP bridge, signatures from public fixture keys and actual live UI. No bank or Stellar RPC call.",
+      "fundingSellerOmittedOnWire": true,
+      "releaseOperations": 1,
+      "privateInstructionsPersisted": false,
+      "sequence": [
+        "fund",
+        "reserve",
+        "beginPayment",
+        "instructions",
+        "policyStatus",
+        "policyStatus",
+        "release",
+        "receipt",
+        "receipt"
+      ],
+      "futurePaymentPath": "Only the disposable mock runtime enables payment lock and verified policy for UI verification. The production host still refuses beginPayment."
+    },
+    "screenshots": [
+      "screenshots/live-unconfigured-desktop.png",
+      "screenshots/live-mocked-receipt-desktop.png",
+      "screenshots/live-mocked-receipt-mobile-top.png",
+      "screenshots/live-mocked-receipt-mobile-bottom.png"
+    ],
+    "screenshotNote": "Mobile full-page capture duplicated compositor tiles although DOM had one shell/header. Replaced with inspected top and bottom viewport captures; no UI duplication."
+  },
+  "readOnlyRpcObservation": "No additional live RPC observation in this continuation; prior observation remains in live-service-checks.json",
+  "remainingSoftware": [
+    "approved deployment/private offer/policy composition",
+    "counterparty recovery authorization transport",
+    "verified TLS payment normalizer",
+    "operator workflow for complete manual-payment reconciliation"
+  ],
+  "bankTestsPaused": true,
+  "livePaymentGate": "NOT_CLEARED",
+  "deployed": false,
+  "transactionsSubmitted": false,
+  "realWalletSigned": false,
+  "appUsesLiveServices": true,
+  "appUsesLiveServicesScope": "Separate live entry point implemented and locally tested; actual deployment and bank ports unconfigured; synthetic demo retained separately",
+  "newPaymentLocksEnabled": false
+}

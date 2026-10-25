@@ -8,13 +8,13 @@ Repository: private [vmichalik/stellar-p2p](https://github.com/vmichalik/stellar
 
 Main's dirty proof docs/evidence and coordinator note were preserved. Component owners' worktrees and running proof services were not changed. This branch can be reviewed or merged separately; do not reset main over those changes.
 
-The [live service continuation](release/live-services.md) adds the Node browser bridge, chain reader/indexer and mutual-recovery authorization. Browser wiring and deployed validation remain outstanding.
+The [live service continuation](release/live-services.md) adds the Node browser bridge, chain reader/indexer and mutual-recovery authorization. A separate live browser, Freighter client and host composition are now implemented; approved configuration, counterparty recovery transport and deployed validation remain outstanding.
 
 ## Resume
 
 1. Read [status](status.md), [release handoff](release/HANDOFF.md) and [proof handoff](proof-handoff.md). Bank tests remain paused.
 2. Run `npm ci --ignore-scripts` and `npm run setup:integration`; prepare the pinned ignored TLS runtime assets using [setup](setup.md). Then run `npm run test:all` (including Python benchmark-preparation checks) and `npm run check`. Require zero skipped runtime tests; record the combined candidate revision and actual results.
-3. Start the synthetic browser demo with `npm run dev:app`.
+3. Start the synthetic browser demo with `npm run dev:app`, or the unconfigured live host with `npm run dev:live`. Both listen locally; neither provides a remote-device handoff.
 4. With compatible Rust available, run `npm run rehearse:local`; it uses the tracked WASM and synthetic evidence, and submits no network transaction.
 5. Finish the live software gaps in [integration](../integration/README.md), then prepare the configured, authorized testnet rehearsal.
 
@@ -22,7 +22,7 @@ The [live service continuation](release/live-services.md) adds the Node browser 
 
 App, policy and escrow work together locally. The browser demo is simulated. Live TLSNotary payment ingestion rejects unverified records. No accepted authenticated payment, deployed escrow, network receipt or public app URL is established by this branch.
 
-The Node wallet/RPC service candidate is implemented and unit checked, with local browser-transport, trusted chain-reader/indexer and two-wallet authorization modules now implemented. Running host composition, private offer/policy ports and browser/counterparty wiring remain. These need code, not just deployment approval. Sanitized cloud source and the plugin/deployment chronology are imported in [the proof handoff](proof-handoff.md). The failed server connection is explained by Fly’s five-minute trial shutdown; the later 391.5-second bank-free uptime observation passed the former cutoff. The separately reproduced QuickJS defect is mitigated, not fully fixed. None clears the payment gate or resumes bank tests. Local import does not deploy the combined app or authorize changing the existing proof runtime.
+The Node wallet/RPC service candidate is implemented and unit checked, with local browser-transport, trusted chain-reader/indexer and two-wallet authorization modules now implemented. The live host and browser are implemented. Approved private offer/policy composition, counterparty approval transport and the live normalizer remain. These need implementation and evidence as well as deployment authorization. Sanitized cloud source and the plugin/deployment chronology are imported in [the proof handoff](proof-handoff.md). The failed server connection is explained by Fly’s five-minute trial shutdown; the later 391.5-second bank-free uptime observation passed the former cutoff. The separately reproduced QuickJS defect is mitigated, not fully fixed. None clears the payment gate or resumes bank tests. Local import does not deploy the combined app or authorize changing the existing proof runtime.
 
 ## Checks and artifacts
 

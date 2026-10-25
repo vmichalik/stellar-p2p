@@ -13,6 +13,10 @@ This is the synthetic buyer/seller demo. It makes no bank or chain request. Its 
 
 For policy, protocol and wallet/RPC checks, run `npm run setup:integration`, prepare the TLS assets below, then run `npm run test:all`. The compiled-WASM rehearsal needs a compatible Rust toolchain: `npm run rehearse:local`. See [integration](../integration/README.md) for rebuilds and service gaps. The checked host used Node 26.7.0, Rust 1.99.1 and Stellar CLI 28.1.0.
 
+## Live browser and host
+
+Run `npm run dev:live` after integration dependencies are prepared. This serves a separate live entry point at loopback port 17861, initially unconfigured with wallet/transaction actions disabled. It does not deploy, submit, or resume bank tests. A trusted local operator module can supply approved configuration through `PACTLANE_HOST_MODULE`; see [the live service handoff](release/live-services.md). No configuration or private files are served to the browser. A remote device still needs an authorized reachable route.
+
 ## TLS source and local verification
 
 The imported cloud/proof source is documented in [the proof handoff](proof-handoff.md). Importing it does not deploy the combined app or change the existing service. **Bank tests remain paused** pending the owner's decision to resume and normal per-attempt consent/disclosure review. The local preparation and synthetic checks below do not require a bank request.

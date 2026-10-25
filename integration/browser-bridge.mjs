@@ -181,6 +181,14 @@ function command(body, owner) {
   fail('ACTION_UNAVAILABLE');
 }
 const SERVICE_ERRORS = new Set([
+  'TRANSACTION_PREPARATION_RETRYABLE',
+  'WALLET_REJECTED',
+  'WALLET_OPERATION_UNKNOWN',
+  'HOST_NOT_CONFIGURED',
+  'PAYMENT_VERIFICATION_UNAVAILABLE',
+  'OFFER_NOT_APPROVED',
+  'CATALOG_LIMIT',
+  'DEPLOYMENT_UNAVAILABLE',
   'TESTNET_SUBMISSION_NOT_AUTHORIZED',
   'TRANSACTION_PENDING_RECONCILIATION',
   'TRANSACTION_SUBMISSION_UNCERTAIN',
@@ -213,6 +221,7 @@ const serviceError = (error) =>
 export function createBrowserBridge({
   publicOrigin,
   createServices,
+  readView,
   clock = Date.now,
   challengeTtlMs = 60_000,
   sessionTtlMs = 900_000,
@@ -447,6 +456,91 @@ export function createBrowserBridge({
     const url = new URL(request.url, publicOrigin);
     check(url.origin === publicOrigin && !url.search && !url.hash, 'INVALID_ROUTE', 404);
     const path = url.pathname;
+    if (method === 'GET')
+      check(
+        !request.headers['transfer-encoding'] &&
+          (!request.headers['content-length'] || request.headers['content-length'] === '0'),
+      );
+    if (method === 'GET' && path === '/api/view') {
+      check(typeof readView === 'function', 'VIEW_UNAVAILABLE', 503);
+      const viewer = sessions.get(cookies(request).get(sessionCookie));
+      const owner = viewer?.account ?? null;
+      const value = await readView({ account: owner });
+      // Expose only the documented public view, never arbitrary runtime data.
+      check(object(value) && typeof value.configured === 'boolean', 'VIEW_UNAVAILABLE', 503);
+      const collection = (input) => {
+        check(Array.isArray(input) && input.length <= 64, 'VIEW_UNAVAILABLE', 503);
+        return input;
+      };
+      const viewDeployment =
+        value.deployment === null
+          ? null
+          : {
+              networkPassphrase: value.deployment.networkPassphrase,
+              contract: address(value.deployment.contract),
+              token: address(value.deployment.token),
+              tokenDecimals: value.deployment.tokenDecimals,
+              tokenLabel: text(value.deployment.tokenLabel, 40),
+            };
+      check(
+        !viewDeployment ||
+          (viewDeployment.networkPassphrase === Networks.TESTNET &&
+            viewDeployment.tokenDecimals === 7 &&
+            StrKey.isValidContract(viewDeployment.contract) &&
+            StrKey.isValidContract(viewDeployment.token)),
+      );
+      check(value.configured === (viewDeployment !== null));
+      const offers = collection(value.offers).map((offer) => {
+        check(offer.currency === 'EUR' && offer.rail === 'revolut');
+        return {
+          id: uint(offer.id),
+          seller: address(offer.seller),
+          tokenAmount: uint(offer.tokenAmount, 127),
+          fiatMinor: uint(offer.fiatMinor, 127),
+          currency: 'EUR',
+          rail: 'revolut',
+          offerExpiresAt: uint(offer.offerExpiresAt),
+          recipientCommitment: hex(offer.recipientCommitment, 32),
+        };
+      });
+      const ownerOrders = collection(value.ownerOrders).map((item) => {
+        const order = publicOrder(item);
+        check(owner && (order.buyer === owner || order.terms.seller === owner));
+        return {
+          ...order,
+          ...(item.lastConfirmedTransaction
+            ? { lastConfirmedTransaction: publicTransaction(item.lastConfirmedTransaction) }
+            : {}),
+        };
+      });
+      const sellerDrafts = collection(value.sellerDrafts).map((draft) => {
+        const terms = publicTerms(draft.publicTerms);
+        check(owner && terms.seller === owner);
+        return { id: text(draft.id, 80), publicTerms: terms };
+      });
+      const readiness = value.readiness ?? {};
+      respond(response, 200, {
+        configured: value.configured,
+        deployment: viewDeployment,
+        account: owner,
+        offers,
+        ownerOrders,
+        sellerDrafts,
+        balances:
+          owner && value.balances ? { tokenAtoms: uint(value.balances.tokenAtoms, 127) } : null,
+        serverTime: uint(value.serverTime),
+        unavailableReasons: collection(value.unavailableReasons).map((reason) => {
+          check(/^[A-Z_]{1,64}$/.test(reason));
+          return reason;
+        }),
+        readiness: {
+          paymentProof: readiness.paymentProof === true,
+          submission: readiness.submission === true,
+          recovery: readiness.recovery === true,
+        },
+      });
+      return;
+    }
     if (method === 'POST' && path === '/api/session/challenge') {
       const body = await readJson(request);
       keys(body, ['account']);
@@ -580,7 +674,12 @@ export function createBrowserBridge({
     else text(body.result, 65_536);
     clearTimeout(pending.timer);
     job.pending = null;
-    if (rejected) pending.reject(new BridgeError('WALLET_REJECTED'));
+    if (rejected)
+      pending.reject(
+        new BridgeError(
+          body.error === 'WALLET_REJECTED' ? 'WALLET_REJECTED' : 'WALLET_OPERATION_UNKNOWN',
+        ),
+      );
     else pending.resolve(body.result);
     respond(response, 200, { accepted: true });
   }

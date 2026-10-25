@@ -37,8 +37,8 @@ Contract replay, cross-order payment reuse and duplicate UI settlement are rejec
 The host provides:
 
 - Explicit testnet deployment: HTTPS RPC, escrow/token addresses, seven decimals, policy public key and maximum fee in stroops.
-- Wallet port: connect, selected address, network and signed envelope. A browser bridge must route these to the wallet; `freighterWalletPort` defines the shape, not the transport.
-- `TransactionJournal` with a private persistent disk path. Atomic reservations precede wallet prompts. Preparing/unknown transactions never expire automatically. Reconcile them; deleting the journal is not recovery.
+- Wallet port: connect, selected address, network and signed envelope. The authenticated browser bridge and `app/host-client.mjs` route these to Freighter; `freighterWalletPort` also defines the direct adapter shape.
+- `TransactionJournal` with a private persistent disk path. Atomic reservations precede wallet prompts. Unknown and legacy preparing transactions never expire automatically. Proven preparation failures and explicit wallet refusal retain history and permit a new user-requested attempt; signed/unknown outcomes require reconciliation. Deleting the journal is not recovery.
 - Trusted proof/status/authorization ports and source-bound private recipient reader.
 - Explicit `submissionEnabled: true` only when network submission is authorized. Default is false.
 
@@ -46,6 +46,6 @@ Funding, reserve, payment lock, signed release, unlocked-expiry refund and recei
 
 **Implemented Node modules:** authenticated browser transport, consistent chain reader, event reconciliation with atomic replay checkpoints, and buyer-envelope plus seller-Soroban recovery authorization. See [live service continuation](../docs/release/live-services.md) for their APIs and boundaries.
 
-**Missing:** composition of these modules into a running host and the browser app, private offer/policy routes, counterparty signing transport, accepted TLSNotary normalization and deployment configuration. `resolve()` requires a configured seller authorization port. Tests mock RPC/wallet while using real SDK signing/encoding, loopback HTTP and disk/restart journals.
+**Live entry point:** `npm run dev:live` composes the host, public view, Freighter client and separate live UI, initially unconfigured. **Missing:** approved private offer/policy composition, counterparty signing transport, accepted TLSNotary normalization and deployment configuration. `resolve()` requires a configured seller authorization port. Tests mock RPC/wallet while using real SDK signing/encoding, loopback HTTP and disk/restart journals.
 
 These are software/configuration gaps. Deployment authorization alone would not finish them. See [testnet handoff](../deploy/testnet/README.md).

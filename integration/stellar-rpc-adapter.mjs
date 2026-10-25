@@ -14,6 +14,7 @@ import {
 import { claimDigest, claimScVal } from '../contracts/escrow/protocol/protocol.mjs';
 import { isDurableTransactionJournal } from './transaction-journal.mjs';
 import { prepareRecoveryTransaction } from './recovery-authorization.mjs';
+import { createHash } from 'node:crypto';
 
 const check = (condition, code) => {
   if (!condition) throw new Error(code);
@@ -85,6 +86,10 @@ export function freighterWalletPort(api) {
         networkPassphrase: Networks.TESTNET,
         address: account,
       });
+      // Freighter 6.0.1's FreighterApiDeclinedError is specifically code -4.
+      // Other provider errors (or any returned envelope) are not proof of refusal.
+      if (result.error?.code === -4 && !result.signedTxXdr && !result.signerAddress)
+        throw new Error('WALLET_REJECTED');
       check(!result.error && result.signerAddress === account, 'WALLET_SIGNING_FAILED');
       return result.signedTxXdr;
     },
@@ -226,9 +231,12 @@ export function createStellarServices({
     check(submissionEnabled, 'TESTNET_SUBMISSION_NOT_AUTHORIZED');
     check(isDurableTransactionJournal(journal), 'DURABLE_TRANSACTION_JOURNAL_REQUIRED');
     const argumentKey = args.map((argument) => argument.toXDR('base64')).join(':');
+    const argumentsHash = createHash('sha256')
+      .update(JSON.stringify([method, expectedAccount, argumentKey]))
+      .digest('hex');
     const running = inFlight.get(key);
     if (running) {
-      check(running.argumentKey === argumentKey, 'TRANSACTION_ARGUMENT_MISMATCH');
+      check(running.argumentsHash === argumentsHash, 'TRANSACTION_ARGUMENT_MISMATCH');
       return running.operation;
     }
     const operation = (async () => {
@@ -241,24 +249,49 @@ export function createStellarServices({
       await network();
       await configuration();
       const prior = await journal.get(key);
-      if (prior) {
+      if (prior && prior.state !== 'retryable') {
+        check(
+          !prior.argumentsHash || prior.argumentsHash === argumentsHash,
+          'TRANSACTION_ARGUMENT_MISMATCH',
+        );
         check(/^[a-f0-9]{64}$/.test(prior.hash), 'TRANSACTION_PENDING_RECONCILIATION');
         const reply = await waitFor(prior.hash);
         return { reply, transaction: checkEnvelope(reply, prior.hash, method, args) };
       }
-      // The host journal must reserve atomically across tabs/processes before
-      // any wallet prompt. A preparing/unknown record is never auto-cleared.
-      check(await journal.reserve(key), 'TRANSACTION_PENDING_RECONCILIATION');
-      const raw = await transaction(method, args, expectedAccount);
-      const preparation = prepare
-        ? await prepare(raw)
-        : { transaction: await remote.prepareTransaction(raw) };
-      const prepared = preparation.transaction;
-      check(BigInt(prepared.fee) <= integer(cfg.maxFeeStroops), 'TRANSACTION_FEE_LIMIT');
-      const signed = TransactionBuilder.fromXDR(
-        await wallet.sign(prepared.toXDR(), expectedAccount),
-        Networks.TESTNET,
-      );
+      // Reservation ownership and every later transition survive process restart.
+      // Only this live owner can prove preparation failed without a buyer envelope.
+      const attempt = await journal.reserve(key, { method, argumentsHash });
+      check(attempt, 'TRANSACTION_PENDING_RECONCILIATION');
+      let preparation, prepared, unsignedXdr, preparedHash;
+      try {
+        const raw = await transaction(method, args, expectedAccount);
+        preparation = prepare
+          ? await prepare(raw)
+          : { transaction: await remote.prepareTransaction(raw) };
+        prepared = preparation.transaction;
+        check(BigInt(prepared.fee) <= integer(cfg.maxFeeStroops), 'TRANSACTION_FEE_LIMIT');
+        unsignedXdr = prepared.toXDR();
+        preparedHash = Buffer.from(prepared.hash()).toString('hex');
+      } catch {
+        await journal.markRetryable(key, attempt, 'PREPARATION_FAILED');
+        throw new Error('TRANSACTION_PREPARATION_RETRYABLE');
+      }
+      // Persist the exact offered envelope hash before requesting a signature.
+      // Generic signer failures may hide a signed/submitted transaction, so they
+      // retain this hash for reconciliation. Only explicit refusal is retryable.
+      await journal.markSigning(key, attempt, preparedHash);
+      let signedXdr;
+      try {
+        signedXdr = await wallet.sign(unsignedXdr, expectedAccount);
+      } catch (error) {
+        if (error?.code === 'WALLET_REJECTED' || error?.message === 'WALLET_REJECTED')
+          await journal.markRetryable(key, attempt, 'WALLET_REJECTED');
+        throw error;
+      }
+      // Even a malformed or changed returned envelope is conservatively final
+      // for retry purposes. No subsequent validation failure releases this row.
+      await journal.markSigned(key, attempt);
+      const signed = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
       check(
         Buffer.from(signed.hash()).equals(Buffer.from(prepared.hash())),
         'WALLET_CHANGED_TRANSACTION',
@@ -273,7 +306,7 @@ export function createStellarServices({
       const hash = Buffer.from(signed.hash()).toString('hex');
       // Persist the hash BEFORE submission. Unknown outcomes stay blocked across
       // reloads; no automatic new transaction is created for this action key.
-      await journal.put(key, { hash, method, state: 'submitted-or-unknown' });
+      await journal.put(key, attempt, { hash, method, state: 'submitted-or-unknown' });
       const accepted = await remote.sendTransaction(signed);
       check(
         accepted.hash === hash && ['PENDING', 'DUPLICATE'].includes(accepted.status),
@@ -281,10 +314,10 @@ export function createStellarServices({
       );
       const reply = await waitFor(hash);
       const confirmed = checkEnvelope(reply, hash, method, args);
-      await journal.put(key, { hash, method, state: 'confirmed' });
+      await journal.put(key, attempt, { hash, method, state: 'confirmed' });
       return { reply, transaction: confirmed };
     })();
-    inFlight.set(key, { argumentKey, operation });
+    inFlight.set(key, { argumentsHash, operation });
     try {
       return await operation;
     } finally {
@@ -442,7 +475,7 @@ export function createStellarServices({
         : null;
       check(
         ['Reserved', 'Paying'].includes(current.state) ||
-          (current.state === 'Resolved' && prior?.hash),
+          (current.state === 'Resolved' && prior?.state !== 'retryable' && prior?.hash),
         'RESOLUTION_NOT_AVAILABLE',
       );
       // Buyer's final envelope signs the exact call plus seller's signed auth.

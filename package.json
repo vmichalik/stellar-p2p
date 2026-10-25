@@ -24,7 +24,8 @@
     "test:legacy": "npm --prefix archive/reclaim test",
     "prepare:benchmark": "python3 scripts/prepare-proof-benchmark.py",
     "test:benchmark-prep": "python3 -m unittest discover -s scripts -p \"test_prepare_proof_benchmark.py\"",
-    "prepare:extension-setup60": "python3 scripts/prepare-extension-setup60.py"
+    "prepare:extension-setup60": "python3 scripts/prepare-extension-setup60.py",
+    "dev:live": "node scripts/serve-live-app.mjs"
   },
   "devDependencies": {
     "prettier": "3.6.2"

@@ -149,7 +149,10 @@ function fixture(options = {}) {
         result: { auth: [], retval: nativeToScVal(values[method]) },
       };
     },
-    prepareTransaction: async (tx) => tx,
+    prepareTransaction: async (tx) => {
+      if (options.prepareError) throw options.prepareError;
+      return tx;
+    },
     sendTransaction: async (tx) => {
       calls.submit++;
       sent = tx;
@@ -178,9 +181,12 @@ function fixture(options = {}) {
     network: async () => (options.wrongNetwork ? Networks.PUBLIC : Networks.TESTNET),
     sign: async (value) => {
       calls.sign++;
+      if (options.signError) throw options.signError;
+      if (options.malformedEnvelope) return 'invalid-signed-envelope';
       let tx = TransactionBuilder.fromXDR(value, Networks.TESTNET);
       if (options.mutateTransaction) tx = TransactionBuilder.cloneFrom(tx, { fee: '999' }).build();
       tx.sign(buyer);
+      if (options.beforeSignReturn) await options.beforeSignReturn();
       return tx.toXDR();
     },
   };
@@ -278,6 +284,24 @@ test('wallet port uses official address, network and signed envelope fields', as
     networkPassphrase: Networks.TESTNET,
     address: buyer.publicKey(),
   });
+});
+
+test('Freighter explicit decline is distinct from generic errors or a returned envelope', async () => {
+  for (const [response, expected] of [
+    [{ error: { code: -4 }, signedTxXdr: '', signerAddress: '' }, /WALLET_REJECTED/],
+    [{ error: { code: -1 }, signedTxXdr: '', signerAddress: '' }, /WALLET_SIGNING_FAILED/],
+    [
+      { error: { code: -4 }, signedTxXdr: '', signerAddress: buyer.publicKey() },
+      /WALLET_SIGNING_FAILED/,
+    ],
+    [
+      { error: { code: -4 }, signedTxXdr: 'returned-envelope', signerAddress: buyer.publicKey() },
+      /WALLET_SIGNING_FAILED/,
+    ],
+  ]) {
+    const wallet = freighterWalletPort({ signTransaction: async () => response });
+    await assert.rejects(wallet.sign('unsigned', buyer.publicKey()), expected);
+  }
 });
 
 test('wrong wallet network and missing submission authorization stop before signing', async () => {
@@ -406,15 +430,25 @@ test('recovery requires submission permission and a valid split before either wa
   }
 });
 
-test('seller refusal cannot become unilateral refund or a new automatic recovery attempt', async () => {
-  const f = fixture({ recovery: true, sellerRejects: true });
+test('seller refusal never refunds and permits an explicitly requested revised recovery proposal', async () => {
+  const options = { recovery: true, sellerRejects: true };
+  const f = fixture(options);
   await f.service.connectWallet('buyer');
-  await assert.rejects(f.service.resolve('0', '0'), /SELLER_REJECTED/);
-  await assert.rejects(f.service.resolve('0', '0'), /TRANSACTION_PENDING_RECONCILIATION/);
+  await assert.rejects(f.service.resolve('0', '0'), /TRANSACTION_PREPARATION_RETRYABLE/);
   assert.equal(f.current.state[0], 'Reserved');
   assert.equal(f.calls.sellerAuthorization, 1);
   assert.equal(f.calls.sign, 0);
   assert.equal(f.calls.submit, 0);
+  options.sellerRejects = false;
+  await f.service.resolve('0', '100000000');
+  assert.equal(f.calls.sellerAuthorization, 2);
+  assert.equal(f.calls.sign, 1);
+  assert.equal(f.calls.submit, 1);
+  const attempts = f.journal
+    .history(`${contract}:resolve:0`)
+    .filter((row) => row.state === 'preparing');
+  assert.equal(attempts.length, 2);
+  assert.notEqual(attempts[0].argumentsHash, attempts[1].argumentsHash);
 });
 
 test('concurrent recovery proposals cannot silently share different allocations', async () => {
@@ -447,4 +481,88 @@ test('a fresh adapter reconciles persisted recovery without collecting signature
   assert.equal(second.calls.sellerAuthorization, 0);
   assert.equal(second.calls.sign, 0);
   assert.equal(second.calls.submit, 0);
+});
+
+test('preparation failure is durably retryable without leaking its error or invoking signing', async () => {
+  const options = { prepareError: new Error('PRIVATE_RPC_DATA') };
+  const f = fixture(options);
+  await f.service.connectWallet('buyer');
+  await assert.rejects(f.service.beginPayment('0'), {
+    message: 'TRANSACTION_PREPARATION_RETRYABLE',
+  });
+  assert.equal(f.journal.get(`${contract}:begin_payment:0`).state, 'retryable');
+  assert.equal(f.calls.sign, 0);
+  assert.equal(f.calls.submit, 0);
+  options.prepareError = undefined;
+  await f.service.beginPayment('0');
+  assert.equal(f.calls.sign, 1);
+  assert.equal(f.calls.submit, 1);
+  assert.equal(
+    f.journal.history(`${contract}:begin_payment:0`).filter((row) => row.state === 'preparing')
+      .length,
+    2,
+  );
+});
+
+test('explicit buyer refusal allows a later user-requested attempt', async () => {
+  const options = {
+    signError: Object.assign(new Error('WALLET_REJECTED'), { code: 'WALLET_REJECTED' }),
+  };
+  const f = fixture(options);
+  await f.service.connectWallet('buyer');
+  await assert.rejects(f.service.beginPayment('0'), /WALLET_REJECTED/);
+  assert.equal(f.journal.get(`${contract}:begin_payment:0`).state, 'retryable');
+  assert.equal(f.calls.submit, 0);
+  options.signError = undefined;
+  await f.service.beginPayment('0');
+  assert.equal(f.calls.sign, 2);
+  assert.equal(f.calls.submit, 1);
+  const history = f.journal.history(`${contract}:begin_payment:0`);
+  assert.equal(history.filter((row) => row.state === 'preparing').length, 2);
+  assert.equal(history.find((row) => row.state === 'retryable').code, 'WALLET_REJECTED');
+});
+
+test('generic signer errors and timeouts retain the offered hash and never sign again', async () => {
+  for (const code of ['WALLET_TIMEOUT', 'SESSION_EXPIRED', 'PROVIDER_UNAVAILABLE']) {
+    const f = fixture({ signError: Object.assign(new Error(code), { code }), pending: true });
+    await f.service.connectWallet('buyer');
+    await assert.rejects(f.service.beginPayment('0'), new RegExp(code));
+    const saved = f.journal.get(`${contract}:begin_payment:0`);
+    assert.equal(saved.state, 'signing');
+    assert.match(saved.hash, /^[a-f0-9]{64}$/);
+    await assert.rejects(f.service.beginPayment('0'), /TRANSACTION_PENDING_RECONCILIATION/);
+    assert.equal(f.calls.sign, 1);
+    assert.equal(f.calls.submit, 0);
+  }
+});
+
+test('every returned envelope prevents retry, including malformed and changed transactions', async () => {
+  for (const options of [{ malformedEnvelope: true }, { mutateTransaction: true }]) {
+    const f = fixture({ ...options, pending: true });
+    await f.service.connectWallet('buyer');
+    await assert.rejects(f.service.beginPayment('0'));
+    assert.equal(f.journal.get(`${contract}:begin_payment:0`).state, 'signed');
+    await assert.rejects(f.service.beginPayment('0'), /TRANSACTION_PENDING_RECONCILIATION/);
+    assert.equal(f.calls.sign, 1);
+    assert.equal(f.calls.submit, 0);
+  }
+});
+
+test('a stale signing continuation cannot store or submit after its owned attempt is replaced', async () => {
+  const options = {};
+  const f = fixture(options);
+  const key = `${contract}:begin_payment:0`;
+  options.beforeSignReturn = async () => {
+    const [active] = f.journal.history(key).slice(-1);
+    f.journal.markRetryable(key, active.attempt, 'WALLET_REJECTED');
+    const replacement = f.journal.reserve(key, {
+      method: 'begin_payment',
+      argumentsHash: active.argumentsHash,
+    });
+    assert.notEqual(replacement, active.attempt);
+  };
+  await f.service.connectWallet('buyer');
+  await assert.rejects(f.service.beginPayment('0'), /ATTEMPT_NOT_OWNED/);
+  assert.equal(f.journal.get(key).state, 'preparing');
+  assert.equal(f.calls.submit, 0);
 });

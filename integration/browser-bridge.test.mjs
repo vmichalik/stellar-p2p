@@ -511,7 +511,7 @@ test('sanitizes service errors and wallet refusals without trusting completion o
     (await f.reply(cookie, id, walletRequest.id, { error: 'PRIVATE_WALLET_ERROR' })).status,
     200,
   );
-  assert.equal((await f.poll(cookie, id)).error, 'WALLET_REJECTED');
+  assert.equal((await f.poll(cookie, id)).error, 'WALLET_OPERATION_UNKNOWN');
 });
 
 test('wallet and operation timeouts settle jobs; late completion cannot revive a job', async (t) => {
@@ -686,4 +686,133 @@ test('timed-out host work remains bounded across commands and fresh sessions unt
   completions.get(bob.publicKey())(order(bob.publicKey()));
   assert.equal((await f.poll(otherSession, next)).status, 'completed');
   assert.equal((await f.poll(firstSession, first)).error, 'OPERATION_TIMEOUT');
+});
+
+test('public view projects only approved fields and binds private rows to the authenticated owner', async (t) => {
+  const seen = [];
+  const view = (account) => ({
+    configured: true,
+    deployment: {
+      networkPassphrase: Networks.TESTNET,
+      contract,
+      token: contract,
+      tokenDecimals: 7,
+      tokenLabel: 'Test token',
+      privateKey: 'PRIVATE_DEPLOYMENT',
+    },
+    offers: [
+      {
+        id: '0',
+        seller: bob.publicKey(),
+        tokenAmount: '220000000',
+        fiatMinor: '2000',
+        currency: 'EUR',
+        rail: 'revolut',
+        offerExpiresAt: '300',
+        recipientCommitment: '12'.repeat(32),
+        destination: 'PRIVATE_DESTINATION',
+      },
+    ],
+    ownerOrders: account
+      ? [
+          {
+            ...order(account),
+            recipientSalt: 'PRIVATE_SALT',
+            lastConfirmedTransaction: { ...confirmed, envelope: 'PRIVATE_ENVELOPE' },
+          },
+        ]
+      : [],
+    sellerDrafts: account
+      ? [
+          {
+            id: 'draft',
+            publicTerms: { ...order().terms, seller: account },
+            source: 'PRIVATE_OFFER',
+          },
+        ]
+      : [],
+    balances: { tokenAtoms: '100', privateAccount: 'PRIVATE_BALANCE' },
+    serverTime: '150',
+    unavailableReasons: ['PAYMENT_VERIFICATION_UNAVAILABLE'],
+    readiness: { paymentProof: false, submission: false, recovery: false },
+    policyKey: 'PRIVATE_POLICY',
+  });
+  const f = await fixture(t, {
+    readView: ({ account }) => {
+      seen.push(account);
+      return view(account);
+    },
+  });
+  const anonymous = await f.request('/api/view');
+  assert.equal(anonymous.status, 200);
+  assert.equal(anonymous.body.account, null);
+  assert.equal(anonymous.body.balances, null);
+  assert.deepEqual(anonymous.body.ownerOrders, []);
+  assert.doesNotMatch(JSON.stringify(anonymous.body), /PRIVATE|destination|recipientSalt/);
+  const cookie = await f.login();
+  const owned = await f.request('/api/view', { cookie });
+  assert.equal(owned.status, 200);
+  assert.equal(owned.body.account, alice.publicKey());
+  assert.equal(owned.body.ownerOrders[0].buyer, alice.publicKey());
+  assert.deepEqual(owned.body.balances, { tokenAtoms: '100' });
+  assert.doesNotMatch(JSON.stringify(owned.body), /PRIVATE|recipientSalt|envelope/);
+  assert.deepEqual(seen, [null, alice.publicKey()]);
+  await f.request('/api/session', { method: 'DELETE', cookie });
+  assert.equal((await f.request('/api/view', { cookie })).body.account, null);
+});
+
+test('rejects private rows for another viewer and inconsistent public deployment or currency', async (t) => {
+  let value = {
+    configured: true,
+    deployment: {
+      networkPassphrase: Networks.TESTNET,
+      contract,
+      token: contract,
+      tokenDecimals: 7,
+      tokenLabel: 'Test token',
+    },
+    offers: [],
+    ownerOrders: [order()],
+    sellerDrafts: [],
+    balances: null,
+    serverTime: '150',
+    unavailableReasons: [],
+    readiness: {},
+  };
+  const f = await fixture(t, { readView: () => value });
+  assert.equal((await f.request('/api/view')).status, 400);
+  const other = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x64));
+  const cookie = await f.login(other);
+  assert.equal((await f.request('/api/view', { cookie })).status, 400);
+  value.ownerOrders = [];
+  value.deployment.token = alice.publicKey();
+  assert.equal((await f.request('/api/view')).status, 400);
+  value.deployment.token = contract;
+  value.offers = [
+    {
+      id: '0',
+      seller: bob.publicKey(),
+      tokenAmount: '1',
+      fiatMinor: '1',
+      currency: 'USD',
+      rail: 'revolut',
+      offerExpiresAt: '300',
+      recipientCommitment: '12'.repeat(32),
+    },
+  ];
+  assert.equal((await f.request('/api/view')).status, 400);
+});
+
+test('preserves only explicit wallet refusal as safely rejected', async (t) => {
+  const f = await fixture(t, {
+    createServices: ({ wallet }) => ({ connectWallet: () => wallet.connect() }),
+  });
+  const cookie = await f.login();
+  const id = await f.start(cookie, 'connectWallet', { party: 'buyer' });
+  const { walletRequest } = await f.poll(cookie, id, (body) => Boolean(body.walletRequest));
+  assert.equal(
+    (await f.reply(cookie, id, walletRequest.id, { error: 'WALLET_REJECTED' })).status,
+    200,
+  );
+  assert.equal((await f.poll(cookie, id)).error, 'WALLET_REJECTED');
 });

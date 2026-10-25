@@ -1,6 +1,6 @@
 # Pactlane app handoff
 
-Latest follow-up: [UI polish handoff](polish-handoff.md). The original component and its check record below describe the `f4c6c42` baseline.
+Latest follow-ups: [mobile navigation and desktop verification](mobile-handoff.md), [UI polish](polish-handoff.md). The original component and its check record below describe the `f4c6c42` baseline.
 
 Objective: a complete buyer/seller demo matching the current escrow lifecycle, with explicit payment lock and mutual recovery. Execution host: Vijay’s Mac mini, 25 October 2026. Worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-ui`. Branch: `codex/pactlane-ui`. Base: `807412686da2cdad494ee284675dbefc35110257`. The scoped component commit is this branch’s HEAD and is supplied in the thread completion. Use `git rev-parse HEAD` and `git status --short` before integration. No push, deployment, live wallet or bank action was performed.
 

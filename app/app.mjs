@@ -27,6 +27,7 @@ const paths = {
   settings:
     '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/>',
   refresh: '<path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/>',
+  desktop: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',
 };
 const icon = (name, extra = '') =>
   `<svg class="icon ${extra}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] ?? paths.info}</svg>`;
@@ -115,6 +116,7 @@ function marketplace() {
       <div class="exchange-divider">${icon('buy')}</div><div class="money-field receive-field"><span>You receive</span><span class="money-input"><output id="receive-amount" for="pay-amount">0.00</output><span class="currency-label"><span class="usdc-disc">$</span> USDC</span></span></div>
       <div id="quote-error" class="field-error" aria-live="polite"></div><div class="quote-terms"><span>With <strong id="quote-seller">Ben</strong> · Revolut</span><span>${formatRate(state.offers[0].rateAtomsPerEuro)}</span></div>
       <button type="submit" class="button primary" id="reserve-button">Reserve USDC ${icon('arrow')}</button><p id="quote-note" class="quote-footnote" role="status">Reserve this whole offer at its exact amount.</p></form>
+      <div class="desktop-preflight">${icon('desktop')}<div><strong>Live verification needs desktop Chrome</strong><button class="text-button" data-action="desktop-setup">Check TLSNotary setup ${icon('arrow')}</button></div></div>
       <details class="quote-breakdown"><summary>Exchange details</summary>${row('Offer size', 'Whole offer')}${row('Receive on', 'Stellar demo')}${row('Demo fee', '€0.00')}</details>
     </aside></div>`;
 }
@@ -193,14 +195,14 @@ function steps(order) {
 function lockPanel(order) {
   const expired = Date.now() >= order.expiresAt;
   const locking = order.status === 'locking';
-  return `<section class="panel status-panel"><span class="status-symbol ${locking ? 'processing' : 'neutral'}">${locking ? '<span class="spinner"></span>' : icon('lock')}</span><h2>${locking ? 'Confirming escrow lock…' : expired ? 'Reservation expired' : 'Confirm the escrow lock'}</h2><p>${locking ? 'Waiting for the demo escrow lock to confirm. Payment instructions will appear after confirmation.' : expired ? 'This reservation was never locked for payment. Do not send any money for it.' : 'Confirm the lock to reveal your Revolut payment details.'}</p>${!locking && !expired ? '<div class="lock-consent"><strong>Before you lock</strong><p>After locking, USDC stays held until payment is verified or both wallets approve recovery. Expiry alone does not return it.</p></div>' : ''}${order.lockFailure ? '<div class="important-note"><strong>Payment lock not confirmed.</strong><span>Do not send a payment. You can retry while the reservation is active.</span></div>' : ''}${locking ? '<p class="small-note">Demo simulation · no real transaction</p>' : expired ? '<button class="button primary" data-action="refund-expired">Return expired reservation to seller</button>' : `<button class="button primary" data-action="lock-payment">${order.lockFailure ? 'Retry escrow lock' : 'Confirm escrow lock'} ${icon('lock')}</button><p class="deadline-note">Confirm before <time datetime="${new Date(order.expiresAt).toISOString()}">${formatDeadline(order.expiresAt)}</time>. Confirming the lock does not extend this deadline.</p><p class="quote-footnote" data-countdown>${remaining(order)}</p><button class="text-button" data-action="request-resolution" data-id="${esc(order.id)}">Agree to end this trade</button>`}</section>`;
+  return `<section class="panel status-panel"><span class="status-symbol ${locking ? 'processing' : 'neutral'}">${locking ? '<span class="spinner"></span>' : icon('lock')}</span><h2>${locking ? 'Confirming escrow lock…' : expired ? 'Reservation expired' : 'Confirm the escrow lock'}</h2><p>${locking ? 'Waiting for the demo escrow lock to confirm. Payment instructions will appear after confirmation.' : expired ? 'This reservation was never locked for payment. Do not send any money for it.' : 'Confirm the lock to reveal your Revolut payment details.'}</p>${!locking && !expired ? '<div class="lock-consent"><strong>Before you lock</strong><p>After locking, USDC stays held until payment is verified or both wallets approve recovery. Expiry alone does not return it.</p><button class="text-button" data-action="desktop-setup">Have desktop Chrome + TLSNotary ready</button></div>' : ''}${order.lockFailure ? '<div class="important-note"><strong>Payment lock not confirmed.</strong><span>Do not send a payment. You can retry while the reservation is active.</span></div>' : ''}${locking ? '<p class="small-note">Demo simulation · no real transaction</p>' : expired ? '<button class="button primary" data-action="refund-expired">Return expired reservation to seller</button>' : `<button class="button primary" data-action="lock-payment">${order.lockFailure ? 'Retry escrow lock' : 'Confirm escrow lock'} ${icon('lock')}</button><p class="deadline-note">Confirm before <time datetime="${new Date(order.expiresAt).toISOString()}">${formatDeadline(order.expiresAt)}</time>. Confirming the lock does not extend this deadline.</p><p class="quote-footnote" data-countdown>${remaining(order)}</p><button class="text-button" data-action="request-resolution" data-id="${esc(order.id)}">Agree to end this trade</button>`}</section>`;
 }
 function paymentPanel(order) {
   if (!canShowPaymentInstructions(order))
     return `<section class="panel status-panel"><span class="status-symbol amber">${icon('clock')}</span><h2>Payment window ended</h2><p>Don’t send a new payment. You can still verify a transfer made after the lock confirmed and before ${formatDeadline(order.expiresAt)}.</p><button class="button primary" data-action="paid">I already paid · verify payment ${icon('shield')}</button><button class="button secondary" data-action="request-resolution" data-id="${esc(order.id)}">Agree on a resolution</button><p class="small-note">USDC stays held until payment is verified or both wallets approve recovery.</p></section>`;
   if (order.paymentReported)
     return `<section class="panel status-panel"><span class="status-symbol neutral">${icon('shield')}</span><h2>Verify the payment you sent</h2><p>You’ve marked the Revolut payment as sent. Continue verification without making another payment.</p><div class="important-note"><strong>Don’t pay again.</strong><span>Your USDC remains held while verification is incomplete.</span></div><button class="button primary" data-action="review-proof">Verify this payment ${icon('arrow')}</button><button class="button secondary" data-action="request-resolution" data-id="${esc(order.id)}">Agree on a resolution</button></section>`;
-  return `<section class="panel payment-panel"><div class="section-title"><h2>Pay ${esc(order.seller)} in Revolut</h2><span class="countdown" data-countdown>${remaining(order)}</span></div><p class="lock-confirmed-label">Escrow lock confirmed</p><div class="payment-amount">${euros(order.fiatMinor)} <span>EUR</span></div><div class="recipient-card"><span class="avatar peach">${esc(order.seller[0])}</span><span><strong>${esc(order.seller)}</strong><span>${esc(order.tag)}</span></span><button class="icon-button" data-action="copy-tag" aria-label="Copy Revolut tag">${icon('copy')}</button></div><p class="pay-deadline">Pay before <time datetime="${new Date(order.expiresAt).toISOString()}">${formatDeadline(order.expiresAt)}</time>.</p><button class="button primary" data-action="paid">${order.paymentReported ? 'Continue payment verification' : 'I’ve paid · verify payment'} ${icon('arrow')}</button><p class="payment-note">A transfer made after the lock and before this deadline can be verified later.</p><button class="text-button cancel-link" data-action="request-resolution" data-id="${esc(order.id)}">Agree on a resolution</button></section>`;
+  return `<section class="panel payment-panel"><div class="section-title"><h2>Pay ${esc(order.seller)} in Revolut</h2><span class="countdown" data-countdown>${remaining(order)}</span></div><p class="lock-confirmed-label">Escrow lock confirmed</p><div class="payment-amount">${euros(order.fiatMinor)} <span>EUR</span></div><div class="recipient-card"><span class="avatar peach">${esc(order.seller[0])}</span><span><strong>${esc(order.seller)}</strong><span>${esc(order.tag)}</span></span><button class="icon-button" data-action="copy-tag" aria-label="Copy Revolut tag">${icon('copy')}</button></div><p class="pay-deadline">Pay before <time datetime="${new Date(order.expiresAt).toISOString()}">${formatDeadline(order.expiresAt)}</time>.</p><button class="button primary" data-action="paid">${order.paymentReported ? 'Continue payment verification' : 'I’ve paid · verify payment'} ${icon('arrow')}</button><p class="payment-note">A transfer made after the lock and before this deadline can be verified later.</p><button class="text-button desktop-help" data-action="desktop-setup">${icon('desktop')} Paid on your phone? Desktop verification guide</button><button class="text-button cancel-link" data-action="request-resolution" data-id="${esc(order.id)}">Agree on a resolution</button></section>`;
 }
 function resolutionPanel(order, party = 'buyer') {
   const proposal = order.resolution;
@@ -347,10 +349,19 @@ function restoreFocus(key) {
   (target || document.querySelector('#main'))?.focus({ preventScroll: true });
 }
 function openModal(content) {
-  lastTrigger = document.activeElement;
-  lastTriggerKey = focusKey(lastTrigger);
+  const replacing = modal.open;
+  if (!replacing) {
+    lastTrigger = document.activeElement;
+    lastTriggerKey = focusKey(lastTrigger);
+  }
   modal.innerHTML = `<button class="icon-button modal-close" data-action="close-modal" aria-label="Close dialog">${icon('close')}</button>${content}`;
   modal.showModal();
+  if (replacing) {
+    const title = modal.querySelector('#modal-title');
+    title.tabIndex = -1;
+    title.focus();
+    modal.scrollTop = 0;
+  }
 }
 function closeModal() {
   modal.close();
@@ -392,10 +403,37 @@ function reserve() {
   navigate('trade', order.id);
 }
 
+const TLSNOTARY_STORE =
+  'https://chromewebstore.google.com/detail/tlsnotary/gnoglgpcamodhflknhmafmjdahcejcgg';
+
+function desktopSetupModal(returnToProof = false) {
+  const order = route === 'trade' ? currentOrder() : null;
+  const checklist = [
+    'Pactlane desktop verification checklist — demo preview',
+    'Open https://pactlane.io in desktop Chrome.',
+    'Install the official TLSNotary extension (prototype version: 0.1.0.1501).',
+    TLSNOTARY_STORE,
+    ...(order
+      ? [
+          `Sample trade reference: ${order.id}`,
+          `Sample exchange: ${euros(order.fiatMinor)} EUR → ${tokens(order.tokenAtoms)} USDC`,
+        ]
+      : []),
+    'Live cross-device resume is not connected. Sample trades stay in the original browser; this checklist does not transfer a trade.',
+    'For the planned live flow: reconnect the same buyer wallet, open My trades, and match the trade reference before continuing.',
+    'After a payment is completed, select that existing transfer in Revolut inside the TLSNotary window. Do not pay again.',
+    'Review the selected payment fields and verifier before approving disclosure; return to the trade to check verification and USDC release.',
+    'No real bank login, payment or extension is needed for this demo.',
+  ].join('\n');
+  openModal(
+    `<div class="desktop-guide"><p class="eyebrow">PHONE → COMPUTER</p><h2 id="modal-title">Continue on desktop</h2><p>For live verification, pay once in mobile Revolut, then check the completed transfer in desktop Chrome.</p><p class="setup-preview-note"><strong>Demo preview:</strong> live resume and verification aren’t connected. Your sample trade stays in this browser.</p><ol class="setup-steps"><li><strong>Install TLSNotary in Chrome</strong><p>On your computer, review the extension permissions, then return to Pactlane.</p><a class="setup-link" href="${TLSNOTARY_STORE}" target="_blank" rel="noopener noreferrer">Open official TLSNotary listing ${icon('up')}<span class="sr-only"> (opens in a new tab)</span></a><p class="small-note">Prototype version: 0.1.0.1501</p></li><li><strong>Match the same trade</strong><p>The live flow will need the same buyer wallet and trade reference in My trades.${order ? ` Your sample reference is <span class="mono">${esc(order.id)}</span>.` : ''}</p></li><li><strong>Select your completed Revolut transfer</strong><p>Sign in inside TLSNotary, review the fields and verifier before sharing, then return to this trade. Don’t pay again.</p></li></ol><details class="handoff-checklist"><summary>Desktop checklist${order ? ' and sample trade reference' : ''}</summary><label class="sr-only" for="desktop-checklist">Desktop verification checklist</label><textarea id="desktop-checklist" readonly rows="7" spellcheck="false">${esc(checklist)}</textarea></details><div class="desktop-guide-actions"><button class="button secondary" data-action="copy-desktop-checklist">${icon('copy')} Copy desktop checklist</button><p class="small-note" id="handoff-copy-status" role="status"></p><button class="button primary" data-action="${returnToProof ? 'review-proof' : 'close-modal'}">${returnToProof ? 'Back to demo payment check' : 'Continue demo here'} ${icon('arrow')}</button><p class="small-note setup-demo-note">No extension or bank login needed for this demo.</p></div></div>`,
+  );
+}
+
 function proofModal() {
   const order = currentOrder();
   openModal(
-    `<span class="status-symbol neutral">${icon('shield')}</span><p class="eyebrow">PAYMENT VERIFICATION</p><h2 id="modal-title">Review your payment check</h2><p>Review the completed transfer details selected for the TLSNotary payment check.</p><div class="disclosure">${row('Recipient', `${esc(order.seller)} · ${esc(order.tag)}`)}${row('Amount', euros(order.fiatMinor) + ' EUR')}${row('Transfer', 'Completed · Outgoing')}${row('Also checked', 'Payment ID and completion time')}</div><p class="small-note">Sample payment details only. No bank login or live proof is used in this walkthrough.</p><label class="consent"><input type="checkbox" id="proof-consent"> <span>I’ve reviewed the selected payment details.</span></label><button class="button primary" id="start-proof" data-action="verify" disabled>Start demo verification ${icon('arrow')}</button>`,
+    `<span class="status-symbol neutral">${icon('shield')}</span><p class="eyebrow">PAYMENT VERIFICATION</p><h2 id="modal-title">Review your payment check</h2><p>Review the sample completed transfer selected for this payment check.</p><div class="proof-device-note">${icon('desktop')}<div><strong>Paid on mobile? Verify on desktop.</strong><button class="text-button" data-action="desktop-setup" data-return="proof">TLSNotary setup and device handoff ${icon('arrow')}</button></div></div><div class="disclosure">${row('Recipient', `${esc(order.seller)} · ${esc(order.tag)}`)}${row('Amount', euros(order.fiatMinor) + ' EUR')}${row('Transfer', 'Completed · Outgoing')}${row('Also checked', 'Payment ID and completion time')}</div><p class="small-note">In the live flow, selected payment details, the payment ID, completion time, request path and response metadata go to Pactlane’s verifier. Stellar settlement is public. This demo shares no bank data and needs no bank login.</p><label class="consent"><input type="checkbox" id="proof-consent"> <span>I’ve reviewed the selected payment details.</span></label><button class="button primary" id="start-proof" data-action="verify" disabled>Start demo verification ${icon('arrow')}</button>`,
   );
 }
 
@@ -416,6 +454,25 @@ async function handleAction(button) {
   }
   if (action === 'open-trade') {
     navigate('trade', button.dataset.id);
+    return;
+  }
+  if (action === 'desktop-setup') {
+    desktopSetupModal(button.dataset.return === 'proof');
+    return;
+  }
+  if (action === 'copy-desktop-checklist') {
+    const field = document.querySelector('#desktop-checklist');
+    const status = document.querySelector('#handoff-copy-status');
+    try {
+      await navigator.clipboard.writeText(field.value);
+      status.textContent = 'Checklist copied. Your sample trade stays in this browser.';
+    } catch {
+      field.closest('details').open = true;
+      field.focus();
+      field.select();
+      status.textContent =
+        'Select and copy the checklist above. Your sample trade stays in this browser.';
+    }
     return;
   }
   if (action === 'wallet') {

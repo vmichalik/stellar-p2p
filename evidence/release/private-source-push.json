@@ -1,0 +1,16 @@
+{
+  "kind": "PRIVATE_SOURCE_PUSH",
+  "verifiedAt": "2026-10-25T20:12:37.631455+00:00",
+  "repository": "https://github.com/vmichalik/stellar-p2p",
+  "visibility": "PRIVATE",
+  "branch": "codex/pactlane-integration",
+  "verifiedSourceCommit": "a614967d132d2449948f69ddcb30cb7bc7bdc817",
+  "authorization": "User explicitly approved pushing this prototype, guide, imported TLS source and sanitized evidence to the existing private repository.",
+  "newGitBlobsReviewed": 213,
+  "credentialScanFindings": 0,
+  "publicAppChanged": false,
+  "proofRuntimeChanged": false,
+  "livePaymentGate": "NOT_CLEARED",
+  "supersedesPushStatusIn": "architecture-handoff-2026-10-25.json",
+  "scope": "Source publication only. Existing checks were not rerun for this documentation receipt."
+}

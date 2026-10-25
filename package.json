@@ -26,7 +26,8 @@
     "prepare:benchmark": "python3 scripts/prepare-proof-benchmark.py",
     "test:benchmark-prep": "python3 -m unittest discover -s scripts -p \"test_prepare_proof_benchmark.py\"",
     "prepare:extension-setup60": "python3 scripts/prepare-extension-setup60.py",
-    "preview:demo": "node scripts/serve-demo.mjs"
+    "preview:demo": "node scripts/serve-demo.mjs",
+    "check:demo": "node scripts/audit-demo.mjs"
   },
   "devDependencies": {
     "prettier": "3.6.2"

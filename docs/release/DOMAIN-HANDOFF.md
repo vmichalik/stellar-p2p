@@ -6,7 +6,7 @@ Objective: prepare Pactlane's app/proof domain topology, research-backed metadat
 
 - App `https://pactlane.io`; aliases `www.pactlane.io` and `app.pactlane.io` redirect with path/query preserved.
 - Workers Static Assets configuration is root `wrangler.jsonc`, Worker `deploy/demo/worker.mjs`. Only built-in ASSETS; no paid service bindings, schedule, source maps or observability. workers.dev and preview URLs disabled.
-- Exact deploy input is ignored `dist/demo`; its `manifest.json` lists each asset/hash and intended origins. Copy of the reviewed manifest and source/config fingerprints is recorded under `evidence/release/domain-*` after the final build.
+- Exact deploy input is ignored `dist/demo`; its `manifest.json` lists each asset/hash and intended origins. `npm run check:demo -- --record` records the exact output inventory and hashes in `evidence/release/domain-bundle.json` after the final build. Source/config fingerprints belong in the companion domain verification record.
 - Metadata, favicon, 1200×630 social card, robots/sitemap and restricted headers are prepared. The help link retains the current operational Fly URL until the proof transition is verified.
 - Product direction copied from coordinator-reviewed `docs/positioning.md`: payment-to-release uncertainty for existing Stellar/Revolut users. No cheapest, instant, anonymous, first, trustless or no-disputes claim.
 

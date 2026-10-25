@@ -19,7 +19,7 @@ export const DEMO_FILES = [
   'assets/favicon.svg',
 ];
 const GENERATED = ['manifest.json', '_headers', 'robots.txt', 'sitemap.xml'];
-const MEDIA_FILES = ['demo.mp4', 'demo-script.txt'];
+export const MEDIA_FILES = ['demo.mp4', 'demo-script.txt'];
 export const DEMO_HEADERS = STATIC_HEADERS;
 
 async function filesUnder(root) {

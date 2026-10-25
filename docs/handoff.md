@@ -2,7 +2,7 @@
 
 Objective: finish the hackathon prototype outside the excluded Revolut proof gate, and explain its contracts, evidence, signing, recovery and operations.
 
-Execution host: Mac mini, Apple Silicon macOS. Repository: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`. Branch: `codex/pactlane-integration`. Base: `c9845e51082dabcdfbd61d1a74d9606b376796e3`. The current checkout is on that base with new local changes; the implementation commit is recorded in Git and the final verification record. These changes have not been pushed or deployed.
+Execution host: Mac mini, Apple Silicon macOS. Repository: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`. Branch: `codex/pactlane-integration`. Implementation commit: `0c280777977b12c222857014ae07d3ed32a21c50`. The following documentation commit records this handoff. The implementation is committed locally; the source push is awaiting explicit approval after the previous automatic-review rejection. No public app or proof-runtime deployment changed.
 
 The [architecture study](architecture/study.html) is the read-first explainer. The [status](status.md) separates source, local checks, the testnet rehearsal, and remaining limits. The [captured testnet record](../evidence/release/testnet-rehearsal-2026-10-25.json) reports a passed synthetic PLTEST release, replay rejection, and mutual half split using the reviewed WASM and programmatic disposable keys.
 
@@ -17,3 +17,7 @@ The public `https://pactlane.io` app remains a separate synthetic app. Its audit
 5. Continue against the [remaining build plan](build-plan.md). Resolve the accepted evidence schema and source identities before implementing or enabling a live payment normalizer.
 
 Private keys, bank identities, raw proof material, and runtime secrets stay outside Git. The new local documentation and prototype must remain separate from public app release decisions.
+
+Two unrelated untracked files, `README 2.md` and `docs/status 2.md`, were left untouched and excluded from the commits. Private runtime files, testnet journals and disposable diagnostic output remain ignored.
+
+The read-only workbench preview was stopped after its browser checks, revoking its temporary capability. The architecture study is self-contained; `npm run read:architecture` serves its local preview. A loopback URL is not a Windows-device handoff. Open or download `docs/architecture/study.html` through Codex, or use the private repository once the push is approved.

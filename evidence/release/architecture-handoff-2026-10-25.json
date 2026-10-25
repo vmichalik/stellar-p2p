@@ -1,0 +1,47 @@
+{
+  "kind": "HACKATHON_NON_BANK_HANDOFF",
+  "recordedAt": "2026-10-25T19:24:11.689197+00:00",
+  "executionHost": "Mac mini",
+  "branch": "codex/pactlane-integration",
+  "implementationCommit": "0c280777977b12c222857014ae07d3ed32a21c50",
+  "livePaymentGate": "NOT_CLEARED",
+  "authenticatedBankTestAttempted": false,
+  "publicAppChanged": false,
+  "proofRuntimeChanged": false,
+  "sourcePush": "AWAITING_EXPLICIT_APPROVAL",
+  "checks": {
+    "javascript": {
+      "root": 125,
+      "policy": 55,
+      "protocol": 11,
+      "integration": 33,
+      "total": 224,
+      "failed": 0,
+      "skipped": 0
+    },
+    "pythonPreparation": {
+      "passed": 10
+    },
+    "syntaxModules": 98,
+    "format": "scoped changed files passed; frozen canonical copies preserved",
+    "localCompiledWasm": "passed with synthetic evidence",
+    "tlsnPrivacyVariant": "offline locked cargo check passed; not release-built or deployed",
+    "testnetRehearsal": "evidence/release/testnet-rehearsal-2026-10-25.json",
+    "browser": "read-only browser->host->RPC order read and NOT_CLEARED policy status; no signing/bank prompt",
+    "architectureStudy": {
+      "diagrams": 7,
+      "clippedLabels": 0,
+      "consoleErrors": 0,
+      "mobileWidth": 390,
+      "documentOverflow": false
+    }
+  },
+  "limitations": [
+    "PLTEST and synthetic payment evidence, not real USDC or authenticated fiat.",
+    "Programmatic testnet keys, not Freighter extension acceptance.",
+    "Operator workbench, not a production multiuser service.",
+    "Real TLSNotary bank schema/identity validation remains excluded and fail-closed.",
+    "Patched verifier source compiled, running-service privacy not revalidated."
+  ],
+  "unrelatedUntrackedFiles": ["README 2.md", "docs/status 2.md"]
+}

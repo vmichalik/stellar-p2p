@@ -12,9 +12,11 @@ const FIELDS = [
   '0.completedDate',
   '0.type',
 ];
-async function pageHarness(result, { failure = false } = {}) {
-  const html = String((await readPaymentRoute('/payment-check/', ORIGIN)).body);
-  const plugin = String((await readPaymentRoute('/payment-check/plugin.mjs', ORIGIN)).body);
+async function pageHarness(result, { failure = false, fullRecord = false } = {}) {
+  const html = String((await readPaymentRoute('/payment-check/', ORIGIN, { fullRecord })).body);
+  const plugin = String(
+    (await readPaymentRoute('/payment-check/plugin.mjs', ORIGIN, { fullRecord })).body,
+  );
   const elements = new Map(
     ['#run', '#consent', '#result', '#source', '#verifier-origin'].map((id) => [
       id,
@@ -151,4 +153,48 @@ test('payment page renders status and exact boolean field presence, never transf
     fieldsPresent: Object.fromEntries(FIELDS.map((key) => [key, true])),
   });
   assert.match(h.elements.get('#result').textContent, /UNRECOGNIZED_DIAGNOSTIC.*NOT_CLEARED/);
+});
+
+test('complete-record page requires fresh explicit consent and renders status without private values', async () => {
+  const html = String(
+    (await readPaymentRoute('/payment-check/', ORIGIN, { fullRecord: true })).body,
+  );
+  for (const text of [
+    'account balance',
+    'response cookies',
+    'request cookies',
+    'authorization values',
+  ])
+    assert.ok(html.includes(text));
+  const h = await pageHarness(
+    {
+      diagnosticOnly: true,
+      mode: 'payment-record',
+      recordDisclosed: true,
+      httpStatus: 200,
+      releaseGate: 'NOT_CLEARED',
+      amount: 12345,
+      name: 'synthetic-private',
+      transcript: 'synthetic-private',
+    },
+    { fullRecord: true },
+  );
+  const run = h.elements.get('#run'),
+    consent = h.elements.get('#consent');
+  assert.equal(run.disabled, true);
+  run.disabled = false;
+  await run.listeners.get('click')();
+  assert.equal(h.calls.length, 0);
+  consent.checked = true;
+  consent.listeners.get('change')();
+  await run.listeners.get('click')();
+  assert.equal(h.calls.length, 1);
+  assert.match(h.calls[0][0], /const FULL_PAYMENT_RECORD = true;/);
+  assert.match(
+    h.elements.get('#result').textContent,
+    /complete response disclosed; server acceptance still required/,
+  );
+  assert.doesNotMatch(h.elements.get('#result').textContent, /12345|synthetic-private/);
+  assert.equal(consent.checked, false);
+  assert.equal(run.disabled, true);
 });

@@ -1,5 +1,9 @@
 # What works so far
 
+## Latest: mainnet completion request, 25 October 2026
+
+The active continuation is the isolated `codex/pactlane-mainnet-completion` candidate. Network support, Freighter transport and the accepted TLS proof flow are integrated locally. A read-only mainnet USDC check passed; no mainnet transaction or deployment has occurred. Payment release remains **NOT_CLEARED** pending strict evidence ingestion/mapping and a configured trade. Read [the current mainnet handoff](release/mainnet-test.md) first; it supersedes the older bank pause and source-intake state below.
+
 The current local candidate includes the separate live browser/host and two-party recovery transport. The complete local suite passed **309 JavaScript tests with zero skips**, eight Python checks and 91 syntax checks. Real HTTP/SDK signatures, SQLite and two-browser flows are exercised with mocked wallet/chain services. Historical native/WASM results retain their source provenance; contract source/artifact did not change. This is not an authenticated payment-to-testnet success. See [current recovery evidence](../evidence/release/mutual-recovery-checks.json) and [the continuation](release/live-services.md).
 
 | Part                        | Evidence                                                                                                                                                                                                          | Limit                                                                                                           |

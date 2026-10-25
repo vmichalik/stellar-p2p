@@ -1,10 +1,10 @@
-import { PolicyError, requirePolicy, exactKeys, uint, positiveAmount } from './errors.mjs';
+import { requirePolicy, exactKeys, uint, positiveAmount } from './errors.mjs';
+import { normalizedVerifiedPayment } from './tlsn-store.mjs';
 
-// Deliberately no success path: accepted bank fields/units/account bindings have
-// not been established by this lane. A JSON flag or browser callback cannot turn
-// this into trusted evidence. The proof owner must provide a reviewed adapter.
-export function normalizeLiveTlsnPayment(_record) {
-  throw new PolicyError('TLSN_PAYMENT_SCHEMA_UNVERIFIED');
+// Only an opaque record issued by the authenticated verifier store can normalize.
+// Browser summaries, pasted JSON and arbitrary reader objects still fail closed.
+export function normalizeLiveTlsnPayment(record) {
+  return normalizedVerifiedPayment(record);
 }
 
 export function validateSyntheticPayment(payment) {

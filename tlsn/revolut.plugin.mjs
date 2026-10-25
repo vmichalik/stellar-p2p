@@ -5,6 +5,7 @@ const VERIFIER_ORIGIN = '';
 const PROXY_URL = '';
 // The response-check renderer sets this to true; explicit payment modes then fail closed.
 const RESPONSE_SHAPE_ONLY = false;
+const FULL_PAYMENT_RECORD = false;
 const DETAIL_URL =
   /^https:\/\/app\.revolut\.com\/api\/retail\/transaction\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FIELDS = [
@@ -153,7 +154,11 @@ function main() {
                 cursor: 'pointer',
               },
             },
-            ['Generate proof for the last opened transfer'],
+            [
+              FULL_PAYMENT_RECORD
+                ? 'Prove the complete transfer record'
+                : 'Generate proof for the last opened transfer',
+            ],
           )
         : div({}, [pending ? 'Generating proof…' : 'No proof has started.']),
       latest && !pending
@@ -181,7 +186,9 @@ function main() {
       div({ style: { marginTop: '8px', fontSize: '12px' } }, [
         RESPONSE_SHAPE_ONLY
           ? 'Response check shares HTTP metadata, JSON root type and selected field names.'
-          : 'Generate proof shares amount, currency, recipient code, transaction ID, state, completion time and type. Review these values before approving.',
+          : FULL_PAYMENT_RECORD
+            ? 'This proof shares the complete response, including balance, identities, names and response headers. Review every disclosed field before approving.'
+            : 'Generate proof shares amount, currency, recipient code, transaction ID, state, completion time and type. Review these values before approving.',
       ]),
     ],
   );
@@ -191,7 +198,13 @@ async function checkResponse() {
   return generateProof('response-shape');
 }
 
-async function generateProof(mode = RESPONSE_SHAPE_ONLY ? 'response-shape' : 'payment-fields') {
+async function generateProof(
+  mode = RESPONSE_SHAPE_ONLY
+    ? 'response-shape'
+    : FULL_PAYMENT_RECORD
+      ? 'payment-record'
+      : 'payment-fields',
+) {
   if (RESPONSE_SHAPE_ONLY && mode !== 'response-shape') {
     setState(
       'message',
@@ -199,6 +212,7 @@ async function generateProof(mode = RESPONSE_SHAPE_ONLY ? 'response-shape' : 'pa
     );
     return;
   }
+  if (mode === 'payment-record' && !FULL_PAYMENT_RECORD) return;
   if (useState('pending', false)) return;
   const selected = useState('selected', null);
   if (!isDetail(selected)) {
@@ -266,35 +280,55 @@ async function generateProof(mode = RESPONSE_SHAPE_ONLY ? 'response-shape' : 'pa
   let completedSummary = null;
   try {
     const shapeOnly = mode === 'response-shape';
-    const handlers = shapeOnly
+    const recordOnly = mode === 'payment-record';
+    const handlers = recordOnly
       ? [
-          { type: 'SENT', part: 'START_LINE', action: 'REVEAL' },
-          { type: 'RECV', part: 'STATUS_CODE', action: 'REVEAL' },
-          { type: 'RECV', part: 'HEADERS', action: 'REVEAL', params: { key: 'content-type' } },
           {
-            type: 'RECV',
+            type: 'SENT',
             part: 'ALL',
             action: 'REVEAL',
-            params: { type: 'regex', regex: ROOT_REGEX },
+            params: {
+              type: 'regex',
+              regex: '^GET /api/retail/transaction/[0-9a-fA-F-]{36} HTTP/1\\.1\\r\\n',
+            },
           },
           {
-            type: 'RECV',
+            type: 'SENT',
             part: 'ALL',
             action: 'REVEAL',
-            params: { type: 'regex', regex: KEYS_REGEX },
+            params: { type: 'regex', regex: '\\r\\n(?i:host):[ \\t]*app\\.revolut\\.com\\r\\n' },
           },
+          { type: 'RECV', part: 'ALL', action: 'REVEAL' },
         ]
-      : [
-          { type: 'SENT', part: 'START_LINE', action: 'REVEAL' },
-          { type: 'RECV', part: 'START_LINE', action: 'REVEAL' },
-          { type: 'RECV', part: 'HEADERS', action: 'REVEAL', params: { key: 'date' } },
-          ...FIELDS.map((path) => ({
-            type: 'RECV',
-            part: 'BODY',
-            action: 'REVEAL',
-            params: { type: 'json', path },
-          })),
-        ];
+      : shapeOnly
+        ? [
+            { type: 'SENT', part: 'START_LINE', action: 'REVEAL' },
+            { type: 'RECV', part: 'STATUS_CODE', action: 'REVEAL' },
+            { type: 'RECV', part: 'HEADERS', action: 'REVEAL', params: { key: 'content-type' } },
+            {
+              type: 'RECV',
+              part: 'ALL',
+              action: 'REVEAL',
+              params: { type: 'regex', regex: ROOT_REGEX },
+            },
+            {
+              type: 'RECV',
+              part: 'ALL',
+              action: 'REVEAL',
+              params: { type: 'regex', regex: KEYS_REGEX },
+            },
+          ]
+        : [
+            { type: 'SENT', part: 'START_LINE', action: 'REVEAL' },
+            { type: 'RECV', part: 'START_LINE', action: 'REVEAL' },
+            { type: 'RECV', part: 'HEADERS', action: 'REVEAL', params: { key: 'date' } },
+            ...FIELDS.map((path) => ({
+              type: 'RECV',
+              part: 'BODY',
+              action: 'REVEAL',
+              params: { type: 'json', path },
+            })),
+          ];
     const result = await prove(
       { url: selected.url, method: 'GET', headers },
       {
@@ -306,7 +340,21 @@ async function generateProof(mode = RESPONSE_SHAPE_ONLY ? 'response-shape' : 'pa
       },
     );
     const results = Array.isArray(result?.results) ? result.results : [];
-    if (shapeOnly) {
+    if (recordOnly) {
+      const response = results.find((row) => row.type === 'RECV' && row.part === 'ALL');
+      const status =
+        typeof response?.value === 'string'
+          ? /^HTTP\/1\.[01] ([1-5][0-9]{2})\b/.exec(response.value)
+          : null;
+      completedSummary = {
+        diagnosticOnly: true,
+        mode: 'payment-record',
+        releaseGate: 'NOT_CLEARED',
+        httpStatus: status ? Number(status[1]) : null,
+        recordDisclosed: !!status,
+      };
+      setState('selected', null);
+    } else if (shapeOnly) {
       const status = results.find((row) => row.type === 'RECV' && row.part === 'STATUS_CODE');
       const statusText = typeof status?.value === 'string' ? status.value.trim() : '';
       const contentType = results.find((row) => row.type === 'RECV' && row.part === 'HEADERS');

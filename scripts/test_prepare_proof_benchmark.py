@@ -102,10 +102,16 @@ class PrepareBenchmarkTests(unittest.TestCase):
             (root / 'tlsn/benchmark/gateway.mjs').write_text('// synthetic gateway')
             public = ('extension-check.mjs', 'extension-check.html', 'extension-check.plugin.mjs',
                       'response-check.mjs', 'response-check.html',
-                      'payment-check.mjs', 'payment-check.html',
+                      'payment-check.mjs', 'payment-check.html', 'payment-record.html',
                       'proof-ui.mjs', 'extension-check-window.html')
             for name in public:
                 (root / 'tlsn' / name).write_text('synthetic public diagnostic')
+            (root / 'policy/src').mkdir(parents=True)
+            for name in ('tlsn-store.mjs', 'tlsn-record.mjs', 'errors.mjs'):
+                (root / 'policy/src' / name).write_text('synthetic evidence receiver')
+            (root / 'integration').mkdir()
+            (root / 'integration/verifier-ingress.mjs').write_text('synthetic ingress')
+            (root / 'infra/proof-benchmark/record-runtime.mjs').write_text("import '../../policy/src/tlsn-store.mjs';\nimport '../../integration/verifier-ingress.mjs';")
             (root / 'tlsn/assets').mkdir()
             (root / 'tlsn/assets/pactlane.css').write_text('/* synthetic stylesheet */')
             (root / 'tlsn/revolut.plugin.mjs').write_text('synthetic authenticated transfer code')

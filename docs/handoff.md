@@ -1,5 +1,9 @@
 # Development handoff
 
+## Latest: mainnet completion request, 25 October 2026
+
+The active continuation is the isolated `codex/pactlane-mainnet-completion` candidate. Network support, Freighter transport and the accepted TLS proof flow are integrated locally. A read-only mainnet USDC check passed; no mainnet transaction or deployment has occurred. Payment release remains **NOT_CLEARED** pending strict evidence ingestion/mapping and a configured trade. Read [the current mainnet handoff](release/mainnet-test.md) first; it supersedes the older bank pause and source-intake state below.
+
 Objective: finish one Revolut-to-Stellar trade from the integrated Pactlane candidate.
 
 Execution host: Mac mini, Apple Silicon macOS. Current owner browser device: MacBook Pro. These devices do not share local files, browser profiles or loopback addresses.

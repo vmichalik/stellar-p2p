@@ -120,6 +120,13 @@ export function makePolicy({
   function checkPayment(payment, result, ledgerTime) {
     const { order } = result;
     requirePolicy(order.state === 'Paying', 'ORDER_NOT_PAYING');
+    if (!syntheticOnly) {
+      requirePolicy(
+        typeof result.offerData?.payerScope === 'string' &&
+          result.offerData.payerScope === payment.payerScope,
+        'PAYER_BINDING_UNVERIFIED',
+      );
+    }
     requirePolicy(
       payment.rail === order.terms.rail &&
         payment.currency === order.terms.currency &&

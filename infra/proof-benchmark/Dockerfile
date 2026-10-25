@@ -24,11 +24,13 @@ COPY --from=verifier-build /build/target/release/tlsn-verifier-server /app/bin/t
 COPY benchmark /app/benchmark
 COPY extension-check.mjs extension-check.html extension-check.plugin.mjs /app/
 COPY response-check.mjs response-check.html revolut.plugin.mjs /app/
-COPY payment-check.mjs payment-check.html /app/
+COPY payment-check.mjs payment-check.html payment-record.html /app/
 COPY proof-ui.mjs extension-check-window.html /app/
 COPY assets /app/assets
 COPY runtime/config.yaml /app/runtime/config.yaml
-COPY configuration.mjs start.mjs /app/
+COPY configuration.mjs start.mjs record-runtime.mjs /app/
+COPY policy /app/policy
+COPY integration /app/integration
 RUN chmod 0444 /app/runtime/config.yaml
 ENV NODE_OPTIONS=--max-old-space-size=256
 USER 65532:65532

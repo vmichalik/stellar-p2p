@@ -11,6 +11,7 @@ const forbiddenTestKeys = new Set(
 );
 export { PolicyError } from './errors.mjs';
 export { ReplayStore } from './replay-store.mjs';
+export { createTlsnEvidenceStore } from './tlsn-store.mjs';
 export { escrowDomainKey, orderBinding } from './engine.mjs';
 export {
   claimDigest,

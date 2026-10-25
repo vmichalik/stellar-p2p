@@ -1,0 +1,44 @@
+{
+  "checkedAt": "2026-10-25T22:30:31.820Z",
+  "network": "mainnet",
+  "networkPassphrase": "Public Global Stellar Network ; September 2015",
+  "protocolVersion": 29,
+  "rpcUrl": "https://soroban-rpc.mainnet.stellar.gateway.fm",
+  "asset": {
+    "code": "USDC",
+    "issuer": "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN"
+  },
+  "token": "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75",
+  "decimals": 7,
+  "ledger": 65136329,
+  "escrowWasmSha256": "8940569853b21a957fc5a81402666e95ed75f054ce2223926231ffc2c0c506dd",
+  "sourceEvidence": [
+    "https://developers.circle.com/stablecoins/usdc-contract-addresses",
+    "https://developers.stellar.org/docs/data/apis/rpc/providers"
+  ],
+  "checks": "Metadata and unsigned read-only decimals simulation",
+  "transactionSubmitted": false,
+  "walletPrompted": false,
+  "escrowDeployed": false,
+  "paymentReleaseGate": "NOT_CLEARED",
+  "sourceCommit": "dd56b4f351f06612ca106258066af974dfdd308c",
+  "integrationCommit": "8bf7465",
+  "walletSourceCommit": "32b11a3",
+  "networkSourceCommit": "2f6ab71",
+  "tlsSourceCommit": "4bcbe65",
+  "combinedAppWalletPolicyProtocolTestsPassed": 281,
+  "tlsDistinctTestsPassedAfterStaleHeadingCorrection": 68,
+  "tlsInitialRun": {
+    "passed": 67,
+    "failed": 1,
+    "reason": "Stale pre-branding page-title assertion"
+  },
+  "tlsGatewayRecheck": {
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0
+  },
+  "stagingTestsPassed": 8,
+  "syntaxChecksPassed": 114,
+  "scope": "Local integration plus read-only mainnet metadata and unsigned token-decimals simulation; no deployment, key creation, signing, bank attempt or transaction submission."
+}

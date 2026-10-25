@@ -281,7 +281,15 @@ export function createChainReader({
         check(typeof reconciler?.syncThrough === 'function', 'CHAIN_RECONCILER_REQUIRED');
         await reconciler.syncThrough(result.ledgerSequence);
         // This salt is for the private policy only. Never expose readOrder as HTTP.
-        return { ...result, offerData: { recipientSalt: offer.recipientSalt } };
+        return {
+          ...result,
+          offerData: {
+            recipientSalt: offer.recipientSalt,
+            ...(offer.buyer === result.order.buyer && typeof offer.payerScope === 'string'
+              ? { payerScope: offer.payerScope }
+              : {}),
+          },
+        };
       });
     },
     instructionsFor(account) {

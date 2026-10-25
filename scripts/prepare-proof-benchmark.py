@@ -122,19 +122,26 @@ def copy_runtime(root, stage):
         shutil.copyfile(root / 'tlsn' / name, stage / name)
     for name in ('response-check.mjs', 'response-check.html', 'revolut.plugin.mjs'):
         shutil.copyfile(root / 'tlsn' / name, stage / name)
-    for name in ('payment-check.mjs', 'payment-check.html'):
+    for name in ('payment-check.mjs', 'payment-check.html', 'payment-record.html'):
         shutil.copyfile(root / 'tlsn' / name, stage / name)
     for name in ('proof-ui.mjs', 'extension-check-window.html'):
         shutil.copyfile(root / 'tlsn' / name, stage / name)
     shutil.copytree(root / 'tlsn/assets', stage / 'assets')
+    (stage / 'policy/src').mkdir(parents=True)
+    for name in ('tlsn-store.mjs', 'tlsn-record.mjs', 'errors.mjs'):
+        shutil.copyfile(root / 'policy/src' / name, stage / 'policy/src' / name)
+    (stage / 'integration').mkdir()
+    shutil.copyfile(root / 'integration/verifier-ingress.mjs', stage / 'integration/verifier-ingress.mjs')
     infra = root / 'infra/proof-benchmark'
-    for name in ('Dockerfile', '.dockerignore', 'configuration.mjs', 'start.mjs', 'render-fly-config.mjs'):
+    for name in ('Dockerfile', '.dockerignore', 'configuration.mjs', 'start.mjs', 'record-runtime.mjs', 'render-fly-config.mjs'):
         data = (infra / name).read_text()
         if name in ('configuration.mjs', 'start.mjs'):
             needle = "'../../tlsn/benchmark/"
             if data.count(needle) != 1:
                 raise ValueError('Canonical runtime import layout changed; review staging before continuing.')
             data = data.replace(needle, "'./benchmark/")
+        if name == 'record-runtime.mjs':
+            data = data.replace("'../../policy/src/", "'./policy/src/").replace("'../../integration/", "'./integration/")
         (stage / name).write_text(data)
     (stage / 'runtime').mkdir()
     (stage / 'runtime/config.yaml').write_text('webhooks: {}\n')

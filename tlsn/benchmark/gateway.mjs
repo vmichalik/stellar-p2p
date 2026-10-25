@@ -118,6 +118,8 @@ async function loadAssets(root, read = readFile) {
 }
 
 export async function createBenchmarkGateway(options = {}) {
+  if (options.fullPaymentRecord !== undefined && typeof options.fullPaymentRecord !== 'boolean')
+    throw new Error('INVALID_PAYMENT_MODE');
   const targets = publicConfiguration(options.publicOrigin, options.targets);
   const listenPort = port(options.port ?? 17848, true);
   const host = listenHost(options.host ?? '127.0.0.1');
@@ -219,7 +221,9 @@ export async function createBenchmarkGateway(options = {}) {
   async function extensionAsset(rawUrl, response) {
     try {
       const asset = isPaymentRoute(rawUrl)
-        ? await readPaymentRoute(rawUrl, options.publicOrigin)
+        ? await readPaymentRoute(rawUrl, options.publicOrigin, {
+            fullRecord: options.fullPaymentRecord === true,
+          })
         : isResponseRoute(rawUrl)
           ? await readResponseRoute(rawUrl, options.publicOrigin)
           : await readExtensionRoute(rawUrl, options.publicOrigin);

@@ -67,11 +67,13 @@ function response(bytes, { framing = 'length', encoding, type = 'application/jso
     : Buffer.concat([head, bytes]);
 }
 
-async function shapeHandlers(payment = false) {
+async function shapeHandlers(payment = false, fullRecord = false) {
   const source = String(
     (
       await (payment
-        ? readPaymentRoute('/payment-check/plugin.mjs', 'https://fixture.example.test')
+        ? readPaymentRoute('/payment-check/plugin.mjs', 'https://fixture.example.test', {
+            fullRecord,
+          })
         : readResponseRoute('/response-check/plugin.mjs', 'https://fixture.example.test'))
     ).body,
   );
@@ -206,5 +208,44 @@ parserTest(
       () => runtime.compute_reveal(sent, response(Buffer.from(JSON.stringify(missing))), handlers),
       /JSON path '0.recipient.code' not found/,
     );
+  },
+);
+
+parserTest(
+  'complete-record handlers cover the raw response and exclude request credentials with the shipped parser',
+  async () => {
+    const { payload, now } = await import('../policy/test/fixtures/tlsn-record.mjs');
+    const { decodeVerifierPayment } = await import('../policy/src/tlsn-record.mjs');
+    const handlers = await shapeHandlers(true, true);
+    for (const chunked of [false, true]) {
+      const original = payload({ chunked });
+      const request = Buffer.from(
+        original.transcript.sent +
+          'Cookie: synthetic-secret\r\nAuthorization: Bearer synthetic-token\r\n\r\n',
+      );
+      const recv = Buffer.from(original.transcript.recv);
+      const ranges = runtime.compute_reveal(request, recv, handlers);
+      const redact = (data, spans) => {
+        const result = Buffer.alloc(data.length);
+        for (const { start, end } of spans) data.copy(result, start, start, end);
+        return result.toString();
+      };
+      const disclosed = {
+        ...original,
+        config: {
+          sent: ranges.sent_ranges_with_handlers,
+          recv: ranges.recv_ranges_with_handlers,
+        },
+        transcript: {
+          sent: redact(request, ranges.sent_ranges_with_handlers),
+          recv: redact(recv, ranges.recv_ranges_with_handlers),
+          sent_length: request.length,
+          recv_length: recv.length,
+        },
+      };
+      assert.doesNotMatch(disclosed.transcript.sent, /synthetic-secret|synthetic-token/);
+      assert.equal(disclosed.transcript.recv, recv.toString());
+      assert.equal(decodeVerifierPayment(disclosed, now).amountMinor, '123');
+    }
   },
 );

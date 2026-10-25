@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
 import { createBenchmarkGateway } from '../../tlsn/benchmark/gateway.mjs';
 import { runtimeConfiguration, PINNED_GIT_HASH, VERIFIER_PORT } from './configuration.mjs';
+import { prepareRecordRuntime } from './record-runtime.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -29,6 +30,7 @@ async function main() {
   const config = runtimeConfiguration(process.env);
   let gateway,
     verifier,
+    recordRuntime,
     stopping = false;
   async function stop(code) {
     if (stopping) return;
@@ -41,6 +43,7 @@ async function main() {
       const forced = setTimeout(() => verifier.kill('SIGKILL'), 5000);
       forced.unref();
     }
+    await recordRuntime?.close();
     process.exitCode = code;
   }
   process.once('SIGTERM', () => {
@@ -50,10 +53,14 @@ async function main() {
     void stop(0);
   });
   try {
+    const recordDirectory = process.env.TLSN_EVIDENCE_DIRECTORY;
+    if (recordDirectory) recordRuntime = await prepareRecordRuntime({ directory: recordDirectory });
     verifier = spawn(resolve(HERE, 'bin/tlsn-verifier-server'), [], {
-      cwd: resolve(HERE, 'runtime'),
+      cwd: recordRuntime?.runtimeDirectory ?? resolve(HERE, 'runtime'),
       env: { ...process.env, PORT: String(VERIFIER_PORT), GIT_HASH: PINNED_GIT_HASH },
-      stdio: ['ignore', 'inherit', 'inherit'],
+      // The pinned binary logs disclosed transcript bytes at INFO and ignores
+      // RUST_LOG. Suppress its output when a complete financial record is used.
+      stdio: recordRuntime ? ['ignore', 'ignore', 'ignore'] : ['ignore', 'inherit', 'inherit'],
     });
     verifier.once('error', () => {
       console.error('Pinned verifier could not start.');
@@ -74,7 +81,7 @@ async function main() {
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
     if (!ready || stopping) throw new Error('VERIFIER_NOT_READY');
-    gateway = await createBenchmarkGateway(config);
+    gateway = await createBenchmarkGateway({ ...config, fullPaymentRecord: !!recordRuntime });
     if (stopping) return;
     await gateway.listen();
     if (stopping) {

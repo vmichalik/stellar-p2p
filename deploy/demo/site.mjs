@@ -1,12 +1,14 @@
+import { SOCIAL } from './social.mjs';
+
 // Intended public origins. Setting these does not publish or attach either domain.
 export const SITE = Object.freeze({
   appOrigin: 'https://pactlane.io',
   proofOrigin: 'https://proof.pactlane.io',
   operationalProofOrigin: 'https://stellar-p2p-proof-vijay.fly.dev',
   proofDomainVerified: false,
-  title: 'Pactlane · Trade euros for USDC on Stellar',
+  title: 'Pactlane · Your bank app. Your Stellar wallet.',
   description:
-    'Pay someone through Revolut and receive USDC in a Stellar wallet. Explore the peer-to-peer prototype with sample payments and simulated settlement.',
+    'Your bank app. A human supplier. Your Stellar wallet. Buy Stellar assets from a person at an upfront price.',
   themeColor: '#f7f5ee',
 });
 
@@ -23,7 +25,8 @@ export function siteMetadata(html) {
       '',
     )
     .replace(/<link\b(?=[^>]*\brel=["'](?:canonical|icon|help)["'])[^>]*>/gi, '');
-  const image = `${SITE.appOrigin}/assets/social-preview.png`;
+  const image = `${SITE.appOrigin}${SOCIAL.og.path}`;
+  const wideImage = `${SITE.appOrigin}${SOCIAL.twitter.path}`;
   const tags = [
     `<title>${escape(SITE.title)}</title>`,
     `<meta name="description" content="${escape(SITE.description)}" />`,
@@ -37,13 +40,16 @@ export function siteMetadata(html) {
     `<meta property="og:description" content="${escape(SITE.description)}" />`,
     `<meta property="og:url" content="${SITE.appOrigin}/" />`,
     `<meta property="og:image" content="${image}" />`,
-    '<meta property="og:image:width" content="1200" />',
-    '<meta property="og:image:height" content="630" />',
-    '<meta property="og:image:alt" content="Pactlane interactive demo. Sample payments and simulated settlement." />',
+    `<meta property="og:image:secure_url" content="${image}" />`,
+    `<meta property="og:image:type" content="${SOCIAL.og.type}" />`,
+    `<meta property="og:image:width" content="${SOCIAL.og.width}" />`,
+    `<meta property="og:image:height" content="${SOCIAL.og.height}" />`,
+    `<meta property="og:image:alt" content="${escape(SOCIAL.og.alt)}" />`,
     '<meta name="twitter:card" content="summary_large_image" />',
     `<meta name="twitter:title" content="${escape(SITE.title)}" />`,
     `<meta name="twitter:description" content="${escape(SITE.description)}" />`,
-    `<meta name="twitter:image" content="${image}" />`,
+    `<meta name="twitter:image" content="${wideImage}" />`,
+    `<meta name="twitter:image:alt" content="${escape(SOCIAL.twitter.alt)}" />`,
   ].join('\n    ');
   return clean.replace(/<\/head>/i, `    ${tags}\n  </head>`);
 }

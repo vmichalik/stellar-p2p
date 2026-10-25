@@ -4,6 +4,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { SITE, siteMetadata } from '../deploy/demo/site.mjs';
+import { SOCIAL_FILES } from '../deploy/demo/social.mjs';
 import { STATIC_HEADERS } from '../deploy/demo/headers.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -18,6 +19,7 @@ export const DEMO_FILES = [
   'assets/fonts/OFL.txt',
   'assets/social-preview.png',
   'assets/favicon.svg',
+  ...SOCIAL_FILES,
 ];
 const GENERATED = ['manifest.json', '_headers', 'robots.txt', 'sitemap.xml'];
 export const MEDIA_FILES = ['demo.mp4', 'demo-script.txt'];

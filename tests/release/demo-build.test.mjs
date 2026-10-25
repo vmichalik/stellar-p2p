@@ -12,6 +12,7 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { SOCIAL } from '../../deploy/demo/social.mjs';
 import { buildDemo, DEMO_FILES } from '../../scripts/build-demo.mjs';
 
 async function fixture(t) {
@@ -54,11 +55,14 @@ test('demo build copies only allowlisted app assets and labels every manifest sy
   assert.equal(result.intendedOrigins.proof, 'https://proof.pactlane.io');
   assert.equal(result.proofCustomDomainReady, false);
   assert.match(index, /https:\/\/stellar-p2p-proof-vijay\.fly\.dev\/extension-check\//);
-  assert.match(
-    index,
-    /property="og:image" content="https:\/\/pactlane\.io\/assets\/social-preview\.png"/,
+  assert.ok(index.includes(`property="og:image" content="https://pactlane.io${SOCIAL.og.path}"`));
+  assert.ok(
+    index.includes(`name="twitter:image" content="https://pactlane.io${SOCIAL.twitter.path}"`),
   );
-  assert.match(index, /sample payments and simulated settlement/);
+  assert.match(index, /property="og:image:type" content="image\/jpeg"/);
+  assert.match(index, /name="twitter:image:alt"/);
+  assert.match(index, /A human supplier/);
+  assert.doesNotMatch(index, /prototype|beta|coming soon/i);
   assert.doesNotMatch(index, /<title>Old title<\/title>/);
   assert.match(
     await readFile(join(paths.output, 'sitemap.xml'), 'utf8'),

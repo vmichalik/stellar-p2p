@@ -1,0 +1,144 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #17392f;
+  background: #f6f2e9;
+  font-size: 16px;
+  line-height: 1.55;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  padding: 1.3rem max(1rem, calc((100% - 920px) / 2));
+  border-bottom: 1px solid #d9dfd3;
+}
+header a {
+  color: inherit;
+  font-size: 1.3rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+header span {
+  font-size: 0.85rem;
+}
+main {
+  max-width: 920px;
+  margin: auto;
+  padding: 2.5rem 1rem 5rem;
+}
+h1 {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1.1;
+  max-width: 700px;
+  letter-spacing: -0.045em;
+}
+h2 {
+  font-size: 1.25rem;
+  margin-top: 0;
+}
+.eyebrow {
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #754329;
+}
+section {
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  background: #fffdf7;
+  border: 1px solid #cdd6c9;
+  border-radius: 16px;
+}
+label {
+  display: block;
+  font-weight: 650;
+  margin: 1rem 0 0.4rem;
+}
+input,
+textarea {
+  display: block;
+  width: 100%;
+  padding: 0.7rem;
+  font: inherit;
+  border: 1px solid #899b8e;
+  border-radius: 6px;
+  background: white;
+  color: inherit;
+}
+textarea {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+button {
+  border: 0;
+  border-radius: 7px;
+  padding: 0.8rem 1rem;
+  background: #174535;
+  color: white;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin: 0.4rem 0.4rem 0.4rem 0;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #e07c47;
+  outline-offset: 3px;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    0.8rem/1.6 ui-monospace,
+    monospace;
+  background: #eaf0e5;
+  padding: 1rem;
+  border-radius: 7px;
+  max-height: 30rem;
+  overflow: auto;
+}
+.wallet-request {
+  padding: 1rem;
+  margin-top: 1rem;
+  border: 2px solid #d77642;
+  border-radius: 8px;
+}
+.wallet-request p {
+  overflow-wrap: anywhere;
+  margin: 0.3rem 0;
+}
+#message,
+#connection {
+  font-weight: 650;
+}
+code {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 500px) {
+  section {
+    padding: 1rem;
+  }
+  header span {
+    max-width: 110px;
+    text-align: right;
+  }
+  button {
+    width: 100%;
+    margin-right: 0;
+  }
+}

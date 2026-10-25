@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Pactlane · Testnet workbench</title>
+    <link rel="stylesheet" href="/testnet/style.css" />
+    <script src="/testnet/freighter-api.js" defer></script>
+    <script src="/testnet/workbench.mjs" type="module"></script>
+  </head>
+  <body>
+    <header><a href="https://pactlane.io">Pactlane</a><span>Testnet workbench</span></header>
+    <main>
+      <p class="eyebrow">For the build team</p>
+      <h1>One trade, with real chain checks.</h1>
+      <p>
+        This private workbench connects Freighter to the host services. It uses Stellar testnet and
+        a configured token. The Revolut proof gate is closed.
+        <strong>Do not send real money.</strong>
+      </p>
+      <p id="connection" role="status">Open the private access link from the host to connect.</p>
+      <section aria-labelledby="deployment-heading">
+        <h2 id="deployment-heading">Deployment</h2>
+        <pre id="deployment">No deployment loaded.</pre>
+      </section>
+      <section aria-labelledby="wallet-heading">
+        <h2 id="wallet-heading">Your wallet</h2>
+        <p>
+          Use separate testnet accounts for the seller and buyer. Select the requested account in
+          Freighter before approving a request. Recovery needs approval from both accounts for the
+          same allocation.
+        </p>
+        <div class="row">
+          <button data-party="seller">Connect seller</button
+          ><button data-party="buyer">Connect buyer</button>
+        </div>
+        <div id="wallet-requests" aria-live="polite"></div>
+      </section>
+      <section aria-labelledby="offer-heading">
+        <h2 id="offer-heading">Fund a whole offer</h2>
+        <p>
+          Use the terms prepared for this deployment. Amounts use integer strings: €20 is
+          <code>"2000"</code>, and 22 tokens at seven decimals is <code>"220000000"</code>. The
+          recipient commitment must match the host’s private offer record.
+        </p>
+        <label for="terms">Offer terms (JSON)</label
+        ><textarea
+          id="terms"
+          rows="11"
+          spellcheck="false"
+          placeholder="Paste configured testnet terms here"
+        ></textarea
+        ><button id="fund">Fund offer</button>
+      </section>
+      <section aria-labelledby="trade-heading">
+        <h2 id="trade-heading">Continue a trade</h2>
+        <label for="order">Order number</label
+        ><input id="order" type="text" inputmode="numeric" pattern="[0-9]+" value="0" />
+        <label for="buyer">Buyer wallet address (for reservation)</label
+        ><input id="buyer" type="text" spellcheck="false" />
+        <div class="row">
+          <button data-action="read">Read order</button
+          ><button data-action="reserve">Reserve</button
+          ><button data-action="begin-payment">Lock payment</button
+          ><button data-action="instructions">Show instructions</button
+          ><button data-action="policy">Read policy status</button
+          ><button data-action="cancel">Cancel unreserved offer</button>
+        </div>
+        <p>
+          Locking removes the seller’s unilateral refund. If proof fails after the lock, funds stay
+          held until a valid claim or mutual recovery. An expired reservation can refund only while
+          it is still unlocked.
+        </p>
+        <label for="evidence">Verifier evidence reference</label
+        ><input id="evidence" type="text" spellcheck="false" />
+        <p>
+          The verifier must supply this reference through a trusted host reader. A screenshot or
+          browser success message cannot clear the gate.
+        </p>
+        <button data-action="authorize">Request policy authorization</button>
+        <label for="authorization">Policy authorization reference</label
+        ><input id="authorization" type="text" spellcheck="false" />
+        <div class="row">
+          <button data-action="release">Release with authorization</button
+          ><button data-action="refund">Refund expired reservation</button>
+        </div>
+        <label for="allocation">Mutual recovery: token atoms to buyer</label
+        ><input id="allocation" type="text" inputmode="numeric" value="0" />
+        <button data-action="resolve">Propose and approve recovery</button>
+        <p>Check the resulting transaction before trusting a receipt.</p>
+        <button id="receipt">Reconcile last confirmed transaction</button>
+      </section>
+      <section aria-labelledby="result-heading">
+        <h2 id="result-heading">Result</h2>
+        <p id="message" role="status">No action taken.</p>
+        <pre id="result" tabindex="0"></pre>
+      </section>
+    </main>
+  </body>
+</html>

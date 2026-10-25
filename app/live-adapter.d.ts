@@ -67,8 +67,10 @@ export interface LivePactlaneServices {
   launchPaymentProof(orderId: Integer, onProgress: (label: string) => void): Promise<void>;
   getPolicyStatus(orderId: Integer): Promise<PolicyStatus>;
   release(orderId: Integer, authorization: string): Promise<ConfirmedOrder>;
-  // Both parties must authorize the same call and buyer allocation.
+  // Buyer authorizes this exact call as transaction source; seller signs its Soroban auth entry.
   resolve(orderId: Integer, buyerTokens: Integer): Promise<ConfirmedOrder>;
+  // Seller can cancel an unreserved funded offer; a reserved offer has a separate expiry refund.
+  cancelFundedOffer(orderId: Integer): Promise<ConfirmedOrder>;
   refundExpiredReservation(orderId: Integer): Promise<ConfirmedOrder>;
   // Confirm actual token transfers and network/contract identity before a receipt.
   reconcileReceipt(orderId: Integer, transaction: ConfirmedTransaction): Promise<ReconciledReceipt>;

@@ -1,29 +1,19 @@
 # Development handoff
 
-Objective: finish one Revolut-to-Stellar trade from the integrated Pactlane candidate.
+Objective: finish the hackathon prototype outside the excluded Revolut proof gate, and explain its contracts, evidence, signing, recovery and operations.
 
-Execution host: Mac mini, Apple Silicon macOS. Current owner browser device: MacBook Pro. These devices do not share local files, browser profiles or loopback addresses.
+Execution host: Mac mini, Apple Silicon macOS. Repository: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`. Branch: `codex/pactlane-integration`. Base: `c9845e51082dabcdfbd61d1a74d9606b376796e3`. The current checkout is on that base with new local changes; the implementation commit is recorded in Git and the final verification record. These changes have not been pushed or deployed.
 
-Repository: private [vmichalik/stellar-p2p](https://github.com/vmichalik/stellar-p2p). Integration worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`. Branch: `codex/pactlane-integration`. Base: `807412686da2cdad494ee284675dbefc35110257`. Runtime integration commit: `006ab023e4d44600d03f320f220457e5b5545f0e`. Use `git rev-parse HEAD` for the final documentation/evidence commit and `git status --short` for local changes.
+The [architecture study](architecture/study.html) is the read-first explainer. The [status](status.md) separates source, local checks, the testnet rehearsal, and remaining limits. The [captured testnet record](../evidence/release/testnet-rehearsal-2026-10-25.json) reports a passed synthetic PLTEST release, replay rejection, and mutual half split using the reviewed WASM and programmatic disposable keys.
 
-Main's dirty proof docs/evidence and coordinator note were preserved. Component owners' worktrees and running proof services were not changed. This branch can be reviewed or merged separately; do not reset main over those changes.
+The public `https://pactlane.io` app remains a separate synthetic app. Its audit recorded source revision `88ba889` and manifest SHA-256 `57976a8918229887b98629139bf2f94ed729bad6acf2181b3f51b8fd886ebebe`; this local work did not alter or redeploy it. The bank gate remains `NOT_CLEARED`: live normalization rejects with `TLSN_PAYMENT_SCHEMA_UNVERIFIED`, no real USDC or accepted bank payment was tested, and Freighter UI behavior is unvalidated. The verifier privacy patch passed offline Cargo check but has not been release-built or deployed.
 
-## Resume
+## Resume and verify
 
-1. Read [status](status.md) and [release handoff](release/HANDOFF.md).
-2. Run `npm ci --ignore-scripts`, `npm run setup:integration`, `npm run test:all` and `npm run check`.
-3. Start the synthetic browser demo with `npm run dev:app`.
-4. With compatible Rust available, run `npm run rehearse:local`; it uses the tracked WASM and synthetic evidence, and submits no network transaction.
-5. Finish the live software gaps in [integration](../integration/README.md), then prepare the configured, authorized testnet rehearsal.
+1. Read [status](status.md), [verification](verification.md), and the architecture study.
+2. Run `npm ci --ignore-scripts`, then `npm run setup:integration`, `npm run test:all`, `npm run check`, and `npm run format:check` as needed. Use the verification record for actual results and limits; do not copy old totals as current.
+3. For the browser demo, run `npm run dev:app`. This is still a synthetic app and is distinct from the testnet workbench.
+4. The historical [testnet evidence](../evidence/release/testnet-rehearsal-2026-10-25.json) is already captured. Do not repeat network actions without the appropriate authorization and a fresh disposable setup.
+5. Continue against the [remaining build plan](build-plan.md). Resolve the accepted evidence schema and source identities before implementing or enabling a live payment normalizer.
 
-## Current boundary
-
-App, policy and escrow work together locally. The browser demo is simulated. Live TLSNotary payment ingestion rejects unverified records. No accepted authenticated payment, deployed escrow, network receipt or public app URL is established by this branch.
-
-The Node wallet/RPC service candidate is implemented and unit checked, but browser transport, trusted live readers/indexer and two-wallet recovery collection remain. These need code, not just deployment approval. The reviewed cloud source snapshot through `2c98f8e` is integrated locally. Keep its operational Fly origin until root verifies DNS/certificate and the new origin; see [domain handoff](release/DOMAIN-HANDOFF.md). Bank tests remain paused.
-
-## Checks and artifacts
-
-[Verification](verification.md) records exact suites and limits. [Local rehearsal evidence](../evidence/release/local-wasm-rehearsal.json) pins source/artifact hashes. Synthetic screenshots are under `evidence/release/screenshots/`. `npm run build:demo` prepares ignored `dist/demo`, with an explicit asset/hash manifest. It does not publish anything.
-
-Private keys, bank identities, raw proofs and runtime logs remain outside Git. Review staged content before every push. Existing repository privacy must remain unchanged. Hosting, token/key/deployer configuration, network signing, reviewer access and final submission need their existing specific authorizations checked before execution.
+Private keys, bank identities, raw proof material, and runtime secrets stay outside Git. The new local documentation and prototype must remain separate from public app release decisions.

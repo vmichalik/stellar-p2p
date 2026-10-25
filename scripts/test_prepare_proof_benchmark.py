@@ -15,6 +15,46 @@ spec.loader.exec_module(prepare)
 
 
 class PrepareBenchmarkTests(unittest.TestCase):
+    def test_privacy_patch_matches_pinned_public_verifier_and_is_idempotent(self):
+        archive_path = Path('/private/tmp/stellar-p2p-public-demo-checkout/.private/benchmark-downloads/tlsn-extension-source.tar.gz')
+        if not archive_path.exists():
+            self.skipTest('Pinned public source archive is not present in the local ignored cache.')
+        source = prepare.checked_bytes(archive_path, prepare.SOURCE_SHA256)
+        patch_path = prepare.ROOT / 'infra/proof-benchmark/verifier-privacy.patch'
+        self.assertEqual(prepare.digest(patch_path.read_bytes()), prepare.VERIFIER_PRIVACY_PATCH_SHA256)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            prepare.extract_workspace(source, root)
+            verifier = root / 'servers/verifier/src/verifier.rs'
+            self.assertEqual(prepare.digest(verifier.read_bytes()), prepare.UPSTREAM_VERIFIER_SHA256)
+            prepare.apply_verifier_privacy_patch(root, patch_path)
+            self.assertEqual(prepare.digest(verifier.read_bytes()), prepare.PRIVACY_PATCHED_VERIFIER_SHA256)
+            patched = verifier.read_text()
+            self.assertNotIn('debug!("transcript: {:?}"', patched)
+            self.assertNotIn('sent_unsafe()', patched)
+            self.assertNotIn('received_unsafe()', patched)
+            self.assertNotIn('bytes_to_redacted_string', patched)
+            self.assertIn('info!("Verification successful; transcript content omitted")', patched)
+            self.assertIn('VerifierCommitStart::Proxy(_) =>', patched)
+            self.assertIn('Proxy commitment mode is not permitted', patched)
+            self.assertIn('VerifierCommitStart::Mpc', patched)
+            proxy_branch = patched.split('VerifierCommitStart::Proxy(_) =>', 1)[1].split('\n        }', 1)[0]
+            self.assertNotIn('connect(', proxy_branch)
+            prepare.apply_verifier_privacy_patch(root, patch_path)
+            self.assertEqual(prepare.digest(verifier.read_bytes()), prepare.PRIVACY_PATCHED_VERIFIER_SHA256)
+
+    def test_privacy_patch_refuses_unknown_verifier_source_without_overwriting(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            verifier = root / 'servers/verifier/src/verifier.rs'
+            verifier.parent.mkdir(parents=True)
+            verifier.write_text('local staged conflict')
+            before = verifier.read_bytes()
+            patch_path = prepare.ROOT / 'infra/proof-benchmark/verifier-privacy.patch'
+            with self.assertRaisesRegex(ValueError, 'differs from pinned upstream'):
+                prepare.apply_verifier_privacy_patch(root, patch_path)
+            self.assertEqual(verifier.read_bytes(), before)
+
     def test_checksum_failure_preserves_input_and_never_extracts(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'archive'

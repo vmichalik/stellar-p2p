@@ -1,0 +1,1472 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Pactlane — architecture study</title>
+    <style>
+      :root {
+        --ink: #173045;
+        --muted: #536b7c;
+        --paper: #f4f7f7;
+        --white: #fff;
+        --line: #d8e2e2;
+        --blue: #155d83;
+        --blue-soft: #e6f2f7;
+        --green: #1d684f;
+        --green-soft: #e6f4ec;
+        --amber: #8c5615;
+        --amber-soft: #fbf1dc;
+        --red: #914737;
+        --red-soft: #f8ece8;
+        --shadow: 0 18px 50px #17304512;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: auto;
+      }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        font:
+          16px/1.65 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+      a {
+        color: var(--blue);
+        text-underline-offset: 0.18em;
+      }
+      a:hover {
+        color: #0d3d59;
+      }
+      .skip {
+        position: absolute;
+        left: -9999px;
+        top: 8px;
+        background: white;
+        padding: 0.6rem 1rem;
+        z-index: 5;
+      }
+      .skip:focus {
+        left: 8px;
+      }
+      header {
+        color: #f6fbfc;
+        background: #15364b;
+        border-bottom: 5px solid #82c5c2;
+      }
+      .hero,
+      nav,
+      main,
+      footer {
+        width: min(1060px, calc(100% - 40px));
+        margin: 0 auto;
+      }
+      .hero {
+        padding: 62px 0 42px;
+      }
+      .eyebrow {
+        margin: 0 0 12px;
+        color: #a8d8d5;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      h1 {
+        max-width: 740px;
+        margin: 0;
+        font-size: clamp(2.35rem, 6vw, 4.5rem);
+        line-height: 1.02;
+        letter-spacing: -0.045em;
+      }
+      .dek {
+        max-width: 720px;
+        margin: 20px 0 0;
+        color: #dce9ec;
+        font-size: clamp(1.05rem, 2vw, 1.25rem);
+      }
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin-top: 27px;
+      }
+      .hero-meta span {
+        border: 1px solid #698394;
+        border-radius: 999px;
+        padding: 5px 11px;
+        color: #f4fbfb;
+        font-size: 0.84rem;
+      }
+      nav {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 0 0 18px;
+        scrollbar-width: thin;
+      }
+      nav a {
+        flex: 0 0 auto;
+        color: #e7f4f4;
+        border: 1px solid #557587;
+        border-radius: 999px;
+        padding: 6px 11px;
+        font-size: 0.82rem;
+        text-decoration: none;
+      }
+      main {
+        padding: 34px 0 70px;
+      }
+      section {
+        scroll-margin-top: 18px;
+        margin: 0 0 24px;
+        padding: clamp(23px, 4vw, 38px);
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+      }
+      h2 {
+        margin: 0 0 13px;
+        font-size: clamp(1.55rem, 3vw, 2.15rem);
+        line-height: 1.2;
+        letter-spacing: -0.025em;
+      }
+      h3 {
+        margin: 27px 0 8px;
+        font-size: 1.15rem;
+        line-height: 1.3;
+      }
+      p {
+        margin: 10px 0;
+      }
+      .lead {
+        max-width: 790px;
+        color: #29465a;
+        font-size: 1.12rem;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 20px 0;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 750;
+      }
+      .tag::before {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        content: '';
+        background: currentColor;
+      }
+      .observed {
+        color: var(--green);
+        background: var(--green-soft);
+      }
+      .source {
+        color: var(--blue);
+        background: var(--blue-soft);
+      }
+      .pending {
+        color: var(--amber);
+        background: var(--amber-soft);
+      }
+      .limit {
+        color: var(--red);
+        background: var(--red-soft);
+      }
+      .callout {
+        margin: 18px 0;
+        padding: 14px 17px;
+        border-left: 4px solid #72aaa8;
+        border-radius: 0 10px 10px 0;
+        background: #f0f7f6;
+      }
+      .callout.warning {
+        border-left-color: #d4a04d;
+        background: #fcf6e8;
+      }
+      .callout p:first-child {
+        margin-top: 0;
+      }
+      .callout p:last-child {
+        margin-bottom: 0;
+      }
+      .diagram-wrap {
+        max-width: 100%;
+        margin: 21px 0;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fbfdfd;
+        scrollbar-color: #9db7bc #eef3f3;
+      }
+      .diagram {
+        display: block;
+        width: 100%;
+        min-width: 840px;
+        height: auto;
+      }
+      .diagram text {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        fill: #173045;
+      }
+      .diagram .title {
+        font-size: 19px;
+        font-weight: 750;
+      }
+      .diagram .small {
+        font-size: 13px;
+        fill: #536b7c;
+      }
+      .diagram .tiny {
+        font-size: 11px;
+        fill: #536b7c;
+      }
+      .diagram .node {
+        fill: white;
+        stroke: #8eaab0;
+        stroke-width: 1.5;
+        rx: 12;
+      }
+      .diagram .blue {
+        fill: #e6f2f7;
+        stroke: #5288a2;
+      }
+      .diagram .green {
+        fill: #e6f4ec;
+        stroke: #65a38a;
+      }
+      .diagram .amber {
+        fill: #fbf1dc;
+        stroke: #c99b54;
+      }
+      .diagram .red {
+        fill: #f8ece8;
+        stroke: #bf7968;
+      }
+      .diagram .dashed {
+        stroke-dasharray: 6 5;
+      }
+      .diagram .arrow {
+        fill: none;
+        stroke: #416779;
+        stroke-width: 2;
+        marker-end: var(--arrow-marker, url(#arrow));
+      }
+      .diagram .arrow-soft {
+        fill: none;
+        stroke: #8b9fa5;
+        stroke-width: 1.7;
+        marker-end: var(--arrow-marker, url(#arrow));
+      }
+      .diagram .arrow-dash {
+        fill: none;
+        stroke: #a2712f;
+        stroke-width: 1.8;
+        stroke-dasharray: 6 5;
+        marker-end: var(--arrow-marker, url(#arrow));
+      }
+      .diagram .group {
+        fill: #f0f5f5;
+        stroke: #ccdada;
+        stroke-width: 1.4;
+        rx: 17;
+      }
+      .table-wrap {
+        overflow-x: auto;
+        margin: 18px 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.93rem;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      th {
+        color: #29465a;
+        background: #f1f6f6;
+      }
+      code {
+        padding: 0.08em 0.3em;
+        border-radius: 4px;
+        background: #edf3f3;
+        color: #183c50;
+        font-size: 0.9em;
+        overflow-wrap: anywhere;
+      }
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 17px;
+      }
+      .links a {
+        display: inline-block;
+        padding: 6px 10px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        text-decoration: none;
+        font-size: 0.88rem;
+      }
+      ol,
+      ul {
+        padding-left: 1.25rem;
+      }
+      li {
+        padding-left: 0.2rem;
+        margin: 6px 0;
+      }
+      blockquote {
+        margin: 15px 0;
+        padding: 15px 18px;
+        border-left: 3px solid #7daead;
+        background: #f4f9f8;
+        color: #29465a;
+      }
+      details {
+        margin: 12px 0;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 15px;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 750;
+      }
+      footer {
+        padding: 0 0 40px;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+      @media (max-width: 600px) {
+        .hero,
+        nav,
+        main,
+        footer {
+          width: min(100% - 24px, 1060px);
+        }
+        .hero {
+          padding-top: 42px;
+        }
+        section {
+          padding: 22px 17px;
+          border-radius: 12px;
+        }
+        .diagram {
+          min-width: 800px;
+        }
+        th,
+        td {
+          min-width: 145px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to study</a>
+    <header>
+      <div class="hero">
+        <p class="eyebrow">Pactlane · Architecture study</p>
+        <h1>A direct trade, with its trust made visible.</h1>
+        <p class="dek">
+          A visual guide to the escrow contract, payment evidence, policy signer, wallet host, and
+          the parts that still need proof.
+        </p>
+        <div class="hero-meta" aria-label="Current project context">
+          <span>EUR through Revolut → USDC on Stellar</span>
+          <span>Fixed whole-offer escrow</span>
+          <span>Disposable testnet rehearsal passed</span>
+        </div>
+      </div>
+      <nav aria-label="Study sections">
+        <a href="#why">Why Pactlane</a><a href="#map">System map</a><a href="#contract">Contract</a
+        ><a href="#policy">Policy</a><a href="#proof">TLSNotary</a><a href="#data">Data</a
+        ><a href="#host">Host and recovery</a><a href="#operations">Operations</a
+        ><a href="#talk">Talk tracks</a>
+      </nav>
+    </header>
+    <main id="main">
+      <section id="why">
+        <h2>Start with the reason</h2>
+        <p class="lead">
+          “I already have a bank account. If I need USDC in my wallet, I don't want another exchange
+          account or another company holding a copy of my passport.”
+        </p>
+        <p>
+          Pactlane explores a direct trade between two people. One seller offers a fixed amount of
+          USDC. A buyer sends the agreed euros through Revolut and receives the tokens after a
+          payment policy authorizes release.
+        </p>
+        <p>
+          The product idea is to verify the few payment facts needed for that trade, without asking
+          users to give Pactlane another full identity document. The design does not hide the
+          payment from Revolut or the counterparty, and Stellar transactions remain public.
+        </p>
+        <div class="callout warning">
+          <p>
+            <strong>Keep the evidence stages separate.</strong> The public app uses synthetic data.
+            A local compiled-WASM rehearsal joined synthetic evidence, policy code, a canonical
+            signature, and the Soroban contract. A separate disposable testnet rehearsal passed on
+            25 October 2026: the reviewed WASM released synthetic PLTEST, rejected replay, and
+            mutually resolved another order with a half split. The auth-entry serialization bug
+            found on an earlier recovery attempt was fixed before the passing run. No bank proof or
+            real USDC was used.
+            <a href="../../evidence/release/testnet-rehearsal-2026-10-25.json"
+              >Read the captured testnet evidence.</a
+            >
+          </p>
+        </div>
+        <div class="legend" aria-label="Evidence legend">
+          <span class="tag source">In source</span><span class="tag observed">Locally observed</span
+          ><span class="tag pending">Still running or pending</span
+          ><span class="tag limit">Not established</span>
+        </div>
+        <p>
+          The offer example is synthetic: €20 is <code>fiat_minor = 2000</code> (cents), and 22
+          seven-decimal tokens is <code>token_amount = 220000000</code> atoms. The testnet rehearsal
+          used PLTEST, not USDC. This is not a bank value, a quote, or evidence of a fiat payment.
+        </p>
+      </section>
+
+      <section id="map">
+        <h2>1. The system has two kinds of evidence</h2>
+        <p>
+          The proof service attests to selected bytes from an authenticated TLS session. The
+          off-chain policy interprets those bytes against a confirmed escrow order and signs a
+          claim. The Soroban contract checks that claim against its own stored terms. The chain does
+          not verify the bank response itself.
+        </p>
+        <div
+          class="diagram-wrap"
+          role="region"
+          aria-label="System architecture diagram, scroll horizontally on a narrow screen"
+          tabindex="0"
+        >
+          <svg
+            class="diagram"
+            style="--arrow-marker: url(#arrow-map)"
+            viewBox="0 0 1160 535"
+            role="img"
+            aria-labelledby="map-title map-desc"
+          >
+            <title id="map-title">Pactlane system and trust boundaries</title>
+            <desc id="map-desc">
+              Three aligned lanes show the separate payment, escrow-token and evidence paths. The
+              buyer pays Revolut in euros. The seller funds the Soroban escrow, the buyer reserves
+              and locks, and the escrow can release tokens once. The buyer-selected TLSNotary proof
+              flows to a policy operator, which also reads chain state and private replay data
+              before signing a claim. Live authenticated bank evidence is not connected.
+            </desc>
+            <defs>
+              <marker
+                id="arrow-map"
+                markerWidth="9"
+                markerHeight="9"
+                refX="7"
+                refY="4.5"
+                orient="auto"
+              >
+                <path d="M0 0L9 4.5L0 9z" fill="#416779" />
+              </marker>
+            </defs>
+            <rect class="group" x="20" y="24" width="1120" height="120" />
+            <text class="title" x="42" y="54">Bank payment path</text>
+            <rect class="node blue" x="95" y="73" width="190" height="52" />
+            <text x="190" y="96" text-anchor="middle">Buyer</text>
+            <text class="small" x="190" y="116" text-anchor="middle">pays from own bank</text>
+            <rect class="node" x="515" y="73" width="220" height="52" />
+            <text x="625" y="96" text-anchor="middle">Revolut</text>
+            <text class="small" x="625" y="116" text-anchor="middle">sees customer + transfer</text>
+            <path class="arrow" d="M285 99H515" />
+            <text class="small" x="400" y="87" text-anchor="middle">EUR payment</text>
+
+            <rect class="group" x="20" y="162" width="1120" height="142" />
+            <text class="title" x="42" y="192">Public Stellar escrow path</text>
+            <rect class="node green" x="78" y="220" width="190" height="62" />
+            <text x="173" y="245" text-anchor="middle">Seller wallet</text>
+            <text class="small" x="173" y="267" text-anchor="middle">token owner</text>
+            <rect class="node green" x="480" y="220" width="230" height="62" />
+            <text x="595" y="245" text-anchor="middle">Soroban escrow</text>
+            <text class="small" x="595" y="267" text-anchor="middle">
+              fixed offer + public state
+            </text>
+            <rect class="node green" x="890" y="220" width="190" height="62" />
+            <text x="985" y="245" text-anchor="middle">Buyer wallet</text>
+            <text class="small" x="985" y="267" text-anchor="middle">token destination</text>
+            <path class="arrow" d="M268 239H480" />
+            <text class="small" x="374" y="229" text-anchor="middle">fund tokens</text>
+            <path class="arrow-soft" d="M890 254H710" />
+            <text class="small" x="800" y="246" text-anchor="middle">reserve, then lock</text>
+            <path class="arrow" d="M710 273H890" />
+            <text class="small" x="800" y="297" text-anchor="middle">
+              release after valid claim
+            </text>
+
+            <rect class="group dashed" x="20" y="322" width="1120" height="176" />
+            <text class="title" x="42" y="352">Selected evidence and operator decision</text>
+            <rect class="node blue" x="55" y="388" width="145" height="70" />
+            <text x="127" y="416" text-anchor="middle">Buyer consent</text>
+            <text class="small" x="127" y="439" text-anchor="middle">selects proof</text>
+            <rect class="node blue" x="250" y="388" width="160" height="70" />
+            <text x="330" y="416" text-anchor="middle">TLSNotary</text>
+            <text class="small" x="330" y="439" text-anchor="middle">prover + verifier</text>
+            <rect class="node amber" x="465" y="388" width="175" height="70" />
+            <text x="552" y="416" text-anchor="middle">Evidence reader</text>
+            <text class="small" x="552" y="439" text-anchor="middle">live adapter pending</text>
+            <rect class="node" x="692" y="388" width="190" height="70" />
+            <text x="787" y="416" text-anchor="middle">Policy + signer</text>
+            <text class="small" x="787" y="439" text-anchor="middle">operator decides meaning</text>
+            <rect class="node green" x="950" y="388" width="155" height="70" />
+            <text x="1027" y="416" text-anchor="middle">Soroban escrow</text>
+            <text class="small" x="1027" y="439" text-anchor="middle">
+              same contract; checks claim
+            </text>
+            <path class="arrow" d="M200 423H250" />
+            <text class="tiny" x="225" y="410" text-anchor="middle">request</text>
+            <path class="arrow-dash" d="M410 423H465" />
+            <text class="tiny" x="437" y="410" text-anchor="middle">selected fields</text>
+            <path class="arrow-soft" d="M640 423H692" />
+            <text class="tiny" x="666" y="410" text-anchor="middle">evidence</text>
+            <path class="arrow" d="M882 423H950" />
+            <text class="tiny" x="916" y="410" text-anchor="middle">signed claim</text>
+            <rect class="node" x="692" y="466" width="190" height="28" />
+            <text class="tiny" x="787" y="485" text-anchor="middle">
+              chain + private offer + replay
+            </text>
+            <path class="arrow-soft" d="M787 466V458" />
+            <text class="tiny" x="42" y="514">
+              Dashed boundary and arrow mark the intended evidence handoff; no accepted live payment
+              adapter is configured.
+            </text>
+          </svg>
+        </div>
+        <p>
+          The policy receives trusted evidence and a fresh chain view, recomputes the recipient
+          commitment from private offer data, reserves the payment identity, then signs. A browser
+          progress message alone cannot authorize release.
+        </p>
+        <div class="links">
+          <a href="system-map.md">Editable system-map reference</a
+          ><a href="../../integration/host/README.md">Host service guide</a
+          ><a href="../../contracts/escrow/PROTOCOL.md">Frozen protocol</a>
+        </div>
+      </section>
+
+      <section id="contract">
+        <h2>2. The contract is a small state machine</h2>
+        <p>
+          A seller funds one whole offer. A buyer may reserve it once, then explicitly lock it
+          before sending fiat. A valid policy claim releases the tokens. Before payment is locked,
+          an offer can be refunded under specific rules. After lock, there is no automatic timeout
+          back to the seller.
+        </p>
+        <div
+          class="diagram-wrap"
+          role="region"
+          aria-label="Escrow state diagram, scroll horizontally on a narrow screen"
+          tabindex="0"
+        >
+          <svg
+            class="diagram"
+            style="--arrow-marker: url(#arrow-state)"
+            viewBox="0 0 1060 430"
+            role="img"
+            aria-labelledby="states-title states-desc"
+          >
+            <title id="states-title">Escrow contract state machine</title>
+            <desc id="states-desc">
+              Funded can move to Reserved or Refunded. Reserved can move to Paying, Refunded after
+              the reservation expires, or Resolved by both parties. Paying can move to Released by a
+              valid signed claim or Resolved by both parties. Released, Refunded and Resolved are
+              terminal states.
+            </desc>
+            <defs>
+              <marker
+                id="arrow-state"
+                markerWidth="9"
+                markerHeight="9"
+                refX="7"
+                refY="4.5"
+                orient="auto"
+              >
+                <path d="M0 0L9 4.5L0 9z" fill="#416779" />
+              </marker>
+            </defs>
+            <rect class="node blue" x="55" y="70" width="165" height="72" />
+            <text class="title" x="137" y="100" text-anchor="middle">Funded</text>
+            <text class="small" x="137" y="123" text-anchor="middle">seller's tokens escrowed</text>
+            <rect class="node blue" x="325" y="70" width="165" height="72" />
+            <text class="title" x="407" y="100" text-anchor="middle">Reserved</text>
+            <text class="small" x="407" y="123" text-anchor="middle">one buyer; timer runs</text>
+            <rect class="node amber" x="595" y="70" width="165" height="72" />
+            <text class="title" x="677" y="100" text-anchor="middle">Paying</text>
+            <text class="small" x="677" y="123" text-anchor="middle">lock; funds remain held</text>
+            <rect class="node green" x="855" y="70" width="165" height="72" />
+            <text class="title" x="937" y="100" text-anchor="middle">Released</text>
+            <text class="small" x="937" y="123" text-anchor="middle">
+              buyer receives all tokens
+            </text>
+            <rect class="node red" x="85" y="290" width="190" height="72" />
+            <text class="title" x="180" y="320" text-anchor="middle">Refunded</text>
+            <text class="small" x="180" y="343" text-anchor="middle">seller receives tokens</text>
+            <rect class="node red" x="545" y="290" width="220" height="72" />
+            <text class="title" x="655" y="320" text-anchor="middle">Resolved</text>
+            <text class="small" x="655" y="343" text-anchor="middle">
+              both authorize exact split
+            </text>
+            <path class="arrow" d="M220 106H325" />
+            <text class="small" x="272" y="94" text-anchor="middle">buyer reserves</text>
+            <path class="arrow" d="M490 106H595" />
+            <text class="small" x="542" y="94" text-anchor="middle">buyer locks payment</text>
+            <path class="arrow" d="M760 106H855" />
+            <text class="small" x="807" y="94" text-anchor="middle">valid policy claim</text>
+            <path class="arrow" d="M137 142V250H180V290" />
+            <text class="small" x="148" y="180">seller cancels</text>
+            <path class="arrow" d="M407 142V214H275V326" />
+            <text class="small" x="316" y="204" text-anchor="middle">reservation expires</text>
+            <path class="arrow-dash" d="M407 142V258H545V326" />
+            <text class="small" x="474" y="247" text-anchor="middle">both authorize</text>
+            <path class="arrow-dash" d="M677 142V290" />
+            <text class="small" x="694" y="245">both authorize</text>
+            <text class="small" x="55" y="405">
+              Only Reserved expires to Refunded. After Paying begins, expiry alone does not return
+              funds.
+            </text>
+          </svg>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Who authorizes?</th>
+                <th>What it enforces</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>fund</code></td>
+                <td>Seller</td>
+                <td>
+                  Positive fixed amounts, EUR, Revolut, recipient commitment, offer lifetime at most
+                  seven days, reservation at most one hour; transfers tokens into escrow.
+                </td>
+              </tr>
+              <tr>
+                <td><code>reserve</code></td>
+                <td>Buyer</td>
+                <td>
+                  Offer remains open; buyer differs from seller and contract. Starts the reservation
+                  window.
+                </td>
+              </tr>
+              <tr>
+                <td><code>begin_payment</code></td>
+                <td>Reserved buyer</td>
+                <td>
+                  Must happen before <code>pay_by</code>. Writes <code>locked_at</code> and moves to
+                  <code>Paying</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>release</code></td>
+                <td>Permissionless relay; signed by policy key</td>
+                <td>
+                  Matches exact order, verifies time bounds, signature, expiry, and unused
+                  nullifier; pays the claim's buyer once.
+                </td>
+              </tr>
+              <tr>
+                <td><code>refund</code></td>
+                <td>Seller when Funded; anyone after unused reservation expires</td>
+                <td>Only returns escrow before the payment lock.</td>
+              </tr>
+              <tr>
+                <td><code>resolve</code></td>
+                <td>Seller and buyer</td>
+                <td>
+                  Authorizes a specific split from Reserved or Paying. It does not inspect payment
+                  proof.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Order records and used-nullifier markers use persistent storage with TTL extension. The
+          global anti-replay rule also depends on a durable off-chain registry spanning deployments.
+          The chain only sees a 32-byte recipient commitment, not the bank recipient or salt.
+        </p>
+        <div class="links">
+          <a href="escrow-contract.md">Editable contract guide</a
+          ><a href="../../contracts/escrow/src/lib.rs">Contract source</a
+          ><a href="../../contracts/escrow/PROTOCOL.md">Protocol v1</a>
+        </div>
+      </section>
+
+      <section id="policy">
+        <h2>3. Policy turns evidence into a narrow authorization</h2>
+        <p>
+          The policy is the central trust boundary. It reads a verified record, current order and
+          chain time, private offer data, and replay storage. It checks that one specific payment
+          fits one specific locked order. Only then does it ask the operator-controlled signer to
+          approve the canonical claim.
+        </p>
+        <div
+          class="diagram-wrap"
+          role="region"
+          aria-label="Policy and signature diagram, scroll horizontally on a narrow screen"
+          tabindex="0"
+        >
+          <svg
+            class="diagram"
+            style="--arrow-marker: url(#arrow-claim)"
+            viewBox="0 0 1050 390"
+            role="img"
+            aria-labelledby="claim-title claim-desc"
+          >
+            <title id="claim-title">Policy checks, nullifier reservation and signature flow</title>
+            <desc id="claim-desc">
+              Evidence, chain snapshot and private offer data go into policy checks. The policy
+              derives recipient commitment and payment nullifier, confirms chain reconciliation,
+              reserves the nullifier before signing, signs canonical XDR digest and returns claim.
+              Contract independently checks claim.
+            </desc>
+            <defs>
+              <marker
+                id="arrow-claim"
+                markerWidth="9"
+                markerHeight="9"
+                refX="7"
+                refY="4.5"
+                orient="auto"
+              >
+                <path d="M0 0L9 4.5L0 9z" fill="#416779" />
+              </marker>
+            </defs>
+            <rect class="node blue" x="32" y="45" width="190" height="65" />
+            <text x="127" y="73" text-anchor="middle">Verified evidence</text>
+            <text class="small" x="127" y="95" text-anchor="middle">server-side reader</text>
+            <rect class="node" x="32" y="150" width="190" height="65" />
+            <text x="127" y="178" text-anchor="middle">Confirmed chain view</text>
+            <text class="small" x="127" y="200" text-anchor="middle">order + config + time</text>
+            <rect class="node" x="32" y="255" width="190" height="65" />
+            <text x="127" y="283" text-anchor="middle">Private offer data</text>
+            <text class="small" x="127" y="305" text-anchor="middle">recipient ID + salt</text>
+            <rect class="node amber" x="292" y="107" width="220" height="105" />
+            <text class="title" x="402" y="143" text-anchor="middle">Policy checks</text>
+            <text class="small" x="402" y="168" text-anchor="middle">
+              amount · receiver · state
+            </text>
+            <text class="small" x="402" y="190" text-anchor="middle">
+              source · direction · time
+            </text>
+            <rect class="node" x="292" y="248" width="220" height="73" />
+            <text x="402" y="276" text-anchor="middle">Stable payment identity</text>
+            <text class="small" x="402" y="300" text-anchor="middle">
+              nullifier = payer scope + payment ID
+            </text>
+            <rect class="node amber" x="585" y="107" width="200" height="105" />
+            <text class="title" x="685" y="143" text-anchor="middle">Replay registry</text>
+            <text class="small" x="685" y="169" text-anchor="middle">atomic reserve first</text>
+            <text class="small" x="685" y="190" text-anchor="middle">hold on uncertainty</text>
+            <rect class="node blue" x="585" y="248" width="200" height="73" />
+            <text x="685" y="276" text-anchor="middle">Canonical claim digest</text>
+            <text class="small" x="685" y="300" text-anchor="middle">
+              network + contract + exact XDR
+            </text>
+            <rect class="node green" x="857" y="72" width="165" height="73" />
+            <text x="939" y="100" text-anchor="middle">Ed25519 signer</text>
+            <text class="small" x="939" y="123" text-anchor="middle">operator trust</text>
+            <rect class="node green" x="857" y="228" width="165" height="73" />
+            <text x="939" y="256" text-anchor="middle">Soroban escrow</text>
+            <text class="small" x="939" y="279" text-anchor="middle">checks claim again</text>
+            <path class="arrow" d="M222 77H258V138H292" />
+            <path class="arrow" d="M222 182H292" />
+            <path class="arrow" d="M222 287H260V183H292" />
+            <path class="arrow" d="M402 212V248" />
+            <path class="arrow" d="M512 159H585" />
+            <path class="arrow" d="M512 284H585" />
+            <path class="arrow" d="M785 284H820V109H857" />
+            <path class="arrow" d="M939 145V228" />
+            <text class="small" x="516" y="145">check identity not used</text>
+            <text class="small" x="791" y="197">signature + claim</text>
+          </svg>
+        </div>
+        <h3>Two hashes solve different problems</h3>
+        <p>
+          <strong>Recipient commitment:</strong> a salted hash of the exact provider-issued
+          recipient ID in a fixed source namespace. It lets the chain bind an offer to its intended
+          recipient without storing the identifier. The policy recomputes it from private offer data
+          and verified evidence.
+        </p>
+        <p>
+          <strong>Payment nullifier:</strong> a deterministic hash of fixed namespace, source
+          origin, payer scope, and stable payment ID. It deliberately excludes order, network,
+          amount, recipient, and timestamp so changing those does not make a transfer usable again.
+          It is a stable pseudonym, not anonymity.
+        </p>
+        <p>
+          <strong>Claim digest:</strong> SHA-256 over canonical ScVal-XDR that includes the network
+          ID, escrow address, and every claim field. Ed25519 signs the raw 32-byte digest. The
+          contract recomputes it and checks its own copy of the order terms.
+        </p>
+        <div class="callout warning">
+          <p>
+            The live normalizer still fails closed because real bank fields, units, and stable
+            source/recipient identities have not been accepted and mapped. Synthetic fixture fields
+            are not Revolut's claimed schema.
+          </p>
+        </div>
+        <div class="links">
+          <a href="policy-and-claims.md">Editable policy guide</a
+          ><a href="../../policy/src/engine.mjs">Policy engine</a
+          ><a href="../../policy/src/evidence.mjs">Evidence normalizer</a
+          ><a href="../../contracts/escrow/protocol/protocol.mjs">Canonical encoder</a>
+        </div>
+      </section>
+
+      <section id="proof">
+        <h2>4. TLSNotary authenticates the transcript, not the judgment</h2>
+        <p>
+          TLSNotary uses an MPC-TLS prover/verifier flow to establish that selected response bytes
+          came from a TLS session with a pinned server. The verifier's cryptographic result does not
+          by itself determine which account paid, what “completed” means, which amount unit applies,
+          or whether the payment matches this order.
+        </p>
+        <div
+          class="diagram-wrap"
+          role="region"
+          aria-label="TLSNotary trust boundary diagram, scroll horizontally on a narrow screen"
+          tabindex="0"
+        >
+          <svg
+            class="diagram"
+            style="--arrow-marker: url(#arrow-proof)"
+            viewBox="0 0 1000 350"
+            role="img"
+            aria-labelledby="proof-title proof-desc"
+          >
+            <title id="proof-title">TLSNotary evidence and policy trust boundary</title>
+            <desc id="proof-desc">
+              The prover talks to the bank and verifier through MPC TLS, then discloses selected
+              authenticated transcript fields. A server adapter maps the fields to payment
+              semantics. Policy operator signs claim. Soroban verifies the signature, not the
+              transcript.
+            </desc>
+            <defs>
+              <marker
+                id="arrow-proof"
+                markerWidth="9"
+                markerHeight="9"
+                refX="7"
+                refY="4.5"
+                orient="auto"
+              >
+                <path d="M0 0L9 4.5L0 9z" fill="#416779" />
+              </marker>
+            </defs>
+            <rect class="group" x="22" y="45" width="390" height="250" />
+            <text class="title" x="44" y="76">Cryptographic source evidence</text>
+            <rect class="node" x="47" y="126" width="118" height="68" />
+            <text x="106" y="154" text-anchor="middle">Bank origin</text>
+            <text class="small" x="106" y="176" text-anchor="middle">TLS server</text>
+            <rect class="node blue" x="237" y="126" width="143" height="68" />
+            <text x="308" y="154" text-anchor="middle">Prover</text>
+            <text class="small" x="308" y="176" text-anchor="middle">browser extension</text>
+            <rect class="node blue" x="237" y="221" width="143" height="52" />
+            <text x="308" y="244" text-anchor="middle">Verifier</text>
+            <text class="small" x="308" y="263" text-anchor="middle">MPC-TLS</text>
+            <path class="arrow" d="M165 160H237" />
+            <path class="arrow" d="M308 194V221" />
+            <text class="small" x="175" y="147">HTTPS transcript</text>
+            <rect class="group dashed" x="450" y="45" width="248" height="250" />
+            <text class="title" x="470" y="76">Semantic trust</text>
+            <rect class="node amber" x="480" y="137" width="188" height="84" />
+            <text x="574" y="166" text-anchor="middle">Evidence adapter</text>
+            <text class="small" x="574" y="188" text-anchor="middle">fields, units, IDs</text>
+            <text class="small" x="574" y="207" text-anchor="middle">real mapping pending</text>
+            <path class="arrow-dash" d="M380 247H430V180H480" />
+            <text class="tiny" x="387" y="234">disclosed fields</text>
+            <rect class="group" x="736" y="45" width="238" height="250" />
+            <text class="title" x="756" y="76">Settlement trust</text>
+            <rect class="node amber" x="763" y="115" width="181" height="60" />
+            <text x="853" y="140" text-anchor="middle">Policy operator</text>
+            <text class="small" x="853" y="160" text-anchor="middle">interprets + signs</text>
+            <rect class="node green" x="763" y="211" width="181" height="60" />
+            <text x="853" y="236" text-anchor="middle">Soroban contract</text>
+            <text class="small" x="853" y="256" text-anchor="middle">signature, terms, time</text>
+            <path class="arrow" d="M668 178H713V145H763" />
+            <path class="arrow" d="M853 175V211" />
+            <text class="small" x="40" y="324">
+              Contract does not receive or verify the TLS transcript.
+            </text>
+          </svg>
+        </div>
+        <p>
+          The verifier source patch removes transcript formatting from INFO and DEBUG logs and
+          rejects Proxy commitment mode before opening a proxy-target connection, while preserving
+          MPC mode. The patched source passed <code>cargo check --offline</code>. It was not
+          release-built, deployed, or runtime-retested; the log behavior of a running service
+          remains unverified.
+        </p>
+        <p>
+          Current TLSNotary diagnostics have exercised setup and public responses. Those are not
+          authenticated payment proofs. The policy's live normalizer still rejects all live records.
+        </p>
+        <div class="links">
+          <a href="tlsnotary-evidence.md">Editable TLSNotary guide</a
+          ><a href="../../tlsn/README.md">TLSNotary files</a
+          ><a href="../../infra/proof-benchmark/verifier-privacy.patch">Reviewed verifier patch</a>
+        </div>
+      </section>
+
+      <section id="data">
+        <h2>5. Privacy means minimizing extra data</h2>
+        <p>
+          Pactlane cannot make the exchange anonymous. It aims to reduce the amount of additional
+          identity material a user gives to a new intermediary for one trade.
+        </p>
+        <div
+          class="diagram-wrap"
+          role="region"
+          aria-label="Data visibility map, scroll horizontally on a narrow screen"
+          tabindex="0"
+        >
+          <svg
+            class="diagram"
+            style="--arrow-marker: url(#arrow-data)"
+            viewBox="0 0 1040 330"
+            role="img"
+            aria-labelledby="data-title data-desc"
+          >
+            <title id="data-title">Data visibility by party</title>
+            <desc id="data-desc">
+              Bank sees legal account activity; counterparty sees payment details; proof operator
+              sees selected transcript data; policy stores pseudonymous nullifier and offer data;
+              public chain shows wallet addresses, order terms, states and token movements. The
+              commitment hashes recipient identifier and salt but is not anonymity.
+            </desc>
+            <defs>
+              <marker
+                id="arrow-data"
+                markerWidth="9"
+                markerHeight="9"
+                refX="7"
+                refY="4.5"
+                orient="auto"
+              >
+                <path d="M0 0L9 4.5L0 9z" fill="#416779" />
+              </marker>
+            </defs>
+            <rect class="node" x="25" y="54" width="160" height="70" />
+            <text x="105" y="82" text-anchor="middle">Bank</text>
+            <text class="small" x="105" y="104" text-anchor="middle">identity + activity</text>
+            <rect class="node" x="225" y="54" width="160" height="70" />
+            <text x="305" y="82" text-anchor="middle">Counterparty</text>
+            <text class="small" x="305" y="104" text-anchor="middle">payment details</text>
+            <rect class="node blue" x="425" y="54" width="160" height="70" />
+            <text x="505" y="82" text-anchor="middle">Proof service</text>
+            <text class="small" x="505" y="104" text-anchor="middle">selected transcript</text>
+            <rect class="node amber" x="625" y="54" width="180" height="70" />
+            <text x="715" y="82" text-anchor="middle">Pactlane operator</text>
+            <text class="small" x="715" y="104" text-anchor="middle">evidence + pseudonyms</text>
+            <rect class="node green" x="845" y="54" width="165" height="70" />
+            <text x="927" y="82" text-anchor="middle">Public ledger</text>
+            <text class="small" x="927" y="104" text-anchor="middle">wallets + movements</text>
+            <path class="arrow" d="M185 89H225" />
+            <path class="arrow" d="M385 89H425" />
+            <path class="arrow-dash" d="M585 89H625" />
+            <path class="arrow" d="M805 89H845" />
+            <rect class="node blue" x="89" y="190" width="282" height="81" />
+            <text x="230" y="220" text-anchor="middle">Private offer record</text>
+            <text class="small" x="230" y="244" text-anchor="middle">
+              recipient ID + random salt
+            </text>
+            <text class="tiny" x="230" y="261" text-anchor="middle">
+              host-side file/store; never on chain
+            </text>
+            <rect class="node amber" x="425" y="190" width="282" height="81" />
+            <text x="566" y="220" text-anchor="middle">Payment nullifier registry</text>
+            <text class="small" x="566" y="244" text-anchor="middle">
+              payer scope + payment ID hash
+            </text>
+            <text class="tiny" x="566" y="261" text-anchor="middle">
+              durable pseudonym; not anonymity
+            </text>
+            <rect class="node green" x="761" y="190" width="249" height="81" />
+            <text x="885" y="220" text-anchor="middle">On-chain recipient commitment</text>
+            <text class="small" x="885" y="244" text-anchor="middle">
+              salted SHA-256 commitment
+            </text>
+            <text class="tiny" x="885" y="261" text-anchor="middle">
+              hash can still be linkable
+            </text>
+            <path class="arrow-soft" d="M371 230H425" />
+            <path class="arrow-soft" d="M707 230H761" />
+          </svg>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Visible to</th>
+                <th>What may be visible</th>
+                <th>Boundary</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Bank</td>
+                <td>Customer identity and transfer activity</td>
+                <td>Pactlane cannot hide those facts from the bank.</td>
+              </tr>
+              <tr>
+                <td>Counterparty</td>
+                <td>Payment instructions and payment recipient/sender details</td>
+                <td>A direct payment necessarily exposes relevant payment details.</td>
+              </tr>
+              <tr>
+                <td>Proof service</td>
+                <td>Selected TLS transcript data needed for proof</td>
+                <td>
+                  The source patch addresses formatting at a specific verifier function; deployed
+                  log behavior is unverified.
+                </td>
+              </tr>
+              <tr>
+                <td>Policy host</td>
+                <td>Evidence fields, private offer information, stable pseudonymous IDs</td>
+                <td>Only the operator and authorized readers should access this data.</td>
+              </tr>
+              <tr>
+                <td>Stellar ledger</td>
+                <td>Addresses, order state, amount, timing, token movement, hashes</td>
+                <td>Chain activity is public.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Never put bank identifiers, recipient salts, credentials, raw payment responses, or
+          private keys in public UI payloads or source control.
+        </p>
+        <div class="links">
+          <a href="privacy-and-data.md">Editable privacy guide</a
+          ><a href="../../integration/host/config.mjs">Host configuration</a
+          ><a href="../../integration/host/bootstrap.mjs">Host bootstrap</a>
+        </div>
+      </section>
+
+      <section id="host">
+        <h2>6. The test workbench has a real host boundary</h2>
+        <p>
+          There is now source for a Node host and same-origin browser workbench. The host serves a
+          restricted static client, protects API requests with a bearer capability, checks the
+          configured origin and host, limits request size, and exposes wallet requests without
+          holding wallet keys. The browser keeps the capability in memory after reading the link
+          fragment and sends it in an authorization header.
+        </p>
+        <div
+          class="diagram-wrap"
+          role="region"
+          aria-label="Wallet and dual authorization sequence diagram, scroll horizontally on a narrow screen"
+          tabindex="0"
+        >
+          <svg
+            class="diagram"
+            style="--arrow-marker: url(#arrow-wallet)"
+            viewBox="0 0 1100 390"
+            role="img"
+            aria-labelledby="wallet-title wallet-desc"
+          >
+            <title id="wallet-title">Mutual recovery authorization sequence</title>
+            <desc id="wallet-desc">
+              The host simulates the exact recovery invocation. The seller wallet signs the
+              authorization entry preimage. The host validates the signature and rebuilds the entry.
+              The buyer wallet signs the final envelope as transaction source. The host verifies the
+              envelope and receipt. A disposable testnet PLTEST half-split recovery passed, using
+              programmatic keys rather than Freighter UI.
+            </desc>
+            <defs>
+              <marker
+                id="arrow-wallet"
+                markerWidth="9"
+                markerHeight="9"
+                refX="7"
+                refY="4.5"
+                orient="auto"
+              >
+                <path d="M0 0L9 4.5L0 9z" fill="#416779" />
+              </marker>
+            </defs>
+            <text class="small" x="142" y="36" text-anchor="middle">Buyer browser</text>
+            <text class="small" x="376" y="36" text-anchor="middle">Node host</text>
+            <text class="small" x="659" y="36" text-anchor="middle">Seller Freighter</text>
+            <text class="small" x="912" y="36" text-anchor="middle">Buyer Freighter</text>
+            <path
+              d="M142 48V354M376 48V354M659 48V354M912 48V354"
+              stroke="#c5d4d5"
+              stroke-dasharray="5 5"
+            />
+            <path class="arrow" d="M142 82H376" />
+            <text class="small" x="254" y="72" text-anchor="middle">
+              resolve(order, exact split)
+            </text>
+            <path class="arrow" d="M376 119H142" />
+            <text class="small" x="254" y="109" text-anchor="middle">
+              request signature for exact auth entry
+            </text>
+            <path class="arrow" d="M142 157H659" />
+            <text class="small" x="404" y="147" text-anchor="middle">wallet bridge prompt</text>
+            <path class="arrow" d="M659 194H142" />
+            <text class="small" x="404" y="184" text-anchor="middle">
+              seller authorization signature
+            </text>
+            <rect class="node blue" x="327" y="213" width="98" height="38" />
+            <text class="tiny" x="376" y="237" text-anchor="middle">verify + rebuild</text>
+            <path class="arrow" d="M376 271H142" />
+            <text class="small" x="254" y="261" text-anchor="middle">
+              prepare final exact transaction
+            </text>
+            <path class="arrow" d="M142 307H912" />
+            <text class="small" x="526" y="297" text-anchor="middle">
+              buyer reviews and signs envelope
+            </text>
+            <path class="arrow" d="M912 337H376" />
+            <text class="small" x="644" y="327" text-anchor="middle">buyer-signed envelope</text>
+            <text class="tiny" x="550" y="374" text-anchor="middle">
+              Host checks exact invocation, party identities, signatures, durable journal and
+              confirmed receipt.
+            </text>
+          </svg>
+        </div>
+        <p>
+          Recovery uses two different signatures: the seller signs the Soroban authorization entry
+          for the exact contract call; the buyer signs the final transaction envelope as its source
+          account. The adapter validates the entries and signatures and refuses extra invocations.
+          The local test fixtures cover supported simulation shapes.
+        </p>
+        <div class="callout warning">
+          <p>
+            <strong>Testnet scope:</strong> the recorded run passed release, replay rejection, and a
+            mutual half split using PLTEST, the reviewed WASM, and programmatic disposable keys. It
+            did not test Freighter UI or authenticated bank evidence. The deployed testnet asset is
+            not USDC.
+          </p>
+        </div>
+        <p>
+          The host can run without a proof adapter or signer; in that mode the proof gate stays
+          closed. Real authenticated verifier evidence, a live indexer/policy configuration, and an
+          accepted payment normalizer are not yet established. The bearer capability is access
+          control for this workbench, not proof of a user's legal identity.
+        </p>
+        <div class="links">
+          <a href="../../integration/host/README.md">Host setup and API</a
+          ><a href="../../integration/RECOVERY.md">Recovery authorization detail</a
+          ><a href="../../integration/host/http-api.mjs">HTTP boundary</a
+          ><a href="../../integration/stellar-rpc-adapter.mjs">Wallet/RPC adapter</a
+          ><a href="../../integration/browser/client.mjs">Browser wallet bridge</a>
+        </div>
+      </section>
+
+      <section id="operations">
+        <h2>7. Operations, failures, and what the checks mean</h2>
+        <div
+          class="diagram-wrap"
+          role="region"
+          aria-label="Host and deployment operations diagram, scroll horizontally on a narrow screen"
+          tabindex="0"
+        >
+          <svg
+            class="diagram"
+            style="--arrow-marker: url(#arrow-ops)"
+            viewBox="0 0 1050 330"
+            role="img"
+            aria-labelledby="ops-title ops-desc"
+          >
+            <title id="ops-title">Host operations and evidence boundaries</title>
+            <desc id="ops-desc">
+              Configured testnet contract and token feed chain reader, policy gate, and indexer.
+              Browser workbench sends requests through HTTPS capability-protected Node host. Wallet
+              signs exact actions. Host journals before submission and checks RPC confirmation and
+              events. Payment proof path is gated until trusted live adapter exists.
+            </desc>
+            <defs>
+              <marker
+                id="arrow-ops"
+                markerWidth="9"
+                markerHeight="9"
+                refX="7"
+                refY="4.5"
+                orient="auto"
+              >
+                <path d="M0 0L9 4.5L0 9z" fill="#416779" />
+              </marker>
+            </defs>
+            <rect class="group" x="20" y="38" width="260" height="245" />
+            <text class="title" x="40" y="69">Browser workbench</text>
+            <rect class="node blue" x="52" y="102" width="194" height="58" />
+            <text x="149" y="127" text-anchor="middle">Same-origin client</text>
+            <text class="small" x="149" y="148" text-anchor="middle">capability in header</text>
+            <rect class="node" x="52" y="188" width="194" height="58" />
+            <text x="149" y="213" text-anchor="middle">Freighter bridge</text>
+            <text class="small" x="149" y="234" text-anchor="middle">sign exact requests</text>
+            <rect class="group" x="324" y="38" width="340" height="245" />
+            <text class="title" x="344" y="69">Node host</text>
+            <rect class="node amber" x="355" y="102" width="278" height="58" />
+            <text x="494" y="127" text-anchor="middle">Origin checks + capability</text>
+            <text class="small" x="494" y="148" text-anchor="middle">
+              bounded API + pending wallet requests
+            </text>
+            <rect class="node" x="355" y="188" width="125" height="58" />
+            <text x="417" y="213" text-anchor="middle">Policy + indexer</text>
+            <text class="small" x="417" y="234" text-anchor="middle">proof gated</text>
+            <rect class="node" x="507" y="188" width="126" height="58" />
+            <text x="570" y="213" text-anchor="middle">Durable journals</text>
+            <text class="small" x="570" y="234" text-anchor="middle">unknown stays blocked</text>
+            <rect class="group" x="707" y="38" width="322" height="245" />
+            <text class="title" x="727" y="69">Stellar testnet</text>
+            <rect class="node green" x="738" y="102" width="260" height="58" />
+            <text x="868" y="127" text-anchor="middle">Configured contract + token</text>
+            <text class="small" x="868" y="148" text-anchor="middle">
+              deployment identity verified
+            </text>
+            <rect class="node green" x="738" y="188" width="260" height="58" />
+            <text x="868" y="213" text-anchor="middle">RPC submission + confirmation</text>
+            <text class="small" x="868" y="234" text-anchor="middle">
+              envelope, order, transfer events
+            </text>
+            <path class="arrow" d="M246 131H355" />
+            <path class="arrow" d="M246 217H324V131H355" />
+            <path class="arrow" d="M633 131H738" />
+            <path class="arrow" d="M633 217H738" />
+            <path class="arrow" d="M480 217H507" />
+            <text class="small" x="525" y="307" text-anchor="middle">
+              Payment validation remains fail-closed until a trusted live evidence adapter and
+              source semantics are accepted.
+            </text>
+          </svg>
+        </div>
+        <p>
+          Submission is disabled by default. Before submission, the host reserves an action in a
+          durable journal. It stores the transaction hash before sending. A timeout does not mean
+          failure: the host reconciles the same hash rather than creating a second action. A receipt
+          is only complete after the confirmed envelope, order state, and token events match.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Observation</th>
+                <th>What it proves</th>
+                <th>What it does not prove</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>MPC setup or public GET works</td>
+                <td>Proof transport/setup worked in that run.</td>
+                <td>Authenticated account, transfer meaning, or payment.</td>
+              </tr>
+              <tr>
+                <td>Local compiled-WASM rehearsal</td>
+                <td>Synthetic app→policy→signature→contract path, payout, and replay rejection.</td>
+                <td>Real bank data or network settlement.</td>
+              </tr>
+              <tr>
+                <td>Host unit tests</td>
+                <td>HTTP guards, wallet bridge, storage/indexing code against fixtures.</td>
+                <td>Real wallet behavior or live chain correctness.</td>
+              </tr>
+              <tr>
+                <td>Disposable testnet rehearsal</td>
+                <td>
+                  Reviewed WASM deployed; synthetic release paid 220,000,000 PLTEST atoms; replay
+                  rejected; second order resolved with 110,000,000 atoms to each party. Captured
+                  receipts verify contract, transaction, state, and transfers.
+                </td>
+                <td>
+                  Real USDC, authenticated bank payment, Freighter UI, or production operation.
+                </td>
+              </tr>
+              <tr>
+                <td>Mutual recovery</td>
+                <td>
+                  Seller authorization signature plus buyer envelope signature; testnet half split
+                  confirmed with programmatic disposable keys.
+                </td>
+                <td>Freighter UI acceptance or production wallet integration.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Current state</h3>
+        <p>
+          <span class="tag source">In source</span> Host API, same-origin capability checks, wallet
+          bridge, private offer reader, deployment verifier, chain reader/indexer, policy
+          status/authorization storage, transaction journal, and dual-authorization recovery
+          collector.
+        </p>
+        <p>
+          <span class="tag observed">Locally tested</span> Host and recovery logic have fixture/unit
+          coverage. Previous integrated WASM rehearsal used synthetic payment evidence. These local
+          results do not substitute for the current network run.
+        </p>
+        <p>
+          <span class="tag observed">Testnet rehearsal passed</span> The 25 October record includes
+          synthetic PLTEST release, replay rejection, and mutual half-split recovery against the
+          reviewed WASM. It used programmatic disposable wallet keys and confirmed transaction
+          receipts. Contract <code>CAJ7GRY6HEA6CWTYPTMSOE4R5V2ZL5I2AIV5APWISWAKBYLBPVEASHCZ</code>;
+          release transaction
+          <code>7acb287096e02b15c80b4c18b0485612efed95fd7b5e83c5e5b1be11cbe1ae5d</code>; recovery
+          transaction <code>866f81532c6cc42c21e9a98f751440c4917b77ee3aad97a7eb81774e41a85165</code>.
+          See
+          <a href="../../evidence/release/testnet-rehearsal-2026-10-25.json"
+            >the captured evidence record</a
+          >.
+        </p>
+        <p>
+          <span class="tag limit">Not established</span> Accepted authenticated payment evidence,
+          live payment normalization, real bank semantics, real USDC settlement, Freighter UI
+          behavior, production deployment, production key custody, or privacy behavior of a running
+          proof service.
+        </p>
+        <p>
+          This testnet pass validates the contract and selected adapter mechanics with synthetic
+          data. Do not present it as an authenticated payment-to-USDC trade.
+        </p>
+        <div class="links">
+          <a href="operations-and-readiness.md">Editable operations guide</a
+          ><a href="../../integration/host/indexer.mjs">Chain indexer</a
+          ><a href="../../integration/transaction-journal.mjs">Transaction journal</a
+          ><a href="../../integration/host/deployment-verifier.mjs">Deployment verifier</a>
+        </div>
+      </section>
+
+      <section id="talk">
+        <h2>8. Explain it without overclaiming</h2>
+        <h3>Thirty seconds</h3>
+        <blockquote>
+          “Pactlane is a prototype for direct EUR-to-USDC trades between two people. The seller
+          locks one fixed token offer in a Soroban escrow. The buyer reserves it and confirms the
+          payment window before sending euros. A policy service checks evidence against that exact
+          order and signs a release claim; the contract checks its own terms before paying once. The
+          public app is synthetic. A local compiled-contract rehearsal passed, and a disposable
+          testnet rehearsal passed release, replay rejection, and mutual recovery with synthetic
+          PLTEST. We have not validated an authenticated bank payment or real USDC settlement.”
+        </blockquote>
+        <h3>Two minutes</h3>
+        <blockquote>
+          “Some people already have a bank account and want USDC on Stellar, but would rather not
+          open another exchange account and hand over another identity document. Pactlane explores a
+          direct trade: the seller puts up the tokens first, and the buyer pays the agreed euros
+          directly. <br /><br />The buyer confirms an on-chain payment lock before paying. The
+          intended proof flow uses TLSNotary to authenticate selected bank-response bytes. An
+          off-chain policy checks their meaning against the order, recipient commitment, payment
+          time, and replay registry, then signs a canonical claim. The contract checks that
+          signature and its own stored terms. It does not verify the TLSNotary proof, so users still
+          trust the policy operator's interpretation and signer key. <br /><br />The public app is
+          synthetic, and the completed local compiled-WASM rehearsal used synthetic evidence. A
+          disposable testnet rehearsal with the reviewed WASM passed a synthetic token release,
+          replay rejection, and mutual half-split recovery. It used PLTEST and programmatic
+          disposable wallet keys, not Freighter UI. We have not validated a real authenticated
+          payment or real USDC settlement.”
+        </blockquote>
+        <h3>Questions people may ask</h3>
+        <details>
+          <summary>Is it trustless?</summary>
+          <p>
+            No. The policy operator is trusted to interpret the payment evidence correctly and
+            protect the signing key. The contract independently checks escrow rules and signatures.
+          </p>
+        </details>
+        <details>
+          <summary>Is it private or anonymous?</summary>
+          <p>
+            No. The bank sees its account activity, the counterparty sees payment details, and
+            Stellar reveals addresses and token movements. The goal is to minimize extra
+            identity-document collection and disclose selected evidence to the policy service.
+          </p>
+        </details>
+        <details>
+          <summary>Is it fully zero knowledge?</summary>
+          <p>
+            No. TLSNotary uses MPC-TLS and selective disclosure. The contract receives a signed
+            claim; it does not verify a zero-knowledge proof or TLS transcript.
+          </p>
+        </details>
+        <details>
+          <summary>What happens if proof fails after the buyer pays?</summary>
+          <p>
+            The escrow remains in <code>Paying</code>. It does not time out to the seller. The buyer
+            can retry with valid evidence or both parties can authorize a split. If they cannot
+            agree, tokens may remain held.
+          </p>
+        </details>
+        <details>
+          <summary>Can one payment be used twice?</summary>
+          <p>
+            The nullifier is derived from stable payer scope and payment ID. The contract tracks use
+            on one deployment; the policy registry and complete chain reconciliation are needed
+            across deployments. Real-source identity mapping is not yet validated.
+          </p>
+        </details>
+        <details>
+          <summary>What is actually live?</summary>
+          <p>
+            The captured disposable testnet rehearsal passed release, replay rejection, and mutual
+            recovery with the reviewed WASM and synthetic PLTEST. It did not use authenticated bank
+            evidence, USDC, or Freighter UI. The release gate remains closed.
+          </p>
+        </details>
+        <div class="links">
+          <a href="talk-tracks.md">Editable talk-track reference</a
+          ><a href="index.md">Architecture handbook index</a>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <p>
+        Architecture study for Pactlane. Inline diagrams and styles are self-contained; the page
+        makes no network requests. Technical claims point to source and editable Markdown references
+        above. Current live evidence remains limited and time-sensitive.
+      </p>
+    </footer>
+  </body>
+</html>

@@ -24,6 +24,7 @@ export class ReplayStore {
         signature TEXT
       );
       CREATE TABLE IF NOT EXISTS checkpoints (domain TEXT PRIMARY KEY, sequence TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS configured_domains (domain TEXT PRIMARY KEY);
       CREATE TABLE IF NOT EXISTS manual_holds (binding TEXT PRIMARY KEY);
     `);
     const mode = syntheticOnly ? 'SYNTHETIC_ONLY' : 'LIVE';
@@ -72,6 +73,29 @@ export class ReplayStore {
     this.#noHolds();
     const row = this.#db.prepare('SELECT sequence FROM checkpoints WHERE domain=?').get(domain);
     requirePolicy(row && BigInt(row.sequence) >= uint(sequence), 'CHAIN_RECONCILIATION_BEHIND');
+  }
+  checkpoint(domain) {
+    hex32(domain);
+    const row = this.#db.prepare('SELECT sequence FROM checkpoints WHERE domain=?').get(domain);
+    return row?.sequence ?? null;
+  }
+  // The host currently serves one configured escrow deployment per replay database.
+  // Existing unregistered rows cannot reveal which deployments they cover, so fail closed.
+  bindDomain(domain) {
+    hex32(domain);
+    this.#transaction(() => {
+      let rows = this.#db.prepare('SELECT domain FROM configured_domains').all();
+      if (rows.length === 0) {
+        const checkpointCount = this.#db
+          .prepare('SELECT COUNT(*) AS count FROM checkpoints')
+          .get().count;
+        const paymentCount = this.#db.prepare('SELECT COUNT(*) AS count FROM payments').get().count;
+        requirePolicy(checkpointCount === 0 && paymentCount === 0, 'STORE_COVERAGE_UNVERIFIED');
+        this.#db.prepare('INSERT INTO configured_domains VALUES (?)').run(domain);
+        rows = [{ domain }];
+      }
+      requirePolicy(rows.length === 1 && rows[0].domain === domain, 'STORE_COVERAGE_MISMATCH');
+    });
   }
   holdManualResolution(binding) {
     hex32(binding);

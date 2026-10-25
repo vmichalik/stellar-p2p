@@ -21,6 +21,9 @@ VERSION = '0.1.0.1501'
 SOURCE_SHA256 = 'a8f7080ce953e59f930654fb08c9e66f6373fbadbd122593e3e1502bf83ff25a'
 RELEASE_SHA256 = '1c312ad4305653b8d9351cf3eac46de4222a43be513260bf53053cfa1de45155'
 PUBLIC_MAIN_SHA256 = 'b5849d6fc3c819494feaf6e90aaecd778ff3f4b6b5d82bfb58ab7803958caa94'
+UPSTREAM_VERIFIER_SHA256 = 'dcde6884045b4fd89b662988527c129357468f99fea855088c926f0e5d60cc96'
+PRIVACY_PATCHED_VERIFIER_SHA256 = '75736d41b5fb88f4e49eb3ad7b3711540cde5f0139192849f0137b9a137bd8dd'
+VERIFIER_PRIVACY_PATCH_SHA256 = 'aabc7aa749cc269f86c9875bfa249ed6bdde08923e84046e744eb86b2a3538f2'
 ASSETS = {
     'tlsn_wasm.js': '523711ce5c7f1d5206bc05250153e74f3063ed7e420d0a0953ca24b4ea39dc4f',
     'tlsn_wasm_bg.wasm': 'bb3c73628f088867a1f99291275b56a379ce44fd239efca9445fb5908a97e318',
@@ -112,6 +115,22 @@ def extract_assets(release, destination):
             output.write_bytes(data)
 
 
+def apply_verifier_privacy_patch(source_root, patch_path):
+    verifier = source_root / 'servers/verifier/src/verifier.rs'
+    source_hash = digest(verifier.read_bytes())
+    patch_hash = digest(patch_path.read_bytes())
+    if patch_hash != VERIFIER_PRIVACY_PATCH_SHA256:
+        raise ValueError('Verifier privacy patch checksum mismatch; no stage was published.')
+    if source_hash == PRIVACY_PATCHED_VERIFIER_SHA256:
+        return
+    if source_hash != UPSTREAM_VERIFIER_SHA256:
+        raise ValueError('Verifier source differs from pinned upstream and reviewed patch; preserve it.')
+    result = subprocess.run(['patch', '--batch', '--fuzz=0', '-p1', '--input', str(patch_path)],
+                            cwd=source_root, capture_output=True, text=True)
+    if result.returncode or digest(verifier.read_bytes()) != PRIVACY_PATCHED_VERIFIER_SHA256:
+        raise ValueError('Reviewed verifier privacy patch failed; no stage was published.')
+
+
 def copy_runtime(root, stage):
     benchmark = stage / 'benchmark'
     benchmark.mkdir()
@@ -201,6 +220,8 @@ def main():
         main_source = stage / 'servers/verifier/src/main.rs'
         if digest(main_source.read_bytes()) != PUBLIC_MAIN_SHA256:
             raise ValueError('Patched verifier differs from the reviewed public variant.')
+        privacy_patch = ROOT / 'infra/proof-benchmark/verifier-privacy.patch'
+        apply_verifier_privacy_patch(stage, privacy_patch)
         copy_runtime(ROOT, stage)
         extract_assets(release, stage / 'benchmark')
         (stage / 'fly.toml').write_text(render.stdout)
@@ -212,6 +233,10 @@ def main():
             'releaseArchiveSha256': RELEASE_SHA256,
             'localVariant': 'public-demo-loopback-fixed-target-budget-capped',
             'publicVerifierMainSha256': PUBLIC_MAIN_SHA256,
+            'upstreamVerifierSha256': UPSTREAM_VERIFIER_SHA256,
+            'verifierPrivacyPatchSha256': VERIFIER_PRIVACY_PATCH_SHA256,
+            'privacyPatchedVerifierSha256': PRIVACY_PATCHED_VERIFIER_SHA256,
+            'verifierPrivacyPatchApplied': True,
             'app': args.app,
             'miniOrigin': args.mini_origin,
             'cloudOrigin': args.public_origin if args.public_origin is not None else f'https://{args.app}.fly.dev',

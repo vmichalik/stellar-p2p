@@ -4,6 +4,7 @@ import {
   Contract,
   Keypair,
   Networks,
+  Operation,
   StrKey,
   TransactionBuilder,
   nativeToScVal,
@@ -11,12 +12,29 @@ import {
   rpc,
   xdr,
 } from '@stellar/stellar-sdk';
-import { claimDigest, claimScVal } from '../contracts/escrow/protocol/protocol.mjs';
+import {
+  authorizeEntry,
+  buildAuthorizationEntryPreimage,
+  hash,
+  inspectAuthEntry,
+} from '@stellar/stellar-sdk/base';
+import {
+  claimDigest,
+  claimScVal,
+  recipientCommitment,
+} from '../contracts/escrow/protocol/protocol.mjs';
 import { isDurableTransactionJournal } from './transaction-journal.mjs';
 
 const check = (condition, code) => {
   if (!condition) throw new Error(code);
 };
+const sameAuthEntries = (actual, expected) =>
+  Array.isArray(actual) &&
+  Array.isArray(expected) &&
+  actual.length === expected.length &&
+  actual.every((entry, index) =>
+    Buffer.from(entry.toXDR()).equals(Buffer.from(expected[index].toXDR())),
+  );
 const integer = (value) => {
   check(
     typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value) && value.length <= 39,
@@ -87,6 +105,14 @@ export function freighterWalletPort(api) {
       check(!result.error && result.signerAddress === account, 'WALLET_SIGNING_FAILED');
       return result.signedTxXdr;
     },
+    async signAuthEntry(entryXdr, account) {
+      const result = await api.signAuthEntry(entryXdr, {
+        networkPassphrase: Networks.TESTNET,
+        address: account,
+      });
+      check(!result.error && result.signerAddress === account, 'WALLET_AUTH_SIGNING_FAILED');
+      return result.signedAuthEntry;
+    },
   };
 }
 
@@ -128,7 +154,10 @@ export function createStellarServices({
   const remote = server ?? new rpc.Server(cfg.rpcUrl);
   const accounts = {};
   const inFlight = new Map();
-  let readerAccount;
+  let readerAccount =
+    typeof cfg.readerAccount === 'string' && StrKey.isValidEd25519PublicKey(cfg.readerAccount)
+      ? cfg.readerAccount
+      : undefined;
 
   async function network() {
     const n = await remote.getNetwork();
@@ -220,7 +249,7 @@ export function createStellarServices({
     }
     throw new Error('TRANSACTION_PENDING_RECONCILIATION');
   }
-  async function send(method, args, expectedAccount, key) {
+  async function send(method, args, expectedAccount, key, collectAuthorization) {
     check(submissionEnabled, 'TESTNET_SUBMISSION_NOT_AUTHORIZED');
     check(isDurableTransactionJournal(journal), 'DURABLE_TRANSACTION_JOURNAL_REQUIRED');
     if (inFlight.has(key)) return inFlight.get(key);
@@ -242,18 +271,60 @@ export function createStellarServices({
       // The host journal must reserve atomically across tabs/processes before
       // any wallet prompt. A preparing/unknown record is never auto-cleared.
       check(await journal.reserve(key), 'TRANSACTION_PENDING_RECONCILIATION');
-      const prepared = await remote.prepareTransaction(
-        await transaction(method, args, expectedAccount),
-      );
+      let unsigned = await transaction(method, args, expectedAccount);
+      if (collectAuthorization) {
+        const simulated = await remote.simulateTransaction(unsigned, undefined, 'record');
+        check(rpc.Api.isSimulationSuccess(simulated), 'AUTHORIZATION_SIMULATION_FAILED');
+        const entries = await collectAuthorization(unsigned, simulated);
+        check(Array.isArray(entries) && entries.length > 0, 'AUTHORIZATION_ENTRIES_MISSING');
+        // Transaction.operations is a decoded view over the underlying XDR.
+        // Rebuild the operation so auth entries are present in the serialized
+        // envelope consumed by prepareTransaction and Freighter.
+        unsigned = TransactionBuilder.cloneFrom(unsigned)
+          .clearOperations()
+          .addOperation(
+            Operation.invokeContractFunction({
+              contract: cfg.contract,
+              function: method,
+              args,
+              auth: entries,
+            }),
+          )
+          .build();
+        const roundTripped = TransactionBuilder.fromXDR(unsigned.toXDR(), Networks.TESTNET);
+        check(
+          sameAuthEntries(roundTripped.operations[0]?.auth, entries),
+          'AUTHORIZATION_ENTRIES_NOT_SERIALIZED',
+        );
+      }
+      const prepared = await remote.prepareTransaction(unsigned);
+      if (collectAuthorization) {
+        const supplied =
+          TransactionBuilder.fromXDR(unsigned.toXDR(), Networks.TESTNET).operations[0]?.auth ?? [];
+        const returned =
+          TransactionBuilder.fromXDR(prepared.toXDR(), Networks.TESTNET).operations[0]?.auth ?? [];
+        check(
+          supplied.length >= 1 && supplied.length <= 2 && sameAuthEntries(returned, supplied),
+          'AUTHORIZATION_ENTRIES_CHANGED',
+        );
+      }
       check(BigInt(prepared.fee) <= integer(cfg.maxFeeStroops), 'TRANSACTION_FEE_LIMIT');
       const signed = TransactionBuilder.fromXDR(
         await wallet.sign(prepared.toXDR(), expectedAccount),
         Networks.TESTNET,
       );
       check(
-        Buffer.from(signed.hash()).equals(Buffer.from(prepared.hash())),
+        signed.source === expectedAccount &&
+          Buffer.from(signed.hash()).equals(Buffer.from(prepared.hash())),
         'WALLET_CHANGED_TRANSACTION',
       );
+      if (collectAuthorization) {
+        const expectedAuth =
+          TransactionBuilder.fromXDR(prepared.toXDR(), Networks.TESTNET).operations[0]?.auth ?? [];
+        const signedAuth =
+          TransactionBuilder.fromXDR(signed.toXDR(), Networks.TESTNET).operations[0]?.auth ?? [];
+        check(sameAuthEntries(signedAuth, expectedAuth), 'AUTHORIZATION_ENTRIES_CHANGED');
+      }
       check(
         signed.signatures.some((sig) =>
           Keypair.fromPublicKey(expectedAccount).verify(signed.hash(), sig.signature.toBytes()),
@@ -308,6 +379,16 @@ export function createStellarServices({
         terms.seller === accounts.seller && terms.currency === 'EUR' && terms.rail === 'revolut',
         'INVALID_OFFER',
       );
+      if (cfg.privateOffer) {
+        const expectedRecipient = recipientCommitment({
+          recipient_id: cfg.privateOffer.recipientId,
+          recipient_salt: cfg.privateOffer.recipientSalt,
+        }).toString('hex');
+        check(
+          terms.seller === cfg.privateOffer.seller && terms.recipient === expectedRecipient,
+          'PRIVATE_OFFER_MISMATCH',
+        );
+      }
       check(integer(terms.token_amount) > 0n && integer(terms.fiat_minor) > 0n, 'INVALID_OFFER');
       const encoded = map({
         seller: addr(terms.seller),
@@ -413,10 +494,134 @@ export function createStellarServices({
       );
       return writeOrder('refund', orderId, [u64(orderId)], accounts.buyer ?? accounts.seller);
     },
-    async resolve() {
-      // Two distinct wallets must authorize the exact invocation. Never replace
-      // that workflow with a single-source transaction or unilateral refund.
-      throw new Error('DUAL_WALLET_AUTHORIZATION_WORKFLOW_REQUIRED');
+    async cancelFundedOffer(orderId) {
+      const current = await order(orderId);
+      check(
+        current.state === 'Funded' &&
+          current.terms.seller === accounts.seller &&
+          accounts.seller === (await wallet.selected()) &&
+          (await wallet.network()) === Networks.TESTNET,
+        'FUNDED_OFFER_CANCELLATION_UNAVAILABLE',
+      );
+      return writeOrder('refund', orderId, [u64(orderId)], accounts.seller);
+    },
+    async resolve(orderId, buyerTokens) {
+      const current = await order(orderId);
+      const amount = integer(buyerTokens);
+      const total = integer(current.terms.token_amount);
+      check(
+        ['Reserved', 'Paying'].includes(current.state) &&
+          current.buyer &&
+          current.terms.seller &&
+          amount >= 0n &&
+          amount <= total &&
+          accounts.buyer === current.buyer &&
+          accounts.seller === current.terms.seller,
+        'INVALID_RESOLUTION',
+      );
+      check(current.buyer !== current.terms.seller, 'DISTINCT_WALLETS_REQUIRED');
+      const args = [u64(orderId), i128(buyerTokens)];
+      const key = `${cfg.contract}:resolve:${orderId}:${amount}`;
+      const submitted = await send('resolve', args, accounts.buyer, key, async (_tx, simulated) => {
+        const latest = await remote.getLatestLedger();
+        const expires = Number(latest.sequence) + 100;
+        check(Number.isSafeInteger(expires), 'AUTHORIZATION_EXPIRY_INVALID');
+        check(_tx.source === current.buyer, 'SOURCE_AUTHORIZATION_MISMATCH');
+        const entries = simulated.result.auth ?? [];
+        const matching = new Map();
+        let sourceAuthorizationCount = 0;
+        for (const entry of entries) {
+          const info = inspectAuthEntry(entry);
+          const root = entry.rootInvocation;
+          check(
+            root.function.type === 'sorobanAuthorizedFunctionTypeContractFn',
+            'AUTHORIZATION_INVOCATION_MISMATCH',
+          );
+          const call = root.function.contractFn;
+          check(
+            Address.fromScAddress(call.contractAddress).toString() === cfg.contract &&
+              call.functionName.toString() === 'resolve' &&
+              call.args.length === 2 &&
+              Buffer.from(call.args[0].toXDR()).equals(Buffer.from(args[0].toXDR())) &&
+              Buffer.from(call.args[1].toXDR()).equals(Buffer.from(args[1].toXDR())),
+            'AUTHORIZATION_INVOCATION_MISMATCH',
+          );
+          check(root.subInvocations.length === 0, 'AUTHORIZATION_INVOCATION_MISMATCH');
+          if (info.credentialType === 'sourceAccount') {
+            sourceAuthorizationCount++;
+            check(
+              _tx.source === current.buyer && sourceAuthorizationCount === 1,
+              'SOURCE_AUTHORIZATION_MISMATCH',
+            );
+          } else {
+            check(
+              info.credentialType === 'addressV2' &&
+                info.address === current.terms.seller &&
+                !matching.has(info.address),
+              'AUTHORIZATION_PARTIES_MISMATCH',
+            );
+            matching.set(info.address, entry);
+          }
+        }
+        check(matching.has(current.terms.seller), 'SELLER_AUTHORIZATION_REQUIRED');
+        const address = current.terms.seller;
+        const entry = matching.get(address);
+        const signatureBase64 = await wallet.signAuthEntry(
+          buildAuthorizationEntryPreimage(entry, expires, Networks.TESTNET).toXDR('base64'),
+          address,
+        );
+        check(typeof signatureBase64 === 'string', 'WALLET_AUTH_SIGNING_FAILED');
+        const signature = Buffer.from(signatureBase64, 'base64');
+        const signed = await authorizeEntry(
+          entry,
+          async () => signature,
+          expires,
+          Networks.TESTNET,
+          address,
+        );
+        const info = inspectAuthEntry(signed);
+        check(
+          info.address === address &&
+            info.signatureExpirationLedger === expires &&
+            info.signed &&
+            Buffer.from(signed.rootInvocation.toXDR()).equals(
+              Buffer.from(entry.rootInvocation.toXDR()),
+            ),
+          'AUTHORIZATION_ENTRY_INVALID',
+        );
+        const credentials = signed.credentials.addressV2;
+        check(
+          String(credentials.nonce) === String(entry.credentials.addressV2.nonce),
+          'AUTHORIZATION_ENTRY_INVALID',
+        );
+        const payload = hash(
+          buildAuthorizationEntryPreimage(signed, expires, Networks.TESTNET).toXdr(),
+        );
+        check(
+          info.signers.some(
+            (node) =>
+              node.address === address &&
+              node.signatures?.some((sig) =>
+                Keypair.fromPublicKey(address).verify(payload, sig.signature),
+              ),
+          ),
+          'AUTHORIZATION_SIGNATURE_INVALID',
+        );
+        return entries.map((candidate) =>
+          inspectAuthEntry(candidate).credentialType === 'sourceAccount' ? candidate : signed,
+        );
+      });
+      const resolved = await order(orderId);
+      check(
+        resolved.state === 'Resolved' && integer(resolved.terms.token_amount) === total,
+        'RESOLUTION_NOT_CONFIRMED',
+      );
+      return {
+        order: resolved,
+        transaction: submitted.transaction,
+        buyerTokens: amount.toString(),
+        sellerTokens: (total - amount).toString(),
+      };
     },
     async reconcileReceipt(orderId, confirmed) {
       check(
@@ -434,7 +639,9 @@ export function createStellarServices({
         'RECEIPT_NOT_CONFIRMED',
       );
       const envelope = TransactionBuilder.fromXDR(
-        reply.envelopeXdr.toXDR('base64'),
+        typeof reply.envelopeXdr === 'string'
+          ? reply.envelopeXdr
+          : reply.envelopeXdr.toXDR('base64'),
         Networks.TESTNET,
       );
       check(
@@ -442,18 +649,42 @@ export function createStellarServices({
           envelope.operations.length === 1,
         'RECEIPT_DOMAIN_MISMATCH',
       );
-      const invoke = envelope.operations[0].func.invokeContract;
+      const operation = envelope.operations[0];
+      check(
+        operation.type === 'invokeHostFunction' &&
+          operation.func.type === 'hostFunctionTypeInvokeContract',
+        'RECEIPT_DOMAIN_MISMATCH',
+      );
+      const invoke = operation.func.invokeContract;
       check(
         Address.fromScAddress(invoke.contractAddress).toString() === cfg.contract,
         'RECEIPT_DOMAIN_MISMATCH',
       );
       const method = invoke.functionName.toString();
-      const argument = scValToNative(invoke.args[0]);
       check(
-        ['release', 'refund', 'resolve'].includes(method) &&
-          String(method === 'release' ? argument.order_id : argument) === orderId,
+        (method === 'release' && invoke.args.length === 2) ||
+          (method === 'refund' && invoke.args.length === 1) ||
+          (method === 'resolve' && invoke.args.length === 2),
         'RECEIPT_ORDER_MISMATCH',
       );
+      const argument = scValToNative(invoke.args[0]);
+      const allocation = method === 'resolve' ? scValToNative(invoke.args[1]) : null;
+      check(
+        ['release', 'refund', 'resolve'].includes(method) &&
+          String(method === 'release' ? argument.order_id : argument) === orderId &&
+          ((method === 'release' && current.state === 'Released') ||
+            (method === 'refund' && current.state === 'Refunded') ||
+            (method === 'resolve' && current.state === 'Resolved')),
+        'RECEIPT_ORDER_MISMATCH',
+      );
+      if (method === 'resolve') {
+        check(
+          typeof allocation === 'bigint' &&
+            allocation >= 0n &&
+            allocation <= integer(current.terms.token_amount),
+          'RECEIPT_ALLOCATION_MISMATCH',
+        );
+      }
       let buyerReceived = 0n,
         sellerReturned = 0n;
       for (const event of reply.events?.contractEventsXdr?.flat() ?? []) {
@@ -477,6 +708,16 @@ export function createStellarServices({
       );
       check(
         current.state !== 'Released' || buyerReceived === integer(current.terms.token_amount),
+        'TOKEN_TRANSFER_EVIDENCE_MISMATCH',
+      );
+      check(
+        current.state !== 'Refunded' || sellerReturned === integer(current.terms.token_amount),
+        'TOKEN_TRANSFER_EVIDENCE_MISMATCH',
+      );
+      check(
+        current.state !== 'Resolved' ||
+          (buyerReceived === allocation &&
+            sellerReturned === integer(current.terms.token_amount) - allocation),
         'TOKEN_TRANSFER_EVIDENCE_MISMATCH',
       );
       return {

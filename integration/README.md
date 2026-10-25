@@ -1,49 +1,45 @@
-# Integration
+# Integration workbench
 
-This folder has a complete local synthetic rehearsal and a testnet wallet/RPC service candidate. Neither automatically sends a bank request or network transaction.
+`integration/` contains the local synthetic WASM rehearsal and the Node testnet host/browser workbench. These are separate from the public synthetic app at `https://pactlane.io`. A disposable testnet rehearsal passed on 25 October 2026; it used PLTEST and synthetic authorization, not real USDC or bank evidence. The release gate remains `NOT_CLEARED`.
 
-## Install and check
-
-From the root with Node >=22.13:
-
-```sh
-npm ci --ignore-scripts
-npm run setup:integration
-npm run test:all
-```
-
-Setup runs locked, script-disabled installs in `policy/`, `contracts/escrow/protocol/` and `integration/`.
+Start with the [architecture study](../docs/architecture/study.html), [host security and setup](host/README.md), and [recovery authorization detail](RECOVERY.md).
 
 ## Local compiled-WASM rehearsal
 
-Requires Cargo/Rust compatible with Soroban SDK 29.0.1 and the pinned locks; checked with Rust 1.99.1. It never falls back to native contract registration.
+The local harness connects the app's fixed order terms, the real policy engine, canonical Ed25519 claim verification, and compiled Soroban escrow WASM. Its evidence and token are synthetic. It is useful for checking order bounds, signature encoding, payout, and replay behavior without submitting a network transaction. See [local rehearsal evidence](../evidence/release/local-wasm-rehearsal.json).
+
+The fixed example is €20 and 22 tokens: `fiat_minor = 2000` cents and `token_amount = 220000000` atoms at seven decimals. These are synthetic test terms.
+
+## Host and browser boundary
+
+The Node host (`host/serve.mjs`) verifies the configured deployment's creation transaction and on-chain WASM hash before serving the browser workbench. Deployment submission is disabled by default. The optional signing key does not have to be present; without a configured key and trusted evidence adapters, authorization stays closed.
+
+The browser keeps its bearer capability in memory after reading the URL fragment, then removes the fragment from the address bar. Requests use a bearer header and must match the configured `Host` and `Origin`; the host also applies request bounds and rate limits. The private link is written to `access-link.txt` with mode `0600`; its value is not printed to stdout. Treat the link as a secret. A bearer capability grants access to the workbench; it is not proof of a person's identity.
+
+The host never receives wallet seed material. The browser calls the installed Freighter API after a user prompt. The host can build and submit exact testnet transactions, reconcile the saved transaction hash after uncertain outcomes, and confirm receipts against the contract, order, and token events. The local fixture tests do not validate real Freighter behavior.
+
+## Policy and live evidence
+
+The policy route accepts an evidence identifier rather than a browser-supplied claim or evidence payload. A trusted policy adapter must fetch verifier evidence and the engine must normalize it. The live normalizer currently throws `TLSN_PAYMENT_SCHEMA_UNVERIFIED`, so proof and release requests remain closed without an accepted adapter and source-backed semantics. Synthetic fixtures cannot clear this gate.
+
+The durable replay database is bound to one network/escrow domain; it must not be reused for another deployment without reviewed coverage. The indexer checkpoints only complete event pages and places a manual hold before it passes `Resolved` orders. Holds are not auto-cleared. Transaction journals prevent creating a second action merely because an RPC response was uncertain.
+
+## Testnet rehearsal evidence
+
+The captured [25 October run](../evidence/release/testnet-rehearsal-2026-10-25.json) passed with the reviewed WASM and a disposable PLTEST token. Order 0 paid 220,000,000 token atoms, a replay was rejected, and order 1 resolved as a mutual 110,000,000/110,000,000 split. The evidence includes confirmed public testnet transaction hashes and receipts.
+
+The run used programmatic disposable keys through the wallet port, not the Freighter extension UI. It used synthetic payment authorization, not a bank request. It did not use USDC or validate production operations. An earlier recovery attempt exposed an auth-entry serialization bug; the passed run uses the rebuilt XDR-backed operation path after that fix.
+
+## Verifier logging source patch
+
+The source-level privacy patch removes transcript formatting from INFO and DEBUG logging and rejects Proxy commitment mode before connecting to the proxy target. The patched verifier passed `cargo check --offline`. It was not release-built, deployed, or runtime-retested as a service. This is not evidence about the current logs of a running verifier.
+
+## Checks
+
+Run deployment-independent host and browser tests with:
 
 ```sh
-npm run rehearse:local
-# Rebuild with Stellar CLI 28.1.0; require byte-identical output:
-npm run rehearse:local -- --rebuild
-# Save sanitized evidence:
-npm run rehearse:local -- --record
+node --test integration/host/*.test.mjs integration/browser/*.test.mjs
 ```
 
-The harness creates the app’s €20 / 22 USDC order, funds a local synthetic token, reserves it and confirms `begin_payment` in the compiled escrow. The Node bridge reads that snapshot, checks synthetic evidence through the real policy and disk SQLite, then signs the frozen claim. Rust independently reproduces the digest, submits the signature to WASM and checks a 220,000,000-base-unit payout.
-
-Contract replay, cross-order payment reuse and duplicate UI settlement are rejected. Proof completed after `pay_by` is allowed for a payment made inside the locked interval. The report records hashes, revision, source dirty status, balances and the open live gate. Public fixture seeds must never become deployment keys.
-
-## Wallet/RPC service candidate
-
-`stellar-rpc-adapter.mjs` uses Stellar SDK 17.1.0 and wraps Freighter API 6.0.1 response shapes. It runs on a Node host because it requires disk SQLite. It cannot be imported directly into the static demo.
-
-The host provides:
-
-- Explicit testnet deployment: HTTPS RPC, escrow/token addresses, seven decimals, policy public key and maximum fee in stroops.
-- Wallet port: connect, selected address, network and signed envelope. A browser bridge must route these to the wallet; `freighterWalletPort` defines the shape, not the transport.
-- `TransactionJournal` with a private persistent disk path. Atomic reservations precede wallet prompts. Preparing/unknown transactions never expire automatically. Reconcile them; deleting the journal is not recovery.
-- Trusted proof/status/authorization ports and source-bound private recipient reader.
-- Explicit `submissionEnabled: true` only when network submission is authorized. Default is false.
-
-Funding, reserve, payment lock, signed release, unlocked-expiry refund and receipts are implemented. Network/config checks, fee cap, unchanged envelope and account signature precede submission. Receipts require confirmed transaction identity and matching token events. Unknown submission reuses its journaled hash.
-
-**Missing:** authenticated HTTP/browser transport, running live policy/chain readers and indexer, accepted TLSNotary normalization, deployment configuration and the two-wallet Soroban authorization collector. `resolve()` rejects with `DUAL_WALLET_AUTHORIZATION_WORKFLOW_REQUIRED`. Tests mock RPC/wallet, while using real SDK encoding and disk/restart journals.
-
-These are software/configuration gaps. Deployment authorization alone would not finish them. See [testnet handoff](../deploy/testnet/README.md).
+These tests use fixtures/mocks where appropriate and do not submit transactions or validate authenticated bank evidence. The passed testnet run is historical evidence; this command does not reproduce it. See the parent [verification record](../docs/verification.md) for the exact checks run in the current checkout.

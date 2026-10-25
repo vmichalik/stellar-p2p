@@ -7,7 +7,9 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "test": "node --test *.test.mjs"
+    "test": "node --test *.test.mjs host/*.test.mjs browser/*.test.mjs",
+    "start": "node host/serve.mjs",
+    "rehearse:testnet": "node rehearse-testnet.mjs"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "17.1.0",

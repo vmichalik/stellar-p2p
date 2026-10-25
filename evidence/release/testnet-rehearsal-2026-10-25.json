@@ -1,0 +1,171 @@
+{
+  "kind": "DISPOSABLE_SYNTHETIC_TESTNET_REHEARSAL",
+  "startedAt": "2026-10-25T19:03:09.433Z",
+  "bankProof": false,
+  "realUSDC": false,
+  "releaseGate": "NOT_CLEARED",
+  "rpcUrl": "https://soroban-testnet.stellar.org",
+  "networkPassphrase": "Test SDF Network ; September 2015",
+  "protocolVersion": 29,
+  "transactions": [
+    {
+      "label": "trust-PLTEST",
+      "hash": "62310a3633e1c42e199fa65bd3737272e2724482d34a4b5f86a48512b52a7697",
+      "maxFeeStroops": "100",
+      "status": "confirmed",
+      "ledger": 5386284
+    },
+    {
+      "label": "trust-PLTEST",
+      "hash": "3426227c78fc7d9dd106590c118d2763c884203ae5c9febce6d43cd0bf671ccb",
+      "maxFeeStroops": "100",
+      "status": "confirmed",
+      "ledger": 5386285
+    },
+    {
+      "label": "issue-PLTEST",
+      "hash": "28c70fec818af183592b6dda863a4309ebf6a3079bf9375ac8c8d0aa52f98661",
+      "maxFeeStroops": "100",
+      "status": "confirmed",
+      "ledger": 5386286
+    },
+    {
+      "label": "deploy-PLTEST-SAC",
+      "hash": "a03e7d17979b98926e1cfff2b3dfbe1686facac7c0a30e2928bc0d3346791697",
+      "maxFeeStroops": "63837",
+      "status": "confirmed",
+      "ledger": 5386287
+    },
+    {
+      "label": "upload-reviewed-escrow",
+      "hash": "3ec185959fddad3bd47b2f4cb28e227d5140a77d709d7cb0c25a1746b4b8deec",
+      "maxFeeStroops": "41279",
+      "status": "confirmed",
+      "ledger": 5386288
+    },
+    {
+      "label": "deploy-escrow",
+      "hash": "70a3f0d865fffa38a93f0ae968f891407be286d338c27eee25edfb1c509c1cee",
+      "maxFeeStroops": "43820",
+      "status": "confirmed",
+      "ledger": 5386289
+    },
+    {
+      "label": "fund-0",
+      "hash": "63ca64485efc82511151b5df0db1c7b8a8552d7f5c341302a1b7ae7c1e765704",
+      "ledger": "5386290",
+      "status": "confirmed",
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "contract": "CAJ7GRY6HEA6CWTYPTMSOE4R5V2ZL5I2AIV5APWISWAKBYLBPVEASHCZ"
+    },
+    {
+      "label": "reserve-0",
+      "hash": "a457914a56d8c4a12cb26bb8b539192e42f719ee8aed33fc4123f76a2617adac",
+      "ledger": "5386291",
+      "status": "confirmed",
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "contract": "CAJ7GRY6HEA6CWTYPTMSOE4R5V2ZL5I2AIV5APWISWAKBYLBPVEASHCZ"
+    },
+    {
+      "label": "lock-0",
+      "hash": "fad913844112343496f1ab68af65b1ab78bb1f1cefc366d5a8f2e8e8f298943a",
+      "ledger": "5386292",
+      "status": "confirmed",
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "contract": "CAJ7GRY6HEA6CWTYPTMSOE4R5V2ZL5I2AIV5APWISWAKBYLBPVEASHCZ"
+    },
+    {
+      "label": "release-synthetic-claim",
+      "hash": "7acb287096e02b15c80b4c18b0485612efed95fd7b5e83c5e5b1be11cbe1ae5d",
+      "maxFeeStroops": "32360",
+      "status": "confirmed",
+      "ledger": 5386293
+    },
+    {
+      "label": "fund-1",
+      "hash": "18d398fcd524c4fa25ee649e6f6fb12e04146adcd3da3dff403f7632081f45f5",
+      "ledger": "5386294",
+      "status": "confirmed",
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "contract": "CAJ7GRY6HEA6CWTYPTMSOE4R5V2ZL5I2AIV5APWISWAKBYLBPVEASHCZ"
+    },
+    {
+      "label": "reserve-1",
+      "hash": "0c2b6823cb96c38dc8c8590018dfe25d6d787c7d5f111d76bb9e12e6051cc57d",
+      "ledger": "5386295",
+      "status": "confirmed",
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "contract": "CAJ7GRY6HEA6CWTYPTMSOE4R5V2ZL5I2AIV5APWISWAKBYLBPVEASHCZ"
+    },
+    {
+      "label": "lock-1",
+      "hash": "f66e393bfed44a2ca03912d5b629b19ceffa36ff69990fbc57b234f04a9defb0",
+      "ledger": "5386296",
+      "status": "confirmed",
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "contract": "CAJ7GRY6HEA6CWTYPTMSOE4R5V2ZL5I2AIV5APWISWAKBYLBPVEASHCZ"
+    },
+    {
+      "label": "resolve-mutual-half-split",
+      "hash": "866f81532c6cc42c21e9a98f751440c4917b77ee3aad97a7eb81774e41a85165",
+      "ledger": "5386297",
+      "status": "confirmed",
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "contract": "CAJ7GRY6HEA6CWTYPTMSOE4R5V2ZL5I2AIV5APWISWAKBYLBPVEASHCZ"
+    }
+  ],
+  "contract": "CAJ7GRY6HEA6CWTYPTMSOE4R5V2ZL5I2AIV5APWISWAKBYLBPVEASHCZ",
+  "token": "CBEZQYHJLCA6WNAKYHOOQRW5FV3UBD5PICQOUFM6RBR2VRYLS3MSIJRK",
+  "tokenLabel": "PLTEST (synthetic, not USDC)",
+  "wasmSha256": "8940569853b21a957fc5a81402666e95ed75f054ce2223926231ffc2c0c506dd",
+  "policySignerPublicKeyHex": "b6d2fee1a2226634e34edb53d6d3ec17ec19661c5ca39c8ae7cc0b816a8530fd",
+  "startLedger": 5386289,
+  "releaseReceipt": {
+    "orderId": "0",
+    "orderState": "Released",
+    "buyerReceivedAtoms": "220000000",
+    "sellerReturnedAtoms": "0",
+    "transaction": {
+      "hash": "7acb287096e02b15c80b4c18b0485612efed95fd7b5e83c5e5b1be11cbe1ae5d",
+      "ledger": "5386293",
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "contract": "CAJ7GRY6HEA6CWTYPTMSOE4R5V2ZL5I2AIV5APWISWAKBYLBPVEASHCZ",
+      "status": "confirmed"
+    }
+  },
+  "replayRejected": true,
+  "recoveryReceipt": {
+    "orderId": "1",
+    "orderState": "Resolved",
+    "buyerReceivedAtoms": "110000000",
+    "sellerReturnedAtoms": "110000000",
+    "transaction": {
+      "hash": "866f81532c6cc42c21e9a98f751440c4917b77ee3aad97a7eb81774e41a85165",
+      "ledger": "5386297",
+      "status": "confirmed",
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "contract": "CAJ7GRY6HEA6CWTYPTMSOE4R5V2ZL5I2AIV5APWISWAKBYLBPVEASHCZ"
+    }
+  },
+  "completedAt": "2026-10-25T19:04:33.770Z",
+  "outcome": "PASSED",
+  "executionHost": "Mac mini",
+  "executionSource": {
+    "baseCommit": "c9845e51082dabcdfbd61d1a74d9606b376796e3",
+    "localChanges": true,
+    "sourceHashesCapturedAfterRun": {
+      "integration/rehearse-testnet.mjs": "4c077ae21a824aaafb49a646f339412e6d229f06d25dec659c13690fb70e0fc2",
+      "integration/stellar-rpc-adapter.mjs": "efc51237129b7b2ca6ae3bcc333a8ee4c39717f6b51016ecc47920dca36e2e09",
+      "integration/host/stellar-reader.mjs": "ae78601dbb935d8695ac0292bed0756e1b8bba06a906e61104da8de5619bd25e",
+      "integration/host/indexer.mjs": "4c5fd44fd365f73b6b30cb33413669e11ebf28d11d24f5b01992b76057a1ac05",
+      "policy/src/engine.mjs": "3f99a0c23e4cfb8b46f21a07147df7c6aeeed6260eb827dab483d348aa011039"
+    }
+  },
+  "limitations": [
+    "Synthetic payment evidence; no bank request or accepted authenticated payment.",
+    "PLTEST is a disposable issued testnet asset, not USDC.",
+    "Programmatic disposable keys exercised the wallet port; no Freighter extension acceptance is claimed.",
+    "The first recovery run exposed an auth-entry serialization bug. This passed run uses rebuilt XDR-backed operations.",
+    "No existing public app, proof runtime, DNS, or remote source was changed."
+  ]
+}

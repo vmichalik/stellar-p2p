@@ -1,5 +1,23 @@
 # Verification records
 
+## 25 October: host integration and architecture handoff
+
+The final local regression run passed **224 JavaScript tests**: 125 root, 55 policy, 11 protocol and 33 integration tests. The integration group includes browser transport, HTTP guards, one-hour capability expiry, private offer binding, deployment history/code verification, consistent-ledger readers, event indexing, durable authorization references, transaction journaling and recovery. No tests were skipped. Ten Python preparation tests, 98 JavaScript/inline syntax checks and scoped Prettier checks also passed.
+
+A fresh app-model → policy → compiled-WASM rehearsal passed against the unchanged reviewed artifact. The new TLSNotary privacy variant passed offline locked Cargo check in 19.41 seconds, after exact archive/patch/source hashes were checked. This was a compile check, not a release build or a running-service test. No existing proof service was restarted.
+
+The [disposable testnet rehearsal](../evidence/release/testnet-rehearsal-2026-10-25.json) passed at `2026-10-25T19:04:33.770Z`. It deployed the reviewed escrow and a synthetic PLTEST asset, released 220,000,000 atoms, rejected resubmission of the same claim, and mutually resolved a second order with 110,000,000 atoms to each party. Receipts matched the confirmed contract, order, transaction and token events. A separate read verified the creation transaction, starting ledger and actual deployed WASM hash. This used fresh programmatic keys and synthetic payment evidence, without a bank request or real USDC.
+
+An earlier disposable recovery attempt failed because editing the SDK's decoded operations did not serialize the signed authorization. The adapter now rebuilds the operation and checks the entries through XDR before preparation, after preparation and after wallet signing. The passing network run used that fix. Earlier failed test-only setups were preserved privately and were not retried as the same actions.
+
+Browser smoke checks loaded the real private host with submission disabled, removed its access fragment, read testnet order 0 as `Released` through HTTP → RPC, and returned `NOT_CLEARED` from the policy route. No wallet prompt or bank flow was initiated. The architecture study has seven rendered SVG diagrams, source links, contract explanations and judge Q&A. Its state/funding arrows were corrected during visual review. All SVG text fits within its figure, and no console warnings/errors were observed in the study. The guide is self-contained and makes no external asset requests.
+
+The public app/media are unchanged, pinned to the [existing narrative release](../evidence/release/public-narrative-2026-10-25.json). The new source is a local development candidate. Authenticated Revolut proof, live normalization, Freighter UI signing, real USDC and production operation remain unvalidated. The release gate stays `NOT_CLEARED`.
+
+## Historical checks
+
+The records below describe earlier candidates before the host/testnet work above. Their deployment and network limitations refer to those checkpoints.
+
 The first table records the initial candidate `c8f4475` on 25 October 2026, before the domain/TLS-source follow-up. It is retained as historical evidence. Current domain checks are below; no result establishes an authenticated bank payment or network settlement.
 
 | Check                                          | Result                                                                                                                                                         |

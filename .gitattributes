@@ -1,0 +1,2 @@
+# Unified diffs contain a required context prefix on otherwise blank lines.
+infra/proof-benchmark/verifier-privacy.patch whitespace=-blank-at-eol

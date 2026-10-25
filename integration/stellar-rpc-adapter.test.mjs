@@ -7,9 +7,11 @@ import {
   Networks,
   TransactionBuilder,
   nativeToScVal,
+  scValToNative,
   xdr,
 } from '@stellar/stellar-sdk';
-import { claimDigest } from '../contracts/escrow/protocol/protocol.mjs';
+import { claimDigest, recipientCommitment } from '../contracts/escrow/protocol/protocol.mjs';
+import { hash, inspectAuthEntry } from '@stellar/stellar-sdk/base';
 import { createStellarServices, freighterWalletPort } from './stellar-rpc-adapter.mjs';
 import { TransactionJournal } from './transaction-journal.mjs';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -30,6 +32,7 @@ const signer = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x55));
 const contract = Address.contract(Buffer.alloc(32, 5)).toString();
 const token = Address.contract(Buffer.alloc(32, 6)).toString();
 const seller = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x77)).publicKey();
+const sellerKey = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x77));
 const deployment = {
   networkPassphrase: Networks.TESTNET,
   rpcUrl: 'https://rpc.example.test',
@@ -41,7 +44,7 @@ const deployment = {
 };
 const scAddress = (value) => new Address(value).toScVal();
 
-function transferEvent() {
+function transferEvent(recipient = buyer.publicKey(), amount = 220000000n) {
   return new xdr.ContractEvent({
     ext: xdr.ExtensionPoint.v0(),
     contractId: StrContract(token),
@@ -51,9 +54,9 @@ function transferEvent() {
         topics: [
           nativeToScVal('transfer', { type: 'symbol' }),
           scAddress(contract),
-          scAddress(buyer.publicKey()),
+          scAddress(recipient),
         ],
-        data: nativeToScVal(220000000n, { type: 'i128' }),
+        data: nativeToScVal(amount, { type: 'i128' }),
       }),
     ),
   });
@@ -62,8 +65,44 @@ function StrContract(value) {
   return new Address(value).toScAddress().contractId;
 }
 
+function resolveInvocation(args) {
+  const invocation = new xdr.SorobanAuthorizedInvocation({
+    function: xdr.SorobanAuthorizedFunction.sorobanAuthorizedFunctionTypeContractFn(
+      new xdr.InvokeContractArgs({
+        contractAddress: new Address(contract).toScAddress(),
+        functionName: 'resolve',
+        args,
+      }),
+    ),
+    subInvocations: [],
+  });
+  return invocation;
+}
+
+function unsignedResolveAuth(address, args) {
+  return new xdr.SorobanAuthorizationEntry({
+    rootInvocation: resolveInvocation(args),
+    credentials: xdr.SorobanCredentials.sorobanCredentialsAddressV2(
+      new xdr.SorobanAddressCredentials({
+        address: new Address(address).toScAddress(),
+        nonce: xdr.Int64.fromString(address === seller ? '77' : '66'),
+        signatureExpirationLedger: 0,
+        signature: xdr.ScVal.scvVec([]),
+      }),
+    ),
+  });
+}
+
+function unsignedResolveSourceAuth(args) {
+  return new xdr.SorobanAuthorizationEntry({
+    rootInvocation: resolveInvocation(args),
+    credentials: xdr.SorobanCredentials.sorobanCredentialsSourceAccount(),
+  });
+}
+
 function fixture(options = {}) {
-  const calls = { sign: 0, submit: 0, instructions: 0 };
+  const calls = { sign: 0, submit: 0, instructions: 0, preparedAuthXdr: [] };
+  let active = buyer.publicKey();
   let sent;
   const current = {
     buyer: buyer.publicKey(),
@@ -84,7 +123,7 @@ function fixture(options = {}) {
   };
   const server = {
     getNetwork: async () => ({ passphrase: Networks.TESTNET, protocolVersion: 29 }),
-    getAccount: async () => new Account(buyer.publicKey(), '10'),
+    getAccount: async () => new Account(options.wrongSource ? seller : active, '10'),
     getLatestLedger: async () => ({ closeTime: '1000', sequence: 100, protocolVersion: 29 }),
     simulateTransaction: async (tx) => {
       const method = tx.operations[0].func.invokeContract.functionName.toString();
@@ -93,16 +132,45 @@ function fixture(options = {}) {
         get_config: { token, signer: Buffer.from(signer.rawPublicKey()) },
         decimals: 7,
       };
+      const auth =
+        method === 'resolve'
+          ? [
+              ...(options.explicitSourceAuth
+                ? [
+                    unsignedResolveSourceAuth(
+                      options.wrongSourceInvocation
+                        ? [
+                            nativeToScVal(1n, { type: 'u64' }),
+                            tx.operations[0].func.invokeContract.args[1],
+                          ]
+                        : tx.operations[0].func.invokeContract.args,
+                    ),
+                  ]
+                : []),
+              unsignedResolveAuth(
+                options.extraBuyerAuth ? buyer.publicKey() : seller,
+                tx.operations[0].func.invokeContract.args,
+              ),
+            ]
+          : [];
       return {
         _parsed: true,
         transactionData: {},
         minResourceFee: '0',
         events: [],
         latestLedger: 100,
-        result: { auth: [], retval: nativeToScVal(values[method]) },
+        result: { auth, retval: nativeToScVal(values[method]) },
       };
     },
-    prepareTransaction: async (tx) => tx,
+    prepareTransaction: async (tx) => {
+      const decoded = TransactionBuilder.fromXDR(tx.toXDR(), Networks.TESTNET);
+      calls.preparedAuthXdr.push(
+        (decoded.operations[0]?.auth ?? []).map((entry) =>
+          Buffer.from(entry.toXDR()).toString('base64'),
+        ),
+      );
+      return tx;
+    },
     sendTransaction: async (tx) => {
       calls.submit++;
       sent = tx;
@@ -112,28 +180,50 @@ function fixture(options = {}) {
         current.locked_at = '950';
       }
       if (method === 'release') current.state = ['Released'];
+      if (method === 'resolve') current.state = ['Resolved'];
+      if (method === 'refund') current.state = ['Refunded'];
+      if (method === 'fund') {
+        current.state = ['Funded'];
+        current.buyer = null;
+      }
       return { status: 'PENDING', hash: Buffer.from(tx.hash()).toString('hex') };
     },
-    getTransaction: async () =>
-      options.pending
-        ? { status: 'NOT_FOUND' }
-        : {
-            status: 'SUCCESS',
-            ledger: 101,
-            envelopeXdr: sent.toEnvelope(),
-            events: { contractEventsXdr: [[transferEvent()]] },
-          },
+    getTransaction: async () => {
+      if (options.pending) return { status: 'NOT_FOUND' };
+      const method = sent.operations[0].func.invokeContract.functionName.toString();
+      let events = [];
+      if (method === 'release') events = [transferEvent(buyer.publicKey(), 220000000n)];
+      if (method === 'refund') events = [transferEvent(seller, 220000000n)];
+      if (method === 'resolve') {
+        const amount = scValToNative(sent.operations[0].func.invokeContract.args[1]);
+        if (amount > 0n) events.push(transferEvent(buyer.publicKey(), amount));
+        if (220000000n - amount > 0n) events.push(transferEvent(seller, 220000000n - amount));
+      }
+      return {
+        status: 'SUCCESS',
+        ledger: 101,
+        envelopeXdr: sent.toEnvelope(),
+        ...(method === 'fund' ? { returnValue: nativeToScVal(0n, { type: 'u64' }) } : {}),
+        events: { contractEventsXdr: [events] },
+      };
+    },
   };
   const wallet = {
-    connect: async () => buyer.publicKey(),
-    selected: async () => buyer.publicKey(),
+    connect: async () => active,
+    selected: async () => active,
     network: async () => (options.wrongNetwork ? Networks.PUBLIC : Networks.TESTNET),
     sign: async (value) => {
       calls.sign++;
       let tx = TransactionBuilder.fromXDR(value, Networks.TESTNET);
       if (options.mutateTransaction) tx = TransactionBuilder.cloneFrom(tx, { fee: '999' }).build();
-      tx.sign(buyer);
+      if (!options.missingBuyerSignature) tx.sign(active === seller ? sellerKey : buyer);
       return tx.toXDR();
+    },
+    signAuthEntry: async (preimageXdr, account) => {
+      const signer = account === seller ? sellerKey : buyer;
+      return Buffer.from(
+        signer.sign(hash(xdr.HashIdPreimage.fromXDR(preimageXdr, 'base64').toXdr())),
+      ).toString('base64');
     },
   };
   const claim = {
@@ -166,7 +256,9 @@ function fixture(options = {}) {
   const journal = new TransactionJournal(journalPath);
   resources.push({ journal, directory });
   const service = createStellarServices({
-    deployment,
+    deployment: options.privateOffer
+      ? { ...deployment, privateOffer: options.privateOffer }
+      : deployment,
     wallet,
     server,
     submissionEnabled: options.submissionEnabled !== false,
@@ -189,11 +281,23 @@ function fixture(options = {}) {
         options.synthetic ? { ...approved, syntheticOnly: true } : approved,
     },
   });
-  return { service, server, calls, current, journal, journalPath };
+  return {
+    service,
+    server,
+    calls,
+    current,
+    journal,
+    journalPath,
+    getSent: () => sent,
+    setActive: (value) => {
+      active = value;
+    },
+  };
 }
 
 test('wallet port uses official address, network and signed envelope fields', async () => {
   let signingOptions;
+  let authSigningOptions;
   const wallet = freighterWalletPort({
     requestAccess: async () => ({ address: buyer.publicKey() }),
     getAddress: async () => ({ address: buyer.publicKey() }),
@@ -202,11 +306,20 @@ test('wallet port uses official address, network and signed envelope fields', as
       signingOptions = options;
       return { signedTxXdr: 'fixture', signerAddress: buyer.publicKey() };
     },
+    signAuthEntry: async (_value, options) => {
+      authSigningOptions = options;
+      return { signedAuthEntry: 'c2lnbmF0dXJl', signerAddress: buyer.publicKey() };
+    },
   });
   assert.equal(await wallet.connect(), buyer.publicKey());
   assert.equal(await wallet.network(), Networks.TESTNET);
   assert.equal(await wallet.sign('fixture', buyer.publicKey()), 'fixture');
   assert.deepEqual(signingOptions, {
+    networkPassphrase: Networks.TESTNET,
+    address: buyer.publicKey(),
+  });
+  assert.equal(await wallet.signAuthEntry('preimage', buyer.publicKey()), 'c2lnbmF0dXJl');
+  assert.deepEqual(authSigningOptions, {
     networkPassphrase: Networks.TESTNET,
     address: buyer.publicKey(),
   });
@@ -219,6 +332,59 @@ test('wrong wallet network and missing submission authorization stop before sign
   await blocked.service.connectWallet('buyer');
   await assert.rejects(blocked.service.beginPayment('0'), /SUBMISSION_NOT_AUTHORIZED/);
   assert.equal(blocked.calls.sign, 0);
+});
+
+test('funding binds the configured seller and recipient commitment before any wallet prompt', async () => {
+  const privateOffer = {
+    seller,
+    recipientId: 'configured-recipient',
+    recipientSalt: 'ab'.repeat(32),
+    destination: { handle: '@private' },
+  };
+  const commitment = recipientCommitment({
+    recipient_id: privateOffer.recipientId,
+    recipient_salt: privateOffer.recipientSalt,
+  }).toString('hex');
+  const f = fixture({ privateOffer });
+  f.setActive(seller);
+  await f.service.connectWallet('seller');
+  const terms = {
+    seller,
+    token_amount: '220000000',
+    fiat_minor: '2000',
+    currency: 'EUR',
+    rail: 'revolut',
+    recipient: commitment,
+    offer_expires_at: '4000',
+    reservation_seconds: '200',
+  };
+  await assert.rejects(
+    f.service.fund({ ...terms, recipient: '33'.repeat(32) }),
+    /PRIVATE_OFFER_MISMATCH/,
+  );
+  await assert.rejects(
+    f.service.fund({ ...terms, seller: buyer.publicKey() }),
+    /INVALID_OFFER|PRIVATE_OFFER_MISMATCH/,
+  );
+  assert.equal(f.calls.sign, 0);
+  const result = await f.service.fund(terms);
+  assert.equal(result.order.state, 'Funded');
+  assert.equal(f.calls.submit, 1);
+});
+
+test('seller can cancel a funded offer through the contract refund method', async () => {
+  const f = fixture();
+  f.current.state = ['Funded'];
+  f.current.buyer = null;
+  f.setActive(seller);
+  await f.service.connectWallet('seller');
+  const result = await f.service.cancelFundedOffer('0');
+  assert.equal(result.order.state, 'Refunded');
+  assert.equal(result.transaction.status, 'confirmed');
+  const receipt = await f.service.reconcileReceipt('0', result.transaction);
+  assert.equal(receipt.orderState, 'Refunded');
+  assert.equal(receipt.sellerReturnedAtoms, '220000000');
+  assert.equal(f.calls.submit, 1);
 });
 
 test('payment instructions require confirmed lock and disappear after pay_by', async () => {
@@ -299,9 +465,103 @@ test('canonical signed claim prepares release and receipt requires matching toke
   );
 });
 
-test('single-wallet recovery is unavailable until the dual-wallet workflow is implemented', async () => {
-  await assert.rejects(
-    fixture().service.resolve('0', '0'),
-    /DUAL_WALLET_AUTHORIZATION_WORKFLOW_REQUIRED/,
+test('mutual recovery combines buyer source signature and seller Soroban auth entry', async () => {
+  const f = fixture();
+  f.setActive(seller);
+  await f.service.connectWallet('seller');
+  f.setActive(buyer.publicKey());
+  await f.service.connectWallet('buyer');
+  const result = await f.service.resolve('0', '80000000');
+  assert.equal(result.order.state, 'Resolved');
+  assert.equal(result.buyerTokens, '80000000');
+  assert.equal(result.sellerTokens, '140000000');
+  assert.equal(f.calls.sign, 1);
+  assert.equal(f.calls.submit, 1);
+  assert.equal(f.calls.preparedAuthXdr.length, 1);
+  const preparedAuth = f.calls.preparedAuthXdr[0].map((entry) =>
+    xdr.SorobanAuthorizationEntry.fromXDR(entry, 'base64'),
   );
+  const envelopeAuth = TransactionBuilder.fromXDR(f.getSent().toXDR(), Networks.TESTNET)
+    .operations[0].auth;
+  assert.equal(preparedAuth.length, 1);
+  assert.deepEqual(
+    envelopeAuth.map((entry) => Buffer.from(entry.toXDR()).toString('base64')),
+    f.calls.preparedAuthXdr[0],
+  );
+  const authInfo = inspectAuthEntry(preparedAuth[0]);
+  assert.equal(authInfo.address, seller);
+  assert.equal(authInfo.signed, true);
+  assert.equal(
+    String(preparedAuth[0].credentials.addressV2.nonce),
+    String(envelopeAuth[0].credentials.addressV2.nonce),
+  );
+  const receipt = await f.service.reconcileReceipt('0', result.transaction);
+  assert.equal(receipt.buyerReceivedAtoms, '80000000');
+  assert.equal(receipt.sellerReturnedAtoms, '140000000');
+  f.current.state = ['Released'];
+  await assert.rejects(
+    f.service.reconcileReceipt('0', result.transaction),
+    /RECEIPT_ORDER_MISMATCH/,
+  );
+});
+
+test('mutual recovery accepts an explicit source-account auth entry for buyer', async () => {
+  const f = fixture({ explicitSourceAuth: true });
+  f.setActive(seller);
+  await f.service.connectWallet('seller');
+  f.setActive(buyer.publicKey());
+  await f.service.connectWallet('buyer');
+  assert.equal((await f.service.resolve('0', '80000000')).order.state, 'Resolved');
+  assert.equal(f.calls.submit, 1);
+});
+
+test('mutual recovery fails closed when seller auth or buyer source signature is missing', async () => {
+  const f = fixture();
+  f.setActive(seller);
+  await f.service.connectWallet('seller');
+  f.setActive(buyer.publicKey());
+  await f.service.connectWallet('buyer');
+  const simulate = f.server.simulateTransaction;
+  f.server.simulateTransaction = async (...args) => {
+    const result = await simulate(...args);
+    if (args[0].operations[0].func.invokeContract.functionName.toString() === 'resolve') {
+      result.result.auth.pop();
+    }
+    return result;
+  };
+  await assert.rejects(f.service.resolve('0', '80000000'), /SELLER_AUTHORIZATION_REQUIRED/);
+  assert.equal(f.calls.sign, 0);
+  assert.equal(f.calls.submit, 0);
+
+  const missingBuyer = fixture({ missingBuyerSignature: true });
+  missingBuyer.setActive(seller);
+  await missingBuyer.service.connectWallet('seller');
+  missingBuyer.setActive(buyer.publicKey());
+  await missingBuyer.service.connectWallet('buyer');
+  await assert.rejects(missingBuyer.service.resolve('0', '80000000'), /WALLET_SIGNATURE_MISSING/);
+  assert.equal(missingBuyer.calls.submit, 0);
+});
+
+test('mutual recovery rejects a wrong transaction source or source invocation', async () => {
+  const wrongSource = fixture({ wrongSource: true });
+  wrongSource.setActive(seller);
+  await wrongSource.service.connectWallet('seller');
+  wrongSource.setActive(buyer.publicKey());
+  await wrongSource.service.connectWallet('buyer');
+  await assert.rejects(
+    wrongSource.service.resolve('0', '80000000'),
+    /SOURCE_AUTHORIZATION_MISMATCH/,
+  );
+  assert.equal(wrongSource.calls.sign, 0);
+
+  const wrongInvocation = fixture({ explicitSourceAuth: true, wrongSourceInvocation: true });
+  wrongInvocation.setActive(seller);
+  await wrongInvocation.service.connectWallet('seller');
+  wrongInvocation.setActive(buyer.publicKey());
+  await wrongInvocation.service.connectWallet('buyer');
+  await assert.rejects(
+    wrongInvocation.service.resolve('0', '80000000'),
+    /AUTHORIZATION_INVOCATION_MISMATCH/,
+  );
+  assert.equal(wrongInvocation.calls.submit, 0);
 });

@@ -76,3 +76,14 @@ test('missing app assets and symlinked input fail before output is written', asy
   await assert.rejects(buildDemo(paths), /regular files/);
   await assert.rejects(readdir(paths.output), { code: 'ENOENT' });
 });
+
+test('a newly imported module cannot be silently omitted from the deployment', async (t) => {
+  const paths = await fixture(t);
+  await writeFile(join(paths.source, 'app.mjs'), "import './presentation-not-reviewed.mjs';\n");
+  await writeFile(
+    join(paths.source, 'presentation-not-reviewed.mjs'),
+    'export const synthetic = true;',
+  );
+  await assert.rejects(buildDemo(paths), /outside the explicit allowlist/);
+  await assert.rejects(readdir(paths.output), { code: 'ENOENT' });
+});

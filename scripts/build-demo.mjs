@@ -65,6 +65,28 @@ export async function buildDemo({
         name === 'index.html' ? Buffer.from(siteMetadata(sourceData.toString('utf8'))) : sourceData,
     });
   }
+  // A new app module must join the explicit allowlist. Do not produce a green
+  // build whose browser entry point imports a file that was silently omitted.
+  const copied = new Set(DEMO_FILES);
+  for (const { name, data } of inputs.filter((row) => row.name.endsWith('.mjs'))) {
+    const sourceText = data.toString('utf8');
+    if (/\bimport\s*\(/.test(sourceText))
+      throw new Error('Demo imports must be explicit static local modules.');
+    for (const match of sourceText.matchAll(
+      /^\s*import(?:\s+[\s\S]*?\s+from)?\s*['"]([^'"]+)['"]/gm,
+    )) {
+      const specifier = match[1];
+      const target = new URL(specifier, `https://demo.invalid/${name}`);
+      if (
+        !specifier.startsWith('.') ||
+        target.origin !== 'https://demo.invalid' ||
+        target.search ||
+        target.hash ||
+        !copied.has(target.pathname.slice(1))
+      )
+        throw new Error('Demo module dependency is outside the explicit allowlist.');
+    }
+  }
   const manifest = {
     schemaVersion: 1,
     mode: 'synthetic-demo',

@@ -2,35 +2,35 @@
 
 ## Short pitch
 
-I’m building a ZKP2P-style on-ramp for Stellar. You pay a seller in Revolut, prove the payment, and receive USDC from a Soroban escrow. The goal is to use the bank app you already have without sending your whole transaction history to the other person.
+I’m building Pactlane, a ZKP2P-style on-ramp for Stellar. You pay a seller in Revolut, prove the payment, and receive USDC from a Soroban escrow. I want it to work with the bank app you already use, without sending the seller your whole transaction history.
 
-The prototype can prove a public Revolut response through TLSNotary. I’m working through the authenticated payment proof next, then the order-bound signer and testnet escrow. MB WAY would be a useful second rail for Portugal once that path is reliable.
+The escrow, policy signer and buyer/seller app are built. They work together locally with synthetic payment evidence and the compiled contract. The real bank-proof integration is still the blocker. MB WAY would be a useful second rail for Portugal once the first works reliably.
 
-## Message for a judge or mentor
+## Message for a judge
 
-I’m working on a Stellar version of ZKP2P, starting with Revolut. The idea is to prove a bank payment and use it to release USDC from escrow. I’ve got the public TLSNotary proof working; the payment proof is the current blocker. Would you focus the weekend on one complete on-ramp trade, or is there a more useful Stellar use case for that payment proof?
+I’m building Pactlane: Revolut payment in, Stellar USDC out. The seller funds escrow, the buyer locks the trade before paying, and a signed payment check releases the USDC once. I’ve got the contract and policy working together locally, including replay protection and recovery if proof fails. I’m still closing the real payment-proof gate. I’d love your take on the trust model and whether this is a useful first on-ramp for Stellar.
 
-## Demo to build toward
+## Demo sequence
 
-1. Show a funded USDC offer and reserve it as the buyer.
-2. Show the EUR payment instructions and the completed payment in Revolut.
-3. Generate the proof with a clear disclosure prompt.
-4. Show the verifier matching the payment to the order.
-5. Release testnet USDC and open the transaction link.
-6. Resubmit the same payment and show the replay rejection.
+1. Ben funds one whole 22 USDC offer for €20.
+2. Ana reserves it, confirms the payment lock, then sees instructions.
+3. Explain the intended Revolut transfer and selected-field approval. Label reconstructed or synthetic screens.
+4. Show policy matching the order and signing the canonical claim.
+5. Show the actual local compiled-WASM payout and replay rejection, labeled local/synthetic. Replace this with transaction links only after an authorized testnet run.
+6. Use a separate held order for proof failure and two-wallet recovery.
 
-Use synthetic identities in screenshots and presentation assets. If the full flow is incomplete, show the public proof and describe the missing steps; do not narrate a payment or release that did not happen.
+The browser receipt is simulated. The compiled-WASM result is real contract execution with a synthetic token/payment. Neither is a bank proof or network transaction.
 
 ## Likely questions
 
-**Who do I trust?** The bank for the payment record, TLSNotary’s protocol and runtime for the authenticated transcript, and our configured verifier operator for payment policy and claim signing.
+**Who do I trust?** Revolut for its record, TLSNotary for the authenticated transcript, and the configured operator for payment interpretation/signing. The contract checks that operator’s signature.
 
-**Why not use a receipt?** A PDF or screenshot supplied by the buyer is not enough to authorize escrow release. We want evidence authenticated against the bank’s server.
+**Why not a receipt?** A buyer-supplied PDF or screenshot does not authenticate the bank’s response or establish that this exact order was paid.
 
-**What is private?** The plan reveals selected payment fields to the verifier. The bank still sees the payment. Stellar transfers remain public unless a separate privacy layer is added.
+**What is private?** The intended verifier receives selected payment fields. Revolut sees the payment; Stellar settlement is public. We are not claiming private on-chain balances.
 
-**Why not MB WAY first?** We haven’t established a reliable proof route for an MB WAY send. Revolut gives us a narrower first test.
+**What if I pay and proof fails?** Tokens stay held. Retry a timely payment’s verification, or both parties agree to release, refund or split. There is no unilateral post-lock refund. An uncooperative counterparty can leave funds locked.
 
-**What happens if I pay and the proof fails?** That recovery policy is still open. It must be resolved before real funds are put in escrow.
+**Why Revolut rather than MB WAY?** We have a narrower proof target for Revolut. A verified MB WAY send remains unestablished; MB NET virtual cards do not solve that proof by themselves.
 
-**What is actually built?** Browser proof tooling, public diagnostics and a separate archived Soroban signature experiment. The live payment-policy and escrow flow remain to be built.
+**What is actually verified?** Component suites and an app-model → policy → compiled-WASM rehearsal pass. Public TLSNotary proof passed separately. No authenticated payment, deployed escrow or live settlement is established by this branch.

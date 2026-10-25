@@ -1,21 +1,38 @@
-# Run the prototype
+# Run Pactlane
+
+## App and integrated checks
+
+Use Node.js 22.13 or later. From the repo root:
+
+```sh
+npm ci --ignore-scripts
+npm run dev:app
+```
+
+This is the synthetic buyer/seller demo. It makes no bank or chain request. Its loopback URL works only on the execution host. A hosted app or authorized private route is a separate handoff.
+
+For policy, protocol and wallet/RPC checks, run `npm run setup:integration` then `npm run test:all`. The compiled-WASM rehearsal needs a compatible Rust toolchain: `npm run rehearse:local`. See [integration](../integration/README.md) for rebuilds and service gaps. The checked host used Node 26.7.0, Rust 1.99.1 and Stellar CLI 28.1.0.
+
+## Earlier private proof prototype
+
+The instructions below reproduce the packaged private launcher. They are not the current cloud deployment's source/runbook. The proof owner operates that runtime; its sanitized source handoff is still pending. Do not restart or replace it from these instructions. Current owner browser: MacBook Pro. Historical Windows results do not establish current device readiness.
 
 ## Source checks
 
-Install Node.js 22 or later, then run:
+For the earlier proof tooling alone, run:
 
 ```sh
 npm test
 npm run check
 ```
 
-The active code uses Node’s standard library. No npm install, extension or network access is needed for these checks.
+The TLSNotary tests use Node’s standard library. The full root suite now includes app and packaging checks too; nested policy/protocol/integration suites need their locked dependencies.
 
 ## Prepare TLSNotary
 
 The browser flow needs TLSNotary extension `0.1.0.1501` and the verifier from source commit `68bbd380d6e1a89d79748e5294661c752f5d1205`. That source uses TLSNotary `0.1.0-alpha.15`. Read the [official quickstart](https://tlsnotary.org/docs/quick_start/browser_extension/) and [verifier docs](https://tlsnotary.org/docs/extension/verifier/).
 
-You need Python 3 and a Rust/Cargo toolchain compatible with the pinned upstream workspace. The tested build host is Apple Silicon macOS with Rust 1.99.1; a Windows verifier build has not been checked. Chrome on Windows is the browser client under test. Downloads and build output stay in ignored `.toolchain/`.
+You need Python 3 and a Rust/Cargo toolchain compatible with the pinned upstream workspace. The tested build host is Apple Silicon macOS with Rust 1.99.1; a Windows verifier build has not been checked. Downloads and build output stay in ignored `.toolchain/`.
 
 ```sh
 npm run prepare:tlsn
@@ -78,7 +95,7 @@ Open `/`, run the transfer test, and navigate to that transfer inside the extens
 
 The full field test requests amount, currency, recipient code, transaction ID, state, completion time and type, plus the request line, response status and Date header. Those fields go to the verifier even though the launcher displays only presence booleans. Request headers stay undisclosed in the extension protocol.
 
-The launcher cannot authorize a claim or release funds. A server-side payment policy must be implemented separately. Stop at a missing field or failed proof; keep raw bank material out of chat, screenshots and Git.
+The launcher cannot authorize a claim or release funds. The implemented policy package still rejects live evidence until its source-backed normalizer is complete. Stop at a missing field or failed proof; keep raw bank material out of chat, screenshots and Git.
 
 ## Optional developer diagnostics
 

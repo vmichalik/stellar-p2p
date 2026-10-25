@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "mode": "synthetic-demo",
+  "revision": "006ab023e4d44600d03f320f220457e5b5545f0e",
+  "livePaymentVerification": false,
+  "liveSettlement": false,
+  "files": [
+    {
+      "path": "index.html",
+      "sha256": "e0bb739619ad76de3682115c07183e44a475738453a0e6f002f43ec13ce44bc4",
+      "bytes": 1112
+    },
+    {
+      "path": "styles.css",
+      "sha256": "0d8ca96be809870f8005b33820cd6535b734797a64a23c84d26966ca80d2025d",
+      "bytes": 39911
+    },
+    {
+      "path": "app.mjs",
+      "sha256": "c9d90761e72f26931a9fb35aaebc0169c5c0ea7d9d1973847481164abed740e6",
+      "bytes": 47239
+    },
+    {
+      "path": "model.mjs",
+      "sha256": "6bab9aeed89e15686ea1ae281a2d46751bb43b82ee2f421c8447dda81e8a89ce",
+      "bytes": 13610
+    },
+    {
+      "path": "demo-adapter.mjs",
+      "sha256": "a594e7b29e1570a9fccebe1ecd4b6f8f224a71e9cae5959c4ac129a3d8bf41aa",
+      "bytes": 3668
+    },
+    {
+      "path": "assets/fonts/manrope.woff2",
+      "sha256": "e310b55a7fd9677f5e3555e6c6c4d064fa1f1d24393f0ddbe217cea12a8c432f",
+      "bytes": 24576
+    },
+    {
+      "path": "assets/fonts/OFL.txt",
+      "sha256": "d6a309fcfb963d329a93baf9df66fa5f3c23a4be2b5f67edf24d6cafecde12ac",
+      "bytes": 4386
+    }
+  ]
+}

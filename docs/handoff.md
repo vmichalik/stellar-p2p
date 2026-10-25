@@ -1,25 +1,29 @@
 # Development handoff
 
-Objective: finish one Revolut-to-Stellar P2P trade, starting from the payment-proof gate.
+Objective: finish one Revolut-to-Stellar trade from the integrated Pactlane candidate.
 
-The packaged source lives in the private `vmichalik/stellar-p2p` repository on `main`. Use `git rev-parse HEAD` and `git status --short` to identify the exact revision and local changes before resuming. This is a new repo containing the prototype baseline; its initial commit date is the packaging date, not evidence that every experiment happened that day.
+Execution host: Mac mini, Apple Silicon macOS. Current owner browser device: MacBook Pro. These devices do not share local files, browser profiles or loopback addresses.
 
-The original experiments ran on a remote Mac mini. The TLSNotary extension is installed in Chrome on Windows. Those machines do not share browser profiles, local files or loopback addresses.
+Repository: private [vmichalik/stellar-p2p](https://github.com/vmichalik/stellar-p2p). Integration worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`. Branch: `codex/pactlane-integration`. Base: `807412686da2cdad494ee284675dbefc35110257`. Runtime integration commit: `006ab023e4d44600d03f320f220457e5b5545f0e`. Use `git rev-parse HEAD` for the final documentation/evidence commit and `git status --short` for local changes.
 
-The earlier private test services are separate from this checkout. Packaging this repo does not move, restart or publish them. Their runtime configuration and logs stay outside Git. Recheck readiness before reusing a service; an old command-session handle does not prove it is running.
+Main's dirty proof docs/evidence and coordinator note were preserved. Component owners' worktrees and running proof services were not changed. This branch can be reviewed or merged separately; do not reset main over those changes.
 
-## First actions in this checkout
+## Resume
 
-1. Run `npm test` and `npm run check`.
-2. Read [status](status.md) before making a live proof claim.
-3. Prepare the pinned verifier and HTTPS route using [setup](setup.md).
-4. Reproduce `/extension-check/` on the actual Windows device.
-5. Only then revisit the authenticated response-shape check with the account owner’s approval.
+1. Read [status](status.md) and [release handoff](release/HANDOFF.md).
+2. Run `npm ci --ignore-scripts`, `npm run setup:integration`, `npm run test:all` and `npm run check`.
+3. Start the synthetic browser demo with `npm run dev:app`.
+4. With compatible Rust available, run `npm run rehearse:local`; it uses the tracked WASM and synthetic evidence, and submits no network transaction.
+5. Finish the live software gaps in [integration](../integration/README.md), then prepare the configured, authorized testnet rehearsal.
 
 ## Current boundary
 
-Public proof completed historically; authenticated TLSNotary payment proof unresolved. No payment-policy signer, TLSNotary-compatible contract, deployed escrow or settlement is established. The earlier Reclaim code is archived and should not be used as the active proof service.
+App, policy and escrow work together locally. The browser demo is simulated. Live TLSNotary payment ingestion rejects unverified records. No accepted authenticated payment, deployed escrow, network receipt or public app URL is established by this branch.
 
-## Keeping the repo clean
+The Node wallet/RPC service candidate is implemented and unit checked, but browser transport, trusted live readers/indexer and two-wallet recovery collection remain. These need code, not just deployment approval. The current cloud proof runtime needs its own sanitized source handoff; do not operate it from this branch's earlier private-launcher instructions.
 
-Use synthetic fixtures. Keep credentials, bank identifiers, proof transcripts and runtime logs in private local storage. Review the staged content before every push; an ignore rule cannot protect a file already tracked in Git. Record new live checks with the actual host, date, result and limitations, without publishing private account details.
+## Checks and artifacts
+
+[Verification](verification.md) records exact suites and limits. [Local rehearsal evidence](../evidence/release/local-wasm-rehearsal.json) pins source/artifact hashes. Synthetic screenshots are under `evidence/release/screenshots/`. `npm run build:demo` prepares ignored `dist/demo`, with an explicit asset/hash manifest. It does not publish anything.
+
+Private keys, bank identities, raw proofs and runtime logs remain outside Git. Review staged content before every push. Existing repository privacy must remain unchanged. Hosting, token/key/deployer configuration, network signing, reviewer access and final submission need their existing specific authorizations checked before execution.

@@ -8,18 +8,18 @@ The contract authenticates the configured signer's claim. The signer remains res
 
 The machine-readable contract spec is [interface.json](interface.json). All times are Unix seconds; IDs are `u64`; monetary values are positive `i128` integers. Use `bigint` or decimal strings in JavaScript, never floating point. Token amounts use the configured token's base units; EUR amounts use cents. Recipient commitments and nullifiers are 32 bytes.
 
-| Method | Authorization | Result / behavior |
-| --- | --- | --- |
-| `get_config()` | Anyone | Immutable token address and payment-policy signing key |
-| `fund(terms)` | Seller, including the nested token transfer | Transfers the exact token amount into escrow and returns a new order ID |
-| `get_order(order_id)` | Anyone | Terms, buyer, state, reservation time, payment deadline and lock time |
-| `reserve(order_id, buyer)` | Buyer | Reserves a funded offer; seller cannot cancel before the reservation expires |
-| `begin_payment(order_id)` | Reserved buyer | Locks escrow before fiat is sent; must confirm before `pay_by` |
-| `release(claim, signature)` | Any relayer with a valid policy signature | Pays the recorded buyer once and atomically consumes the payment nullifier |
-| `refund(order_id)` | Seller for `Funded`; anyone for an expired `Reserved` order | Returns the full amount to the recorded seller |
-| `resolve(order_id, buyer_tokens)` | Both seller and buyer, approving the same call | Splits a reserved or paying order; remainder returns to seller |
-| `claim_digest(claim)` | Anyone | Returns the canonical digest; does not validate or approve payment |
-| `payment_used(nullifier)` | Anyone | Whether this deployment has consumed the payment |
+| Method                            | Authorization                                               | Result / behavior                                                            |
+| --------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `get_config()`                    | Anyone                                                      | Immutable token address and payment-policy signing key                       |
+| `fund(terms)`                     | Seller, including the nested token transfer                 | Transfers the exact token amount into escrow and returns a new order ID      |
+| `get_order(order_id)`             | Anyone                                                      | Terms, buyer, state, reservation time, payment deadline and lock time        |
+| `reserve(order_id, buyer)`        | Buyer                                                       | Reserves a funded offer; seller cannot cancel before the reservation expires |
+| `begin_payment(order_id)`         | Reserved buyer                                              | Locks escrow before fiat is sent; must confirm before `pay_by`               |
+| `release(claim, signature)`       | Any relayer with a valid policy signature                   | Pays the recorded buyer once and atomically consumes the payment nullifier   |
+| `refund(order_id)`                | Seller for `Funded`; anyone for an expired `Reserved` order | Returns the full amount to the recorded seller                               |
+| `resolve(order_id, buyer_tokens)` | Both seller and buyer, approving the same call              | Splits a reserved or paying order; remainder returns to seller               |
+| `claim_digest(claim)`             | Anyone                                                      | Returns the canonical digest; does not validate or approve payment           |
+| `payment_used(nullifier)`         | Anyone                                                      | Whether this deployment has consumed the payment                             |
 
 Offers expire within seven days of funding. Reservations last at most one hour and cannot exceed the offer expiry. An order is never re-reserved or recycled. `OrderChanged` events contain `order_id` and the resulting state; fetch `get_order` for details.
 

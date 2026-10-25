@@ -12,7 +12,7 @@ The first user is someone who already has Revolut and wants USDC on Stellar. The
 
 The intended integration puts the USDC escrow and release rules in Soroban. The interesting part is bringing evidence from a normal payment app into that trade. Stellar is the settlement layer; the bank payment still happens outside the chain.
 
-The build needs a real contract interaction to make this claim credible. The current archived signature test is an early building block, and does not provide escrow.
+The escrow and policy now execute together locally against compiled Soroban WASM. A testnet deployment and real wallet transaction are still needed for the network demo.
 
 ## Why Revolut first
 
@@ -28,10 +28,10 @@ An order book, multiple banks, agent automation and private on-chain balances ca
 
 ## Decisions still open
 
-- Can an existing outgoing transfer be proved reliably in the user’s Windows Chrome extension?
+- Can an existing outgoing transfer be proved reliably on the owner’s current MacBook Pro?
 - Which signed fields establish recipient, direction, completion and a stable payment ID?
 - How do we bind the payment to a newly reserved order and reject older payments?
 - Is the verifier-signer trust model useful enough for the first pilot?
-- How should expiry work if the buyer has paid but proof generation fails?
+- Can the live host reliably reconcile every payment identity across deployments and manual recoveries?
 
-The last question needs a careful answer before using real escrow funds. A timeout must not leave the seller with both the fiat payment and the returned USDC.
+Recovery is decided: after the payment lock, proof failure holds funds. A later valid proof can release, or both parties authorize the same release/refund/split. There is no unilateral post-lock timeout refund. An uncooperative party can leave funds locked.

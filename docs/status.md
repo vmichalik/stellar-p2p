@@ -1,30 +1,35 @@
 # What works so far
 
-This is the starting point for the hackathon build. Earlier experiments are recorded here without including bank data or raw proofs. See [the machine-readable summary](../evidence/prototype-status.json) and [current packaging checks](verification.md).
+Checked on the Mac mini on 25 October 2026. This is an integrated local candidate. It is not an authenticated payment-to-testnet success.
 
-| Part                                        | Evidence                                                                                                                                               | Limit                                                                                               |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Public proof through the official extension | Completed on the Mac mini on 23 October 2026. The verifier accepted the `app.revolut.com` server identity and HTTP 200 response for `GET /robots.txt`. | No account login or payment data was used.                                                          |
-| Ordinary-browser MPC setup on Windows       | User reported a pass in 10.7 seconds, 76.1 MB queued, 3.4 MB received and no pending upload.                                                           | This was setup only, outside the extension’s offscreen worker.                                      |
-| Windows extension payment test              | Repeated `MPC_SETUP_TIMEOUT` at the extension’s 30-second limit. An earlier attempt reached a response but missed required field `0.amount`.           | No authenticated transfer proof was accepted on the active TLSNotary path.                          |
-| Automated source tests                      | Synthetic tests cover request matching, explicit clicks, limited disclosure, route restrictions, pinned assets and sanitized errors.                   | They do not reproduce the real bank response. Run them again in this checkout.                      |
-| Earlier Soroban signature experiment        | A local compatibility experiment exists in `archive/reclaim/`.                                                                                         | It uses a retired claim format and has no escrow or release rules. The repo fixtures are synthetic. |
-| Payment-policy signer and escrow            | Designed in the architecture notes.                                                                                                                    | Not implemented or deployed. No release has occurred.                                               |
+| Part                      | Evidence                                                                                                                                                      | Limit                                                                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Buyer/seller app          | Whole-offer funding, reserve, confirmed payment lock, failure/retry, mutual recovery and receipts; 14 model/adapter tests. Browser flow rehearsed again here. | All browser wallets, payments and settlement are simulated.                                                                |
+| Soroban escrow            | 29 native and the same 29 compiled-WASM tests passed in this checkout. Reviewed optimized artifact is tracked.                                                | Local host and synthetic token; no deployed contract.                                                                      |
+| Canonical protocol        | 11 SDK compatibility tests and policy snapshot hash check passed.                                                                                             | Encoding/signature compatibility does not prove bank semantics.                                                            |
+| Payment policy            | 51 tests passed, including replay/restart/concurrency and manual-recovery reconciliation.                                                                     | Live normalizer deliberately rejects with `TLSN_PAYMENT_SCHEMA_UNVERIFIED`.                                                |
+| Cross-component rehearsal | Actual app model → durable policy → canonical Ed25519 claim → compiled escrow WASM → one payout → replay rejection.                                           | Synthetic payment and token, local execution, no network transaction.                                                      |
+| Wallet/RPC candidate      | 11 tests passed using the actual SDK, mocked wallet/RPC and real disk journal.                                                                                | Node service candidate; browser transport, deployed configuration and dual-wallet recovery collection are not implemented. |
+| Static demo package       | Explicit seven-file allowlist, hashes, synthetic manifest and no-external-connection headers.                                                                 | Local build only; no hosted app URL.                                                                                       |
 
-## The remaining feasibility gate
+## Proof observations
 
-First reproduce the fixed public extension check in Windows Chrome. If it passes, run one separately approved response-shape check for an existing outgoing transfer. Establish HTTP status and JSON structure before changing selectors or requesting more fields.
+- **23 October, 17:53:56 UTC:** historical Mac-mini public `GET /robots.txt` proof accepted for `app.revolut.com`, HTTP 200. No login or payment data.
+- **25 October, 10:46:50 UTC:** the proof workstream recorded public-proof acceptance from the MacBook Pro. This integration lane did not repeat it.
+- **25 October, 12:34:28 UTC:** the proof workstream reported server acceptance of the cloud public proof. At that checkpoint it was preparing the owner-approved response-only check. Sanitized cloud source has not been handed off into this branch.
+- Older Windows setup and timeout results remain in [historical evidence](../evidence/prototype-status.json). The current owner browser device is the MacBook Pro.
 
-The plugin currently expects array paths such as `0.amount` and `0.recipient.code`. Those are provisional. A missing field could mean a different shape, an authentication error or a different transaction type; it is not enough evidence to remove the array index.
+None establishes an authenticated transfer. The live payment gate remains **`NOT_CLEARED`**. A screenshot, callback, setup result, public proof or uploaded receipt cannot authorize release.
 
-An authenticated test passes only when the server verifies the intended completed outgoing transfer, including recipient, amount units, currency, stable ID, time and type. Until then the release gate stays `NOT_CLEARED`.
+## Remaining software
 
-## Constraints to keep
+1. Establish the real response schema and source/account/recipient identities, exact units, direction, state and completion time with the proof owner. Then implement the live normalizer against accepted server evidence.
+2. Connect the browser to authenticated host services: wallet signing bridge, authoritative order/config reader, private recipient/salt reader, policy status/claim routes and complete reconciliation. The demo currently imports only its synthetic adapter.
+3. Collect both wallets’ authorization for the same recovery invocation. The contract and demo support it; the live RPC candidate refuses a one-wallet shortcut.
+4. Rehearse the complete path against a configured, authorized testnet deployment and reconcile actual transaction/balance evidence.
 
-- Use the pinned extension and verifier versions together.
-- Keep the working 4 KiB / 16 KiB proof budgets. Larger budgets exhausted the pinned MPC stream limit in earlier tests.
-- Keep setup deadlines and protocol protections in place while investigating failures.
-- Public checks use GET. The pinned runtime’s method enum supports GET, POST, PUT and DELETE; HEAD is unsupported.
-- Never treat a browser callback, screenshot, uploaded receipt or successful setup as authorization to release USDC.
+## External prerequisites
 
-The repo cleanup does not rerun the historical live proof. Current automated check results belong in the development handoff; live claims retain their original observation dates.
+The official testnet RPC reported protocol 29 in a read-only check at 13:03 UTC on 25 October. That matches the artifact’s required protocol; it does not establish a deployment. Approved token/decimals, policy public key, existing deployer, fee limit and transaction authorization remain unconfigured. Public app hosting, private-repo reviewer access and final submission are also unestablished.
+
+Detailed provenance is in [verification](verification.md) and [the release handoff](release/HANDOFF.md). No existing proof service was restarted or changed by this integration lane.

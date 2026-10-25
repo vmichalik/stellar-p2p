@@ -1,33 +1,27 @@
-# Build plan
+# Finish the hackathon build
 
-The next useful milestone is one independently verified outgoing transfer. Finish that before adding escrow around an unproven payment signal.
+The local components work together. The next milestone is the same trade through real host services and an authorized testnet deployment.
 
-## 1. Close the payment-proof gate
+## 1. Resolve payment evidence
 
-Run the fixed public extension check on Windows. If it passes, inspect the status and shape of one existing transfer response using the limited diagnostic. Update selectors only from that evidence.
+Use the proof owner’s existing response-only check. Establish HTTP success, selected transfer association, exact units/sign, completed outgoing state/type, completion timestamp, stable payer scope, recipient and transfer identity. Do not open a second bank diagnostic from this lane.
 
-Done when the server accepts the intended completed outgoing payment and a changed recipient, wrong amount or incomplete state cannot pass policy. Keep bank values and raw proofs outside the repo.
+Done when the server accepts a real completed transfer, live normalization has source-backed rules, and wrong recipient/amount/state/time cases fail. Keep values and raw proofs private.
 
-## 2. Build the policy service and signed claim
+## 2. Connect app and host
 
-Consume verified server results, validate the payment against a reserved order, and emit a canonical claim. Use minor units and a stable payment nullifier. Add domain separation for the network and contract.
+Keep the demo usable. Add authenticated browser/host transport, wallet signing, authoritative chain/config reads, private offer configuration and trusted policy routes. Finish the two-wallet authorization collector. Use the durable journals and reconciliation already implemented.
 
-Done when synthetic adversarial cases fail, an accepted verified response produces exactly one valid claim, and browser-supplied summaries cannot authorize signing.
+Done when the UI uses confirmed service results, instructions appear only after the lock, unknown submission cannot duplicate a transaction, late proof remains possible, and receipts match chain evidence.
 
-## 3. Build the smallest Soroban escrow
+## 3. Execute a testnet trade when authorized
 
-Start with one seller-funded offer and one buyer. Bind the signed claim to the offer and consume its nullifier in the same transaction as release. Define a refund/dispute rule for a paid buyer whose proof fails.
+Confirm token/decimals, policy key, existing deployer and fee budget. Use the reviewed artifact. Record deployment, funding, reserve, lock and release transactions and balances. Use a separate order for recovery.
 
-Done when testnet USDC releases once for the matching claim, a second submission fails, and wrong-order, expired and unauthorized claims fail. Record the deployment and transaction links after checking them live.
+Done when the buyer receives once, replay causes no second transfer, and receipt amounts agree with token events. Synthetic testnet evidence still does not establish a bank payment.
 
-## 4. Finish the user flow
+## 4. Rehearse and submit
 
-Show an offer, reservation, payment instructions, proof progress and the resulting transaction. Let the user recover from a proof failure without pretending the payment failed. Keep technical details in a review panel.
+Agree on public hosting and reviewer access. Record the implemented flow, signer trust model and a separate held-funds recovery scenario. Keep video silent for Vijay’s dub. Check portal cutoff/timezone and format limits before final export/submission.
 
-Done when someone unfamiliar with the project can complete the testnet flow and understand what to do when the proof is unavailable.
-
-## 5. Record and submit
-
-Capture a short demo of a real testnet trade plus a replay rejection. Add a diagram and the trust model to the pitch. Give judges access to the private repo through the submission process.
-
-If the payment gate stays unresolved, show the verified public proof and the remaining failure honestly. A simulated settlement can explain the design, but it must be labeled as a simulation throughout the video and README.
+If authenticated evidence remains blocked, show the local compiled-WASM result and labeled browser simulation accurately. Do not narrate a real payment or network release that has not happened.

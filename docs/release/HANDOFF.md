@@ -1,34 +1,36 @@
 # Release integration handoff
 
-Objective: assemble stable Pactlane app, policy, escrow and proof snapshots into one reviewed private-repo candidate, while preserving evidence boundaries and the approved mutual-consent recovery.
+Objective: deliver one reviewed Pactlane candidate from frozen app, policy and escrow snapshots, with an actual local cross-component rehearsal and an honest live gap list.
 
-Execution host: remote Mac mini, 25 October 2026. Worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`. Branch: `codex/pactlane-integration`. Base: `807412686da2cdad494ee284675dbefc35110257`. Integration preparation commits are `0c0f58e326745c099fe161c813fa47c163167dd8` and `8ade28d4cea18f1861f7e5920c06583b9392106a`. Use `git rev-parse HEAD` for this handoff's current revision.
+Host: Mac mini, 25 October 2026. Worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`. Branch: `codex/pactlane-integration`. Base: `807412686da2cdad494ee284675dbefc35110257`. Runtime commit: `006ab023e4d44600d03f320f220457e5b5545f0e`; final handoff/evidence revision is the branch HEAD. Run `git rev-parse HEAD` and `git status --short` before continuation.
 
-## Prepared
+## Delivered
 
-- `docs/release/integration.md`: component intake, acceptance gates and approval boundaries, including late proof after the payment deadline.
-- `scripts/build-demo.mjs` and `tests/release/demo-build.test.mjs`: explicit static asset allowlist, synthetic manifest, hashes and no-external-connection headers. The actual app snapshot has not yet been imported or bundled.
-- `deploy/demo/README.md`: static deployment candidate instructions. No hosting account or service was changed.
-- `deploy/testnet/README.md`: transaction/evidence checklist. No deployer, token, signing key or contract was provisioned.
-- Root package scripts: release tests and demo build, kept separate from component-owned files until their handoffs arrive.
+- Frozen scoped app, policy and escrow imports; exact mapping in [integration](integration.md).
+- Root install/test/check/rehearsal/build commands and reconciled README, setup, concept, architecture, pitch, status and handoff.
+- App-model → real policy/durable SQLite → canonical Ed25519 claim → actual optimized escrow WASM → one local token release → contract/policy/UI replay rejection.
+- Testnet-only SDK wallet/RPC candidate with capped fees, exact envelope/signature checks, confirmed-lock instruction gate, receipt token events and atomic persistent transaction journal. No default submission permission.
+- Seven-asset static demo build with hashes and synthetic/no-live-settlement manifest.
+- Sanitized local rehearsal report and desktop/mobile synthetic screenshots.
 
-## Checks run here
+## Actual checks
 
-The baseline's 32 TLSNotary tests passed. After preparation, all 35 root tests passed, including three demo-packaging boundary tests. Twenty JavaScript modules/inline scripts passed syntax checks. Formatting and source whitespace checks passed. These use synthetic inputs and establish no bank payment, contract deployment or settlement.
+122 JS tests passed: 49 root, 51 policy, 11 canonical protocol, 11 wallet/RPC/journal. Policy protocol sync passed. 29 native and the same 29 compiled-WASM escrow cases passed. One cross-component compiled-WASM rehearsal passed after a byte-identical CLI rebuild. 49 JavaScript syntax checks passed. Prettier/diff review completed; Rustfmt is absent, so no Rustfmt pass is claimed.
 
-Component native/WASM and browser results remain their owners' reported evidence until rerun against imported revisions. No current component worktree was copied, staged or modified. Main's dirty proof docs, evidence and coordinator-owned note were left intact.
+Browser: create/fund as seller → reserve as buyer → confirm lock before instructions → unavailable proof holds → retry → simulated receipt. Reload preserves completion; seller balances agree. Desktop, 390px receipt and 320px seller checked; no horizontal overflow or console warning/error observed. Screenshots are under `evidence/release/screenshots/`.
 
-## Intake status
+These are local/synthetic checks. Network calls in this lane were read-only testnet RPC checks, not deployment or transaction submission. See [verification](../verification.md) and [recorded rehearsal](../../evidence/release/local-wasm-rehearsal.json).
 
-At this checkpoint, the UI, escrow and policy lanes are active and have not yet handed off a scoped commit. Their branch tips still point to the packaged baseline. Do not import their moving files. The proof lane reports cloud public-proof acceptance at 12:34:28 UTC; an authenticated payment proof remains unestablished. Its sanitized cloud source and the final demo assets have not been handed off here.
+## Current limitations
 
-## Remaining gates
+The live payment gate is `NOT_CLEARED`. Public proof success reported by the proof lane is separate; no authenticated transfer has been accepted here. The cloud proof source and final video/deck handoffs are missing. The proof owner's running services and main's dirty files are untouched.
 
-1. Import the scoped escrow/protocol, policy and lifecycle-aligned app commits when stable. Reconcile root package scripts and canonical README/status/setup/handoff against those exact revisions.
-2. Rerun component suites and shared vectors, then rehearse buyer/seller failure, late verification, recovery and replay behavior. Inspect the built static bundle in a fresh desktop/mobile browser.
-3. Keep the authenticated-payment gate open until the proof owner supplies accepted evidence and the policy adapter can validate its real schema. Do not ask for or automatically repeat bank disclosure from this lane.
-4. A live app-to-policy/RPC adapter, authorized testnet execution and transaction/balance receipts remain separate requirements. Local component success cannot be described as their completion.
-5. Public demo hosting/account/hostname approval and third-party reachability are not established. The cloud proof URL is not a published Pactlane app demo.
-6. Submission portal access, exact cutoff/timezone, video/deck limits, private-repo reviewer access and final submission remain owner/coordinator actions. Keep audio absent for Vijay's dub.
+The Node wallet/RPC candidate is not wired into the browser. Authenticated transport, private offer/chain/policy readers, a complete indexer and dual-wallet recovery collection still need implementation. `resolve` deliberately refuses a one-wallet shortcut. Live normalization deliberately rejects unknown semantics.
 
-Next action: accept stable component snapshots and update this handoff with imported hashes, actual integrated checks and the candidate's reachable-URL status. If the proof or demo handoff remains absent, return the strongest reviewed candidate with those precise gaps; do not wait indefinitely or widen permissions.
+The optimized artifact requires protocol 29; official testnet RPC reported protocol 29 at 13:03 UTC. No token, signer, deployer or fee configuration is established. No network account creation, funding, signature, deployment, settlement, hosted app URL, reviewer invitation or submission was performed.
+
+## Next action
+
+Finish accepted evidence semantics and authenticated host wiring, then use the exact artifact/configuration for an authorized testnet trade with transaction/balance receipts. If that remains blocked, the candidate supports a truthful local-WASM demonstration and labeled browser simulation. Keep the silent-video instruction and approved mutual-consent recovery. An uncooperative party can leave a locked trade unresolved.
+
+The isolated branch is the handoff; no main merge or reset is required to inspect it. Existing main proof docs/evidence and coordinator-owned note remain local to their owners.

@@ -1,0 +1,38 @@
+{
+  "balances": {
+    "buyer": "220000000",
+    "escrow": "0",
+    "seller": "0"
+  },
+  "buyerAtoms": "220000000",
+  "canonicalDigest": "78e7da5e078c40d4fe4fdbd2921d7b76bebe0e4528d02f27ed3ef041b2b2cbb0",
+  "contractExecution": "compiled Soroban WASM in local host",
+  "contractReplayRejected": true,
+  "duplicateUiSettlementRejected": true,
+  "fiatMinor": "2000",
+  "kind": "LOCAL_WASM_INTEGRATION_REHEARSAL",
+  "lateTimelyPaymentAccepted": true,
+  "livePaymentGate": "NOT_CLEARED",
+  "networkTransactionsSubmitted": false,
+  "paymentEvidence": "synthetic",
+  "paymentLockConfirmedBeforeInstructions": true,
+  "policyReplayRejected": true,
+  "proofFailureHeldFunds": true,
+  "signatureCheckedByWasm": true,
+  "transactionHash": null,
+  "uiStatus": "completed",
+  "observedAt": "2026-10-25T13:45:02.466Z",
+  "sourceRevision": "006ab023e4d44600d03f320f220457e5b5545f0e",
+  "sourceDirty": false,
+  "wasmSha256": "8940569853b21a957fc5a81402666e95ed75f054ce2223926231ffc2c0c506dd",
+  "sourceSha256": {
+    "app/model.mjs": "6bab9aeed89e15686ea1ae281a2d46751bb43b82ee2f421c8447dda81e8a89ce",
+    "policy/src/engine.mjs": "3f99a0c23e4cfb8b46f21a07147df7c6aeeed6260eb827dab483d348aa011039",
+    "policy/src/testing.mjs": "18a7d18d53f1b0a1d2bfa83dd2adf6d5f9b1b323df78308c816d3d7f0fec892c",
+    "policy/vendor/escrow-protocol.mjs": "08e73cbd4d2507ef85c62317638a4d4fcefd922d9de1ba3822793450cbd2127e",
+    "contracts/escrow/src/lib.rs": "164cf51035393f129a6facd23829412338b4c1096ad7a31d7f2da38dfe769009",
+    "integration/policy-bridge.mjs": "c2b5504d3636a91a62214010a31b96829e93a8c10406ed85440d5ab19c17781d",
+    "integration/wasm/trade.rs": "bd765dcf1f9c4d30d0b55e9648d16bbf85de6e632b31116949028ef33c1768ca",
+    "scripts/rehearse-local.mjs": "c4b427fe14d3dfcfd7be7f31a29e6c137ad9bbd8b1f1f1db3ade074929fc43db"
+  }
+}

@@ -15,15 +15,15 @@ All source identities are opaque, case-sensitive ASCII strings of 1–256 bytes,
 
 `revolut` is the fixed rail symbol. `https://app.revolut.com` is the fixed ASCII source-origin byte string, without a trailing slash. Callers cannot override either namespace in v1. These are identity requirements, not a claim that the current TLSNotary plugin has established those fields. Missing or unstable identities block live signing; this spec does not authorize any additional bank disclosure.
 
-| Input | Authority |
-| --- | --- |
-| Recipient ID in outgoing payment | Verified provider evidence; compare against the offer's configured recipient ID |
-| Configured recipient ID and salt | Authenticated seller offer configuration whose hash matches immutable `Terms.recipient` |
-| Payer scope and payment ID | Verified provider evidence or an independently authenticated verifier/account binding; never a client label |
-| Seller/buyer/token/amounts/currency/rail/reservation/deadline | Current on-chain order and immutable deployment configuration |
-| Payment state, direction, recipient, amount/currency and payment timestamp | Verified provider evidence, interpreted by the strict payment-policy adapter |
-| Claim expiry | Policy's explicit bounded validity decision, after verifying evidence and current order/ledger time |
-| Network and escrow address | Trusted deployment configuration, checked against the network/order queried |
+| Input                                                                      | Authority                                                                                                   |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Recipient ID in outgoing payment                                           | Verified provider evidence; compare against the offer's configured recipient ID                             |
+| Configured recipient ID and salt                                           | Authenticated seller offer configuration whose hash matches immutable `Terms.recipient`                     |
+| Payer scope and payment ID                                                 | Verified provider evidence or an independently authenticated verifier/account binding; never a client label |
+| Seller/buyer/token/amounts/currency/rail/reservation/deadline              | Current on-chain order and immutable deployment configuration                                               |
+| Payment state, direction, recipient, amount/currency and payment timestamp | Verified provider evidence, interpreted by the strict payment-policy adapter                                |
+| Claim expiry                                                               | Policy's explicit bounded validity decision, after verifying evidence and current order/ledger time         |
+| Network and escrow address                                                 | Trusted deployment configuration, checked against the network/order queried                                 |
 
 The shape/semantics check has not established source-account or recipient identity availability. If either required verified identity is missing, reject live signing and leave the order held. Do not replace missing values with a recipient display name, a browser-provided identifier or the order's expected value.
 
@@ -79,21 +79,21 @@ The Ed25519 message is the 32 raw digest bytes, not hex/base64 text, an Ethereum
 
 `PaymentClaim` is a ScVal map with symbol keys in this exact lexical order:
 
-| Key | ScVal type |
-| --- | --- |
-| `buyer` | Address |
-| `currency` | Symbol (`EUR`) |
-| `expires_at` | U64 |
-| `fiat_minor` | I128 (EUR cents) |
-| `nullifier` | Bytes (32) |
-| `order_id` | U64 |
-| `paid_at` | U64 |
-| `pay_by` | U64 |
-| `rail` | Symbol (`revolut`) |
-| `recipient` | Bytes (32) |
-| `reserved_at` | U64 |
-| `seller` | Address |
-| `token` | Address |
+| Key            | ScVal type              |
+| -------------- | ----------------------- |
+| `buyer`        | Address                 |
+| `currency`     | Symbol (`EUR`)          |
+| `expires_at`   | U64                     |
+| `fiat_minor`   | I128 (EUR cents)        |
+| `nullifier`    | Bytes (32)              |
+| `order_id`     | U64                     |
+| `paid_at`      | U64                     |
+| `pay_by`       | U64                     |
+| `rail`         | Symbol (`revolut`)      |
+| `recipient`    | Bytes (32)              |
+| `reserved_at`  | U64                     |
+| `seller`       | Address                 |
+| `token`        | Address                 |
 | `token_amount` | I128 (token base units) |
 
 XDR includes the outer ScVal vector discriminant, presence marker and length, and the map presence marker/length. Strings used as identities/origin are **Bytes**, not ScVal String or Symbol. Monetary values and timestamps in JSON vectors are canonical decimal strings. JS callers use `bigint` or those strings; the reference encoder rejects JS Numbers, leading zeros, signs and overflow. It also rejects missing/extra claim fields, unknown rails/currencies, noncanonical addresses and malformed byte encodings.

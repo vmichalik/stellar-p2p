@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "activeProofStack": "TLSNotary MPC-TLS",
   "releaseGate": "NOT_CLEARED",
   "historicalObservations": {
@@ -27,9 +27,28 @@
     }
   },
   "authenticatedTlsnTransferAccepted": false,
-  "policySignerImplemented": false,
+  "policySignerImplemented": true,
   "tlsnSorobanAdapterImplemented": false,
   "escrowDeployed": false,
   "fundsReleased": false,
-  "rawProofsIncluded": false
+  "rawProofsIncluded": false,
+  "localCompiledWasmIntegrationPassed": true,
+  "networkTransactionsSubmitted": false,
+  "publicAppUrlEstablished": false,
+  "liveAdapterStatus": "Node candidate tested with mocked wallet/RPC; browser transport and dual-wallet recovery missing",
+  "currentOwnerBrowserDevice": "MacBook Pro",
+  "latestPublicProofReports": [
+    {
+      "observedAt": "2026-10-25T10:46:50Z",
+      "source": "proof workstream record, not repeated by integration",
+      "host": "MacBook Pro",
+      "paymentProof": false
+    },
+    {
+      "observedAt": "2026-10-25T12:34:28Z",
+      "source": "proof workstream server acceptance report, cloud source handoff pending",
+      "host": "cloud verifier",
+      "paymentProof": false
+    }
+  ]
 }

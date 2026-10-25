@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-25T13:49:14.749917+00:00",
+  "host": "Apple Silicon Mac mini",
+  "runtimeRevision": "006ab023e4d44600d03f320f220457e5b5545f0e",
+  "javascript": {
+    "root": 49,
+    "policy": 51,
+    "canonicalProtocol": 11,
+    "walletRpcJournal": 11,
+    "failures": 0
+  },
+  "contract": {
+    "native": 29,
+    "compiledWasm": 29,
+    "localCrossComponent": 1,
+    "syntheticEvidence": true,
+    "actorAuthMockedInCrossComponentHarness": true,
+    "policySignatureVerifiedInWasm": true
+  },
+  "syntaxModulesAndInlineScripts": 49,
+  "frozenProtocolSync": true,
+  "wasmRebuildHashMatched": true,
+  "formatting": "Prettier passed; rustfmt unavailable",
+  "browser": {
+    "mode": "synthetic-demo",
+    "flow": [
+      "seller funding",
+      "whole-offer reserve",
+      "confirmed lock before instructions",
+      "proof unavailable holds funds",
+      "retry",
+      "receipt",
+      "reload",
+      "matching seller balances"
+    ],
+    "responsiveWidths": [390, 320],
+    "horizontalOverflowObserved": false,
+    "consoleWarningsOrErrorsObserved": false,
+    "screenshots": {
+      "demo-seller-mobile.jpg": "ecf22eab906aecb44ec6db9647b520c43d358c1fc6a1db6bb56e52983ffab853",
+      "demo-receipt-mobile.jpg": "2122cc49bd9d96f53e9b8f882f12b96d87d234f12fab0fe42680a0cbee4b7685",
+      "demo-receipt-desktop.jpg": "8cad47992a346ccfcb32426646a97e47ce9a7643ec4b7d83f49ed82b90e450d1"
+    }
+  },
+  "staticBuild": {
+    "allowlistedFiles": 7,
+    "outputMatchesSourceHashes": true,
+    "deployed": false
+  },
+  "readOnlyTestnetRpc": {
+    "url": "https://soroban-testnet.stellar.org",
+    "observedAt": "2026-10-25T13:03Z",
+    "protocolVersion": 29,
+    "latestLedgerSequence": 5381965,
+    "networkPassphrase": "Test SDF Network ; September 2015",
+    "transactionSubmitted": false
+  },
+  "livePaymentGate": "NOT_CLEARED",
+  "networkTransactionsSubmitted": false,
+  "publicAppUrlEstablished": false
+}

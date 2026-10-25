@@ -2,8 +2,14 @@
 import { writeFileSync } from 'node:fs';
 import { Keypair } from '@stellar/stellar-sdk';
 import {
-  PROTOCOL_VERSION, recipientXdr, recipientCommitment, nullifierXdr,
-  paymentNullifier, networkId, claimXdr, claimDigest,
+  PROTOCOL_VERSION,
+  recipientXdr,
+  recipientCommitment,
+  nullifierXdr,
+  paymentNullifier,
+  networkId,
+  claimXdr,
+  claimDigest,
 } from './protocol.mjs';
 
 const publicTestSeed = Buffer.alloc(32, 42);
@@ -43,7 +49,11 @@ const base = {
 function vector(id, kind, input, context = null) {
   const digest = claimDigest(input);
   return {
-    id, kind, ...input, identities: { ...identities }, context,
+    id,
+    kind,
+    ...input,
+    identities: { ...identities },
+    context,
     network_id_hex: networkId(input.network_passphrase).toString('hex'),
     recipient_xdr_hex: recipientXdr(recipientInput).toString('hex'),
     payment_identity_xdr_hex: nullifierXdr(paymentInput).toString('hex'),
@@ -60,8 +70,11 @@ const fixture = {
   signer_public_key_hex: Buffer.from(signer.rawPublicKey()).toString('hex'),
   vectors: [
     vector('whole-offer-eur20-usdc22', 'settlement', base, {
-      locked_at: '1792929605', ledger_time: '1792929660',
-      offer_expires_at: '1792933200', reservation_seconds: '600', token_decimals: 7,
+      locked_at: '1792929605',
+      ledger_time: '1792929660',
+      offer_expires_at: '1792933200',
+      reservation_seconds: '600',
+      token_decimals: 7,
     }),
     vector('integer-boundaries-and-account-addresses', 'encoding_only', {
       ...base,

@@ -21,4 +21,8 @@ Keep synthetic settlement separate from an authenticated payment proof. Testnet 
 
 ## Current blockers
 
-The component snapshots, on-chain adapter and deployment configuration are not yet integrated at this checklist's starting point. No testnet deployment, submitted transaction, configured live signer or confirmed live token balance is established by this branch.
+Escrow, policy and app snapshots are integrated. The actual app-model → policy → compiled-WASM local rehearsal passes with synthetic payment evidence. The Node wallet/RPC candidate is tested with mocked wallet/RPC and a real disk journal. Browser transport, live policy/chain readers and dual-wallet recovery collection remain software gaps; see `integration/README.md`.
+
+A read-only call to `https://soroban-testnet.stellar.org` at 13:03 UTC on 25 October 2026 returned protocol 29 and the expected testnet passphrase; latest ledger was 5,381,965. This matches the artifact's required protocol. It is not deployment or transaction evidence.
+
+No testnet deployment, submitted transaction, configured live signer, approved asset or confirmed live token balance is established by this branch. Configure those only under the owner's specific authorization. Public fixture signing keys are forbidden for live policy and the RPC candidate.

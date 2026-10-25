@@ -1,62 +1,62 @@
 # Architecture
 
-The prototype currently runs a browser launcher and an independently operated TLSNotary verifier. The payment-policy service and escrow below are proposed.
+Pactlane has four boundaries: the browser, bank-proof verifier, payment-policy signer and Soroban escrow. A browser progress callback cannot replace a server or chain check.
 
 ```mermaid
 sequenceDiagram
+    participant Seller
     participant Buyer
     participant Bank as Revolut
-    participant Proof as TLSNotary extension + verifier
-    participant Policy as Payment policy + signer (planned)
-    participant Escrow as Soroban escrow (planned)
-    Buyer->>Escrow: Reserve seller's funded offer
-    Buyer->>Bank: Pay seller in EUR
-    Buyer->>Proof: Prove selected transfer response
-    Proof->>Bank: MPC-TLS request
-    Proof->>Policy: Verified source and disclosed fields
-    Policy->>Policy: Check payment against reserved order
-    Policy-->>Buyer: Signed order-bound claim
-    Buyer->>Escrow: Submit claim
-    Escrow->>Escrow: Check signature, expiry and unused nullifier
-    Escrow-->>Buyer: Release testnet USDC once
+    participant Proof as TLSNotary verifier
+    participant Policy as Payment policy + signer
+    participant Escrow as Soroban escrow
+    Seller->>Escrow: Fund fixed whole offer
+    Buyer->>Escrow: Reserve, then begin_payment
+    Escrow-->>Buyer: Confirm payment lock
+    Buyer->>Bank: Pay exact EUR amount
+    Buyer->>Proof: Approve selected transfer disclosure
+    Proof->>Policy: Authenticated source and fields
+    Policy->>Policy: Match locked order, time and unused identity
+    Policy-->>Buyer: Canonical signed claim
+    Buyer->>Escrow: release(claim, signature)
+    Escrow->>Escrow: Validate and consume nullifier atomically
+    Escrow-->>Buyer: Transfer token once
 ```
 
-## What the code does today
+The local WASM rehearsal runs order, policy and escrow together with synthetic evidence. The browser demo is separate; live proof ingestion rejects unverified records.
 
-`tlsn/launcher.mjs` serves the test pages and forwards a fixed set of routes to a loopback verifier. It inserts the configured HTTPS origin into the plugins. It accepts no arbitrary proxy target; the bank target is `app.revolut.com`.
+## Contract and claim
 
-`tlsn/revolut.plugin.mjs` watches for an individual transfer-detail GET and waits for an explicit click. Its authentication-header allowlist is kept inside the extension. The request uses a 4 KiB sent / 16 KiB received budget. The plugin either requests selected payment fields or runs a smaller response-shape check. It returns sanitized diagnostics and always leaves the release gate at `NOT_CLEARED`.
+`contracts/escrow/` implements funding, reservation, payment lock, signed release, pre-lock expiry refund and mutual resolution. One funded offer has one fixed amount and one buyer. It is never partially filled or recycled.
 
-`tlsn/extension-check.plugin.mjs` proves only a fixed public `GET /robots.txt` response, without account credentials. `setup-check.worker.mjs` measures MPC setup without sending a bank request. These checks help locate failures; they do not establish a payment.
+The frozen [protocol](../contracts/escrow/PROTOCOL.md) is `pactlane.protocol.v1`. It uses canonical ScVal-XDR, lexical map keys, exact integer widths and Ed25519. Claims bind network, contract, order, buyer, seller, token/amount, EUR minor units, rail, recipient commitment, payment nullifier and time bounds. JS, policy and Rust share exact vectors.
+
+The recipient commitment binds provider-issued destination identity and private offer salt. The observed destination must independently come from verified evidence; expected seller configuration cannot replace it. The nullifier binds source namespace, verified payer scope and stable transfer ID, independently of order/network/deployment. Cross-deployment replay prevention also needs the durable policy registry and complete chain reconciliation.
+
+## Policy and storage
+
+The public policy method accepts only `{orderId,evidenceId}`. Trusted host readers supply evidence, chain snapshot and private offer data. Policy checks exact completed outgoing payment semantics and confirmed locked-order terms.
+
+Disk SQLite reserves payment identity before signing. Restart, signing failure, expired claims and uncertain delivery never free it automatically. Complete confirmed manual-recovery manifests consume associated payments even when tokens were refunded or split. Unknown manual resolution holds signing until reconciliation.
+
+Synthetic stores and public fixture keys are separated from live bootstrap. `normalizeLiveTlsnPayment` rejects until the real schema is established. Synthetic fixtures do not define real bank semantics.
+
+## Wallet and RPC
+
+`integration/stellar-rpc-adapter.mjs` is a testnet-only Node service candidate matching [the app interface](../app/live-adapter.d.ts). It validates network/configuration, prepares capped-fee transactions, checks the unchanged wallet-signed envelope, persists its hash before submission and reconciles RPC success. A disk journal reserves each action atomically across concurrent instances. Unknown outcomes remain blocked across restart.
+
+Instructions require a confirmed `Paying` order and independently bound destination. Release requires trusted non-synthetic authorization and a canonical signature. Receipts require the exact contract/order transaction and matching token-transfer events.
+
+Authenticated transport, browser wallet bridge, private readers, deployment configuration and the dual-wallet recovery workflow remain to be implemented. `resolve` fails explicitly rather than submitting unilateral recovery.
+
+## Recovery and deadlines
+
+An expired unlocked reservation can refund the seller. After `begin_payment`, proof failure holds funds. A payment made before `pay_by` may be verified later; after that deadline the app stops showing instructions for a new payment.
+
+Both parties may authorize the same release, refund or split. A later valid signed claim may release a held order. There is no arbitrator or hidden admin path; either party can keep funds locked by refusing to cooperate.
 
 ## Trust model
 
-TLSNotary’s verifier authenticates the TLS server and checks the protocol transcript. The planned policy service must then interpret the disclosed payment data. A valid transcript alone says nothing about whether this order has been paid.
+TLSNotary authenticates the server and transcript. The operator-run policy interprets disclosed fields and signs the order claim. The contract trusts its configured key and does not verify the full TLS transcript. A compromised or incorrect operator can authorize an incorrect claim within the contract’s bounds.
 
-The Soroban contract would verify a claim signed by a configured operator. That operator is trusted to apply the payment rules correctly and protect its signing key. The contract would not independently verify the full MPC-TLS transcript. Selective disclosure also does not hide activity from the bank or make Stellar settlement private.
-
-The gateway is intended for a private network. Its route restrictions and browser origin pinning are not a substitute for access control. Keep it behind the private HTTPS route; do not expose the upstream verifier or turn it into a public service.
-
-## Proposed release claim
-
-Choose a canonical encoding before implementing the signer. Both sides must hash exactly the same bytes. The claim should bind:
-
-| Field                                     | Purpose                                         |
-| ----------------------------------------- | ----------------------------------------------- |
-| Version, network and contract             | Prevent reuse across formats and deployments    |
-| Order ID and buyer wallet                 | Identify the trade and release destination      |
-| Payment rail and recipient commitment     | Match the seller’s payment destination          |
-| Fiat amount in minor units and currency   | Match the agreed EUR payment exactly            |
-| Token, token amount and seller            | Match the funded escrow                         |
-| Stable payment nullifier                  | Prevent the same rail/payment ID settling twice |
-| Payment time, reservation time and expiry | Reject older or expired evidence                |
-
-The policy must establish HTTP success, the exact source endpoint, a completed outgoing transfer, the intended recipient, amount, currency and a stable payment ID. It must check field structure and context on the server. The browser’s `fieldsPresent` result is untrusted UI feedback.
-
-Payment IDs need not be posted in plaintext. Decide on a domain-separated nullifier scheme and its privacy limits before deployment. A hash alone does not guarantee anonymity.
-
-## Contract work still needed
-
-Implement escrow funding, reservation, signature authorization, one-use nullifiers, expiry and a payment-failure/dispute policy. Release and nullifier consumption must happen atomically. Include negative cases for the wrong order, buyer, network, recipient, amount, signer, expiry and reused payment.
-
-The archived contract only recovers a signer from an older claim format. It has no payment policy, escrow or replay protection and cannot accept TLSNotary results as written.
+Selective disclosure does not hide the payment from Revolut or make Stellar settlement private. Credentials, raw transcripts, private salts and signing keys belong outside Git. The earlier `tlsn/` launcher pins routes/origin but provides no public-service authentication. Its private gateway is not the current cloud runtime source.

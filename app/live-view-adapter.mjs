@@ -1,3 +1,5 @@
+import { readRecoveryRequest } from './host-client.mjs';
+
 const TESTNET = 'Test SDF Network ; September 2015';
 const STATES = new Set(['Funded', 'Reserved', 'Paying', 'Released', 'Refunded', 'Resolved']);
 const TERMINAL = new Set(['Released', 'Refunded', 'Resolved']);
@@ -7,6 +9,7 @@ const MUTATIONS = new Set([
   'beginPayment',
   'release',
   'refundExpiredReservation',
+  'resolve',
 ]);
 const check = (condition, code) => {
   if (!condition) throw Object.assign(new Error(code), { code });
@@ -102,7 +105,22 @@ export function formatUnits(value, decimals = 7, minimumDecimals = 2) {
   return whole + (fraction ? '.' + fraction : '');
 }
 
+export function parseTokenUnits(value) {
+  check(
+    typeof value === 'string' &&
+      /^(0|[1-9][0-9]*)(?:\.[0-9]{1,7})?$/.test(value) &&
+      value.length <= 40,
+    'INVALID_RESOLUTION_SPLIT',
+  );
+  const [whole, fraction = ''] = value.split('.');
+  const atoms = BigInt(whole) * 10_000_000n + BigInt(fraction.padEnd(7, '0'));
+  check(atoms < 1n << 127n, 'INVALID_RESOLUTION_SPLIT');
+  return atoms.toString();
+}
+
 export function friendlyError(error) {
+  if (error?.code === 'RECOVERY_RESPONSE_UNKNOWN')
+    return 'Seller approval could not be confirmed. Refresh the trade before doing anything else; do not sign this request again.';
   if (error?.outcome === 'unknown')
     return 'Confirmation is still pending. Check this operation before starting another; closing the wallet does not cancel a submitted transaction.';
   const messages = {
@@ -118,6 +136,33 @@ export function friendlyError(error) {
       'The transaction could not be prepared. Nothing was submitted; refresh before trying again.',
     OFFER_NOT_APPROVED: 'This offer is no longer available for this wallet.',
     CATALOG_LIMIT: 'The exchange cannot accept another offer right now.',
+    RECOVERY_UNAVAILABLE: 'Both-wallet recovery is not available for this trade yet.',
+    RECOVERY_REQUEST_INVALID:
+      'The recovery terms could not be verified. Refresh before continuing.',
+    RECOVERY_REQUEST_CHANGED:
+      'The recovery terms changed. Refresh and review the new request before signing.',
+    RECOVERY_EXPIRED: 'This recovery request expired. Funds remain in escrow.',
+    RECOVERY_REQUEST_EXPIRED: 'This recovery request expired. Funds remain in escrow.',
+    RECOVERY_SESSION_INVALID:
+      'The wallet session for recovery ended. Reconnect and refresh the trade.',
+    RECOVERY_ALREADY_CLAIMED:
+      'This recovery request is already being reviewed. Refresh its status.',
+    RECOVERY_REQUEST_MISMATCH:
+      'The recovery terms could not be verified. Refresh before continuing.',
+    RECOVERY_SIGNATURE_INVALID:
+      'The recovery signature could not be verified. Funds remain in escrow.',
+    RECOVERY_CAPACITY: 'The exchange cannot accept another recovery request right now.',
+    RECOVERY_ARGUMENT_INVALID:
+      'The recovery terms could not be verified. Refresh before continuing.',
+    RECOVERY_CLOSED:
+      'Recovery is unavailable while the exchange reconnects. Funds remain in escrow.',
+    RECOVERY_REJECTED: 'The recovery proposal was declined. Funds remain in escrow.',
+    RECOVERY_REQUEST_ALREADY_CLAIMED:
+      'This recovery request is already being reviewed. Refresh its status.',
+    INVALID_RESOLUTION_SPLIT:
+      'Enter a token amount between zero and the full escrow, with up to seven decimal places.',
+    RESOLUTION_NOT_AVAILABLE:
+      'This trade no longer supports this recovery proposal. Refresh its status.',
     CONNECT_WALLET_FIRST: 'Connect your wallet for this side of the trade first.',
     OPERATION_PENDING: 'Finish checking the pending operation before starting another.',
     TESTNET_SUBMISSION_NOT_AUTHORIZED: 'Transactions are not enabled for this exchange yet.',
@@ -206,6 +251,24 @@ function cleanView(raw, expectedAccount) {
     check(publicTerms.seller === expectedAccount, 'SESSION_CHANGED');
     return { id: value.id, publicTerms };
   });
+  const recoveryRequests = (raw.recoveryRequests ?? []).map((value) => {
+    const request = readRecoveryRequest(value);
+    const existing = ownerOrders.find((entry) => entry.id === request.orderId);
+    check(
+      existing &&
+        [request.buyer, request.seller].includes(expectedAccount) &&
+        request.networkPassphrase === deployment?.networkPassphrase &&
+        request.contract === deployment.contract &&
+        request.token === deployment.token &&
+        request.orderState === existing.state &&
+        request.buyer === existing.buyer &&
+        request.seller === existing.terms.seller &&
+        request.tokenAmount === existing.terms.token_amount &&
+        request.fiatMinor === existing.terms.fiat_minor,
+      'RECOVERY_REQUEST_INVALID',
+    );
+    return request;
+  });
   check(
     new Set(ownerOrders.map((value) => value.id)).size === ownerOrders.length &&
       new Set(offers.map((value) => value.id)).size === offers.length,
@@ -218,6 +281,7 @@ function cleanView(raw, expectedAccount) {
     offers,
     ownerOrders,
     sellerDrafts,
+    recoveryRequests,
     serverTime: integer(raw.serverTime, 64),
     balances:
       raw.balances?.tokenAtoms != null ? { tokenAtoms: integer(raw.balances.tokenAtoms) } : null,
@@ -251,6 +315,8 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
     policy: null,
     transactions: {},
     receipts: {},
+    recoveryNotice: null,
+    recoverySplits: {},
   };
   const listeners = new Set();
   const emit = () => {
@@ -302,6 +368,8 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
         state.receipts = {};
         state.transactions = {};
         state.policy = null;
+        state.recoveryNotice = null;
+        state.recoverySplits = {};
       }
       state.view = view;
       readAt = clock();
@@ -341,11 +409,15 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
       check([value.buyer, value.terms.seller].includes(state.account), 'SESSION_CHANGED');
       if (action === 'beginPayment')
         check(value.state === 'Paying' && BigInt(value.locked_at) > 0n, 'UNCONFIRMED_TRANSACTION');
+      if (action === 'resolve') {
+        check(value.state === 'Resolved', 'UNCONFIRMED_TRANSACTION');
+        state.recoverySplits[value.id] = args.buyerTokens;
+      }
       state.view.ownerOrders = [
         ...state.view.ownerOrders.filter((item) => item.id !== value.id),
         value,
       ];
-      if (['release', 'refundExpiredReservation'].includes(action))
+      if (['release', 'refundExpiredReservation', 'resolve'].includes(action))
         state.transactions[value.id] = tx;
       state.selectedOrderId = value.id;
     } else if (action === 'getPaymentInstructions') {
@@ -392,6 +464,12 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
       );
       check(value.state !== 'Released' || sellerReturnedAtoms === '0', 'RECEIPT_UNAVAILABLE');
       check(value.state !== 'Refunded' || buyerReceivedAtoms === '0', 'RECEIPT_UNAVAILABLE');
+      check(
+        value.state !== 'Resolved' ||
+          state.recoverySplits[args.orderId] === undefined ||
+          buyerReceivedAtoms === state.recoverySplits[args.orderId],
+        'RECEIPT_UNAVAILABLE',
+      );
       state.receipts[args.orderId] = {
         orderId: args.orderId,
         orderState: value.state,
@@ -399,6 +477,57 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
         sellerReturnedAtoms,
         transaction: tx,
       };
+    }
+  }
+
+  async function respondRecovery(requestId, approve) {
+    ready('seller', true);
+    check(state.view.readiness.recovery, 'RECOVERY_UNAVAILABLE');
+    check(!state.pending, 'OPERATION_PENDING');
+    const request = state.view.recoveryRequests.find((value) => value.requestId === requestId);
+    check(request?.seller === state.account, 'RECOVERY_REQUEST_INVALID');
+    check(request.status === 'queued', 'RECOVERY_REQUEST_ALREADY_CLAIMED');
+    check(BigInt(request.expiresAt) > now() * 1000n, 'RECOVERY_EXPIRED');
+    const generation = epoch;
+    ++readVersion;
+    state.pending = {
+      action: approve ? 'approveRecovery' : 'rejectRecovery',
+      args: { requestId },
+      status: 'running',
+      operationId: null,
+    };
+    state.error = null;
+    state.instructions = null;
+    state.policy = null;
+    state.recoveryNotice = null;
+    emit();
+    try {
+      const result = await client[approve ? 'approveRecovery' : 'rejectRecovery'](
+        structuredClone(request),
+        {
+          onProgress(value) {
+            if (generation === epoch && state.pending) {
+              Object.assign(state.pending, value);
+              emit();
+            }
+          },
+        },
+      );
+      if (generation !== epoch) return;
+      check(
+        result?.requestId === requestId && result.accepted === true && result.approved === approve,
+        'INVALID_HOST_RESPONSE',
+      );
+      state.pending = null;
+      state.recoveryNotice = { orderId: request.orderId, approved: approve };
+      await refresh();
+      return result;
+    } catch (error) {
+      if (generation !== epoch) return;
+      state.pending = null;
+      if (error?.outcome === 'unknown') error.code = 'RECOVERY_RESPONSE_UNKNOWN';
+      fail(error);
+      throw error;
     }
   }
 
@@ -550,6 +679,8 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
         policy: null,
         transactions: {},
         receipts: {},
+        recoveryNotice: null,
+        recoverySplits: {},
         error: null,
       };
       emit();
@@ -621,6 +752,31 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
       if (result) await this.loadReceipt(id);
       return result;
     },
+    async proposeRecovery(id, buyerTokens) {
+      ready('buyer', true);
+      check(state.view.readiness.recovery, 'RECOVERY_UNAVAILABLE');
+      const value = currentOrder(id);
+      check(
+        value?.buyer === state.account && ['Reserved', 'Paying'].includes(value.state),
+        'RESOLUTION_NOT_AVAILABLE',
+      );
+      check(
+        typeof buyerTokens === 'string' &&
+          /^(0|[1-9][0-9]*)$/.test(buyerTokens) &&
+          buyerTokens.length <= 39 &&
+          BigInt(buyerTokens) <= BigInt(value.terms.token_amount),
+        'INVALID_RESOLUTION_SPLIT',
+      );
+      check(
+        !state.view.recoveryRequests.some((request) => request.orderId === id),
+        'OPERATION_PENDING',
+      );
+      const result = await execute('resolve', { orderId: id, buyerTokens });
+      if (result) await this.loadReceipt(id);
+      return result;
+    },
+    approveRecovery: (requestId) => respondRecovery(requestId, true),
+    rejectRecovery: (requestId) => respondRecovery(requestId, false),
     async loadReceipt(id) {
       ready();
       const value = currentOrder(id);

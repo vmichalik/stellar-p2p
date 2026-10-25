@@ -13,6 +13,27 @@ const ID = 'o'.repeat(43),
 const SIGNATURE = new Uint8Array(64).fill(17);
 const UNSIGNED = btoa('synthetic unsigned transaction');
 const SIGNED = btoa('synthetic signed transaction');
+const recovery = () => ({
+  requestId: REQUEST,
+  orderId: '0',
+  networkPassphrase: TESTNET_PASSPHRASE,
+  contract: 'C' + 'C'.repeat(55),
+  token: 'C' + 'D'.repeat(55),
+  buyer: OTHER,
+  seller: ACCOUNT,
+  tokenAmount: '220000000',
+  buyerTokens: '100000001',
+  sellerTokens: '119999999',
+  orderState: 'Paying',
+  expirationLedger: 512,
+  expiresAt: 61_000,
+  fiatMinor: '2000',
+  currency: 'EUR',
+  rail: 'revolut',
+  status: 'queued',
+});
+const CLAIM = 'k'.repeat(43),
+  PREIMAGE = btoa('synthetic authorization preimage');
 
 function fixture(options = {}) {
   const state = {
@@ -50,6 +71,10 @@ function fixture(options = {}) {
     getNetworkDetails: async () => ({ networkPassphrase: state.network }),
     signMessage: async () => ({ signedMessage: SIGNATURE, signerAddress: state.account }),
     signTransaction: async () => ({ signedTxXdr: SIGNED, signerAddress: state.account }),
+    signAuthEntry: async () => ({
+      signedAuthEntry: btoa(String.fromCharCode(...SIGNATURE)),
+      signerAddress: state.account,
+    }),
     ...options.wallet,
   };
   const freighter = Object.fromEntries(
@@ -512,7 +537,7 @@ test('refuses cross-origin responses, unsupported actions and caller-selected en
   assert.throws(() => f.client.command('https://other.example.test/submit', {}), {
     code: 'ACTION_UNAVAILABLE',
   });
-  assert.throws(() => f.client.command('resolve', { orderId: '7' }), {
+  assert.throws(() => f.client.command('unilateralRecovery', { orderId: '7' }), {
     code: 'ACTION_UNAVAILABLE',
   });
   f.location.origin = 'https://changed.example.test';
@@ -539,4 +564,188 @@ test('definite host preflight refusals leave no unknown transaction and never re
       false,
     );
   }
+});
+
+test('recovery accepts a shorter session expiry, signs once and returns only the seller signature to the host', async () => {
+  const f = fixture({
+    intercept: ({ path, response }) => {
+      if (path.endsWith('/claim'))
+        return response({
+          ...recovery(),
+          expiresAt: 60_000,
+          status: 'claimed',
+          claimToken: CLAIM,
+          preimageXdr: PREIMAGE,
+        });
+      if (path.endsWith('/respond')) return response({ accepted: true });
+    },
+  });
+  await f.client.authenticate();
+  assert.deepEqual(await f.client.approveRecovery(recovery()), {
+    requestId: REQUEST,
+    accepted: true,
+    approved: true,
+  });
+  const signed = f.state.walletCalls.filter((call) => call.name === 'signAuthEntry');
+  assert.equal(signed.length, 1);
+  assert.deepEqual(signed[0].args, [
+    PREIMAGE,
+    { address: ACCOUNT, networkPassphrase: TESTNET_PASSPHRASE },
+  ]);
+  assert.deepEqual(f.state.requests.find((item) => item.path.endsWith('/respond')).body, {
+    claimToken: CLAIM,
+    signature: btoa(String.fromCharCode(...SIGNATURE)),
+    signerAddress: ACCOUNT,
+  });
+  assert.equal(
+    f.state.walletCalls.some((call) => call.name === 'signTransaction'),
+    false,
+  );
+  await assert.rejects(f.client.approveRecovery(recovery()), {
+    code: 'RECOVERY_REQUEST_ALREADY_CLAIMED',
+  });
+  assert.equal(f.state.requests.filter((item) => item.path.endsWith('/claim')).length, 1);
+});
+
+test('recovery refuses changed reviewed terms before a wallet prompt, including changed but balanced splits', async () => {
+  for (const changed of [
+    { buyerTokens: '100000000', sellerTokens: '120000000' },
+    { contract: 'C' + 'E'.repeat(55) },
+    { expirationLedger: 513 },
+    { expiresAt: 62_000 },
+  ]) {
+    const f = fixture({
+      intercept: ({ path, response }) => {
+        if (path.endsWith('/claim'))
+          return response({
+            ...recovery(),
+            ...changed,
+            status: 'claimed',
+            claimToken: CLAIM,
+            preimageXdr: PREIMAGE,
+          });
+        if (path.endsWith('/respond')) return response({ accepted: true });
+      },
+    });
+    await f.client.authenticate();
+    await assert.rejects(f.client.approveRecovery(recovery()), {
+      code: 'RECOVERY_REQUEST_CHANGED',
+    });
+    assert.equal(
+      f.state.walletCalls.some((call) => call.name === 'signAuthEntry'),
+      false,
+    );
+    assert.equal(
+      f.state.requests.some((item) => item.path.endsWith('/respond') && item.body?.signature),
+      false,
+    );
+  }
+});
+
+test('declining a recovery claims once and sends a refusal without requesting a signature', async () => {
+  const f = fixture({
+    intercept: ({ path, response }) => {
+      if (path.endsWith('/claim'))
+        return response({
+          ...recovery(),
+          status: 'claimed',
+          claimToken: CLAIM,
+          preimageXdr: PREIMAGE,
+        });
+      if (path.endsWith('/respond')) return response({ accepted: true });
+    },
+  });
+  await f.client.authenticate();
+  assert.equal((await f.client.rejectRecovery(recovery())).approved, false);
+  assert.deepEqual(f.state.requests.find((item) => item.path.endsWith('/respond')).body, {
+    claimToken: CLAIM,
+    error: 'RECOVERY_REJECTED',
+  });
+  assert.equal(
+    f.state.walletCalls.some((call) => call.name === 'signAuthEntry'),
+    false,
+  );
+});
+
+test('recovery rejects malformed signatures and explicit refusal without sending approval', async () => {
+  for (const reply of [
+    { signedAuthEntry: SIGNED, signerAddress: ACCOUNT },
+    { signedAuthEntry: null, signerAddress: '', error: { code: -4 } },
+  ]) {
+    const f = fixture({
+      wallet: { signAuthEntry: async () => reply },
+      intercept: ({ path, response }) => {
+        if (path.endsWith('/claim'))
+          return response({
+            ...recovery(),
+            status: 'claimed',
+            claimToken: CLAIM,
+            preimageXdr: PREIMAGE,
+          });
+        if (path.endsWith('/respond')) return response({ accepted: true });
+      },
+    });
+    await f.client.authenticate();
+    await assert.rejects(f.client.approveRecovery(recovery()));
+    const body = f.state.requests.find((item) => item.path.endsWith('/respond')).body;
+    assert.equal(Object.hasOwn(body, 'signature'), false);
+    assert.equal(body.error, reply.error ? 'WALLET_REJECTED' : 'WALLET_OPERATION_UNKNOWN');
+  }
+});
+
+test('an uncertain recovery reply is never retried or signed twice', async () => {
+  const f = fixture({
+    intercept: ({ path, response }) => {
+      if (path.endsWith('/claim'))
+        return response({
+          ...recovery(),
+          status: 'claimed',
+          claimToken: CLAIM,
+          preimageXdr: PREIMAGE,
+        });
+      if (path.endsWith('/respond')) throw Error('connection lost');
+    },
+  });
+  await f.client.authenticate();
+  await assert.rejects(f.client.approveRecovery(recovery()), { outcome: 'unknown' });
+  await assert.rejects(f.client.approveRecovery(recovery()), {
+    code: 'RECOVERY_REQUEST_ALREADY_CLAIMED',
+  });
+  assert.equal(f.state.walletCalls.filter((call) => call.name === 'signAuthEntry').length, 1);
+  assert.equal(f.state.requests.filter((item) => item.path.endsWith('/respond')).length, 1);
+});
+
+test('logout while recovery approval is open discards the late signature', async () => {
+  let complete;
+  const f = fixture({
+    wallet: {
+      signAuthEntry: () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    },
+    intercept: ({ path, response }) => {
+      if (path.endsWith('/claim'))
+        return response({
+          ...recovery(),
+          status: 'claimed',
+          claimToken: CLAIM,
+          preimageXdr: PREIMAGE,
+        });
+      if (path.endsWith('/respond')) return response({ accepted: true });
+    },
+  });
+  await f.client.authenticate();
+  const approval = f.client.approveRecovery(recovery());
+  const rejected = assert.rejects(approval, { outcome: 'unknown' });
+  for (let i = 0; !complete && i < 50; i++) await setImmediate();
+  assert.equal(typeof complete, 'function');
+  await f.client.logout();
+  complete({ signedAuthEntry: btoa(String.fromCharCode(...SIGNATURE)), signerAddress: ACCOUNT });
+  await rejected;
+  await setImmediate();
+  assert.equal(
+    f.state.requests.some((item) => item.path.endsWith('/respond')),
+    false,
+  );
 });

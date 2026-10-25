@@ -1,5 +1,10 @@
 import { createHostClient } from './host-client.mjs';
-import { createLiveViewAdapter, formatUnits, friendlyError } from './live-view-adapter.mjs';
+import {
+  createLiveViewAdapter,
+  formatUnits,
+  friendlyError,
+  parseTokenUnits,
+} from './live-view-adapter.mjs';
 
 const client = createHostClient();
 const adapter = createLiveViewAdapter({ client });
@@ -8,6 +13,7 @@ const toastElement = document.querySelector('#toast');
 let route = 'buy',
   toastTimer,
   lastTemporalKey;
+const recoveryDrafts = new Map();
 const esc = (value) =>
   String(value ?? '').replace(
     /[&<>"']/g,
@@ -40,6 +46,9 @@ const temporalKey = (state) =>
   JSON.stringify([
     ...(state.view?.offers ?? []).map((value) => BigInt(state.now) >= BigInt(value.offerExpiresAt)),
     ...(state.view?.ownerOrders ?? []).map((value) => BigInt(state.now) >= BigInt(value.pay_by)),
+    ...(state.view?.recoveryRequests ?? []).map(
+      (value) => BigInt(state.now) * 1000n >= BigInt(value.expiresAt),
+    ),
   ]);
 const token = (value, state) => `${formatUnits(value)} ${esc(tokenLabel(state))}`;
 const isBusy = (state) =>
@@ -153,6 +162,51 @@ function receipt(value, state) {
   return `<section class="panel receipt-panel"><span class="status-symbol">${icon('check')}</span><p class="received-label">${mine === '0' ? 'Trade settled' : 'Transfer confirmed'}</p><div class="receipt-amount">${formatUnits(mine)} <span>${esc(tokenLabel(state))}</span></div><p class="small-note">${mine === '0' ? 'No tokens were sent to this wallet' : 'To your wallet on Stellar testnet'}</p><div class="live-receipt-grid">${row('Trade', esc(value.id))}${row('Outcome', esc(labels[value.state]))}${row('Buyer received', token(proof.buyerReceivedAtoms, state))}${row('Seller returned', token(proof.sellerReturnedAtoms, state))}${row('Transaction', esc(short(proof.transaction.hash)))}${row('Confirmed ledger', esc(proof.transaction.ledger))}</div>${button(`Back to your trades ${icon('arrow')}`, 'trades', { secondary: true })}</section>`;
 }
 
+function recoveryAmount(value, state) {
+  const draft = recoveryDrafts.get(`${state.account}:${value.id}`) ?? '0';
+  try {
+    const buyerTokens = parseTokenUnits(draft);
+    if (BigInt(buyerTokens) > BigInt(value.terms.token_amount)) return null;
+    return {
+      buyerTokens,
+      sellerTokens: (BigInt(value.terms.token_amount) - BigInt(buyerTokens)).toString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function recoveryPanel(value, state) {
+  if (!['Reserved', 'Paying'].includes(value.state)) return '';
+  if (!state.view.readiness.recovery)
+    return `<section class="panel live-recovery"><h2>Agree a recovery together</h2><p>Recovery needs both wallets to approve the same token split. The two-wallet connection is not available for this exchange yet.</p></section>`;
+  const request = state.view.recoveryRequests.find((item) => item.orderId === value.id);
+  const notice = state.recoveryNotice?.orderId === value.id ? state.recoveryNotice : null;
+  const buyer = value.buyer === state.account;
+  const pending = state.pending?.action === 'resolve' && state.pending.args.orderId === value.id;
+  const domain = `<details class="live-recovery-domain"><summary>Verify wallets and contracts</summary>${row('Buyer', `<code>${esc(value.buyer)}</code>`)}${row('Seller', `<code>${esc(value.terms.seller)}</code>`)}${row('Escrow contract', `<code>${esc(state.view.deployment.contract)}</code>`)}${row('Token contract', `<code>${esc(state.view.deployment.token)}</code>`)}</details>`;
+  let content;
+  if (request || pending) {
+    const split = request ?? {
+      buyerTokens: state.pending.args.buyerTokens,
+      sellerTokens: (
+        BigInt(value.terms.token_amount) - BigInt(state.pending.args.buyerTokens)
+      ).toString(),
+    };
+    const expired = request && BigInt(state.now) * 1000n >= BigInt(request.expiresAt);
+    const canReview = !buyer && request?.status === 'queued' && !expired;
+    content = `${row('Total in escrow', token(value.terms.token_amount, state))}${row('Buyer receives', token(split.buyerTokens, state))}${row('Seller receives', token(split.sellerTokens, state))}${row('Network', 'Stellar testnet')}${domain}<p class="small-note">${expired ? 'This request expired. Funds remain in escrow.' : buyer ? 'Keep this page open. The seller must refresh this trade and approve the exact split. Your wallet will then ask you to confirm the final transaction.' : request.status === 'claimed' ? 'This request is already being reviewed. Refresh to see the confirmed result.' : 'Approve only if you agree to these exact amounts. Your signature authorizes this split; the buyer must then sign the final transaction.'}</p>${request ? `<p class="small-note">Authorization expires before ledger ${request.expirationLedger}.</p>` : ''}${canReview ? `<div class="live-actions">${state.roles.includes('seller') ? button('Approve exact split', 'recovery-approve', { id: request.requestId, disabled: !enabled(state, 'seller', true) }) + button('Decline proposal', 'recovery-reject', { id: request.requestId, disabled: !enabled(state, 'seller', true), secondary: true }) : connect(state, 'seller')}</div>` : ''}`;
+  } else if (notice) {
+    content = `<p>${notice.approved ? 'Your authorization was sent. The buyer must confirm the final transaction. Funds stay in escrow until it is confirmed.' : 'You declined this proposal. Funds remain in escrow.'}</p>${button('Refresh trade', 'refresh', { disabled: isBusy(state), secondary: true })}`;
+  } else if (buyer) {
+    const amount = recoveryAmount(value, state);
+    content = `<p>Propose how to divide all ${token(value.terms.token_amount, state)}. The seller must approve the same split, then you confirm the final transaction.</p><label class="field-label" for="recovery-amount">Tokens to buyer</label><input id="recovery-amount" class="text-input" data-recovery-input data-id="${esc(value.id)}" inputmode="decimal" autocomplete="off" value="${esc(recoveryDrafts.get(`${state.account}:${value.id}`) ?? '0')}" ${isBusy(state) ? 'disabled' : ''} /><div class="live-recovery-preview" aria-live="polite">${amount ? `${row('Buyer receives', token(amount.buyerTokens, state))}${row('Seller receives', token(amount.sellerTokens, state))}` : '<p class="field-error">Enter an amount within the escrow, with up to seven decimal places.</p>'}</div>${domain}<div class="live-actions">${state.roles.includes('buyer') ? button('Propose split to seller', 'recovery-propose', { id: value.id, disabled: !enabled(state, 'buyer', true) || !amount }) : connect(state, 'buyer')}</div><p class="small-note">A proposal does not move funds. Both wallets must approve.</p>`;
+  } else {
+    content = `<p>The buyer can propose a token split. Refresh this trade to review it before approving with your wallet.</p>${button('Check for a proposal', 'refresh', { disabled: isBusy(state), secondary: true })}`;
+  }
+  return `<section class="panel live-recovery"><div class="section-title"><h2>Agree a recovery together</h2>${pill('Both wallets')}</div>${content}</section>`;
+}
+
 function trade(state) {
   const value = state.view?.ownerOrders.find((item) => item.id === state.selectedOrderId);
   if (!value) return trades(state);
@@ -171,7 +225,7 @@ function trade(state) {
       state.instructions?.orderId === value.id ? state.instructions.destination : null;
     content = `<section class="panel payment-panel status-panel"><div class="section-title"><h2>${policy?.status === 'verified' ? 'Payment verified' : destination ? 'Send your exact payment' : 'Your escrow is held'}</h2>${pill(policy?.status === 'verified' ? 'Verified' : 'Locked', policy?.status === 'verified' ? 'green' : 'neutral')}</div><p>${policy?.status === 'verified' ? 'The payment service accepted your transfer for this trade. Confirm the release to receive tokens in your wallet.' : !paymentReady ? 'Payment verification is unavailable. Funds remain in escrow; there is no automatic timeout refund after the payment lock.' : expired ? 'The payment window has ended. If you already paid within the window, verification can still finish. Do not send another payment.' : 'The payment lock is confirmed. Only the matching payment can authorize release.'}</p>${destination ? `<div class="payment-amount">${euros(value.terms.fiat_minor)} <span>exact amount</span></div><div class="recipient-card"><span class="avatar peach"><span class="revolut-mark">R</span></span><span><strong>Verified payment destination</strong><span class="live-recipient">${esc(destination)}</span></span></div><p class="payment-note">Use these details for this trade only. Complete payment verification after sending.</p>` : ''}${!paymentReady && !policy ? `<div class="important-note"><strong>Do not send a new bank payment</strong><span>Wait until payment verification is available. If you already paid, keep the trade open and check its status.</span></div>` : ''}${policy && policy.status !== 'verified' ? `<div class="important-note"><strong>${policy.status === 'pending' ? 'Verification is still pending' : policy.status === 'rejected' ? 'This payment was not accepted' : 'Verification is unavailable'}</strong><span>Your tokens remain in escrow. A status update cannot release them by itself.</span></div>` : ''}<div class="live-actions">${buyer ? (!state.roles.includes('buyer') ? connect(state, 'buyer') : policy?.status === 'verified' ? button(`Receive ${esc(tokenLabel(state))} ${icon('wallet')}`, 'release', { id: value.id, disabled: !enabled(state, 'buyer', true) }) : `${paymentReady && !expired && !destination ? button('Show payment details', 'instructions', { id: value.id, disabled: !enabled(state, 'buyer'), secondary: true }) : ''}${button('Check payment verification', 'verify', { id: value.id, disabled: !enabled(state, 'buyer') })}`) : button(`Refresh status ${icon('refresh')}`, 'refresh', { secondary: true, disabled: isBusy(state) })}</div></section>`;
   }
-  return `<button class="text-button live-nav-back" data-action="trades">← Your trades</button>${heading(`Trade ${esc(value.id)}`, `${euros(value.terms.fiat_minor)} · Revolut · Stellar testnet`, buyer ? 'BUYER WORKSPACE' : 'SELLER WORKSPACE')}<div class="trade-layout">${content}<aside class="panel live-info-panel"><h2>Trade details</h2>${row('Escrow amount', token(value.terms.token_amount, state))}${row('Exact EUR payment', euros(value.terms.fiat_minor))}${row('Seller', esc(short(value.terms.seller)))}${row('Buyer', esc(short(value.buyer)))}${row('Status', esc(labels[value.state]))}${['Reserved', 'Paying'].includes(value.state) ? `<div class="detail-row"><span>Payment window</span><strong data-countdown="${esc(value.id)}">${countdown(value, state)}</strong></div>` : ''}<div class="escrow-note">${icon('shield')}<p>${value.state === 'Paying' ? 'Recovery requires agreement from both wallets. A failed proof does not return funds automatically.' : 'Your wallet approves transactions. Balances and receipts come from confirmed chain data.'}</p></div>${['Reserved', 'Paying'].includes(value.state) ? '<p class="small-note">The two-wallet recovery connection is not available in this session yet.</p>' : ''}</aside></div>`;
+  return `<button class="text-button live-nav-back" data-action="trades">← Your trades</button>${heading(`Trade ${esc(value.id)}`, `${euros(value.terms.fiat_minor)} · Revolut · Stellar testnet`, buyer ? 'BUYER WORKSPACE' : 'SELLER WORKSPACE')}<div class="trade-layout"><div class="live-trade-primary">${content}${recoveryPanel(value, state)}</div><aside class="panel live-info-panel"><h2>Trade details</h2>${row('Escrow amount', token(value.terms.token_amount, state))}${row('Exact EUR payment', euros(value.terms.fiat_minor))}${row('Seller', esc(short(value.terms.seller)))}${row('Buyer', esc(short(value.buyer)))}${row('Status', esc(labels[value.state]))}${['Reserved', 'Paying'].includes(value.state) ? `<div class="detail-row"><span>Payment window</span><strong data-countdown="${esc(value.id)}">${countdown(value, state)}</strong></div>` : ''}<div class="escrow-note">${icon('shield')}<p>${value.state === 'Paying' ? 'Recovery requires agreement from both wallets. A failed proof does not return funds automatically.' : 'Your wallet approves transactions. Balances and receipts come from confirmed chain data.'}</p></div></aside></div>`;
 }
 
 function render() {
@@ -242,8 +296,10 @@ async function action(name, id) {
     }
     if (name === 'connect') await adapter.connect(id);
     else if (name === 'refresh') await adapter.refresh();
-    else if (name === 'logout') await adapter.logout();
-    else if (name === 'reserve') {
+    else if (name === 'logout') {
+      recoveryDrafts.clear();
+      await adapter.logout();
+    } else if (name === 'reserve') {
       await adapter.reserve(id);
       route = 'trade';
     } else if (name === 'fund') {
@@ -255,6 +311,13 @@ async function action(name, id) {
     else if (name === 'release') await adapter.release(id);
     else if (name === 'refund') await adapter.refund(id);
     else if (name === 'receipt') await adapter.loadReceipt(id);
+    else if (name === 'recovery-propose') {
+      const value = adapter.snapshot().view.ownerOrders.find((item) => item.id === id);
+      const amount = recoveryAmount(value, adapter.snapshot());
+      if (!amount) throw { code: 'INVALID_RESOLUTION_SPLIT' };
+      await adapter.proposeRecovery(id, amount.buyerTokens);
+    } else if (name === 'recovery-approve') await adapter.approveRecovery(id);
+    else if (name === 'recovery-reject') await adapter.rejectRecovery(id);
     else if (name === 'resume') await adapter.resumePending();
     render();
   } catch (error) {
@@ -262,6 +325,18 @@ async function action(name, id) {
     render();
   }
 }
+root.addEventListener('input', (event) => {
+  if (!event.target.matches('[data-recovery-input]')) return;
+  const state = adapter.snapshot();
+  const value = state.view.ownerOrders.find((item) => item.id === event.target.dataset.id);
+  recoveryDrafts.set(`${state.account}:${value.id}`, event.target.value);
+  const amount = recoveryAmount(value, state);
+  root.querySelector('.live-recovery-preview').innerHTML = amount
+    ? `${row('Buyer receives', token(amount.buyerTokens, state))}${row('Seller receives', token(amount.sellerTokens, state))}`
+    : '<p class="field-error">Enter an amount within the escrow, with up to seven decimal places.</p>';
+  const submit = root.querySelector('[data-action="recovery-propose"]');
+  if (submit) submit.disabled = !amount || !enabled(state, 'buyer', true);
+});
 root.addEventListener('click', (event) => {
   const target = event.target.closest('button[data-action]');
   if (target && !target.disabled) void action(target.dataset.action, target.dataset.id);

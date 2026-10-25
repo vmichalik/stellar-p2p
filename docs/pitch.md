@@ -4,7 +4,7 @@
 
 I’m building Pactlane, a ZKP2P-style on-ramp for Stellar. You pay a seller in Revolut, prove the payment, and receive USDC from a Soroban escrow. I want it to work with the bank app you already use, without sending the seller your whole transaction history.
 
-The escrow, policy signer and buyer/seller app are built. They work together locally with synthetic payment evidence and the compiled contract. The real bank-proof integration is still the blocker. MB WAY would be a useful second rail for Portugal once the first works reliably.
+The escrow, policy signer and buyer/seller app are built. They work together locally with synthetic payment evidence and the compiled contract. The separate live browser and authenticated host are also implemented locally, including exact two-wallet recovery and receipts checked against mocked chain events. Real bank proof and a deployed testnet trade remain unfinished. MB WAY would be a useful second rail for Portugal once the first works reliably.
 
 ## Message for a judge
 
@@ -19,7 +19,7 @@ I’m building Pactlane: Revolut payment in, Stellar USDC out. The seller funds 
 5. Show the actual local compiled-WASM payout and replay rejection, labeled local/synthetic. Replace this with transaction links only after an authorized testnet run.
 6. Use a separate held order for proof failure and two-wallet recovery.
 
-The browser receipt is simulated. The compiled-WASM result is real contract execution with a synthetic token/payment. Neither is a bank proof or network transaction.
+The demo receipt is simulated. Separate live-browser rehearsals use real HTTP and fixture wallet signatures with mocked chain services; they do not establish network settlement. The compiled-WASM result is real contract execution with a synthetic token/payment. Neither is a bank proof or network transaction.
 
 ## Likely questions
 
@@ -33,4 +33,4 @@ The browser receipt is simulated. The compiled-WASM result is real contract exec
 
 **Why Revolut rather than MB WAY?** We have a narrower proof target for Revolut. A verified MB WAY send remains unestablished; MB NET virtual cards do not solve that proof by themselves.
 
-**What is actually verified?** Component suites and an app-model → policy → compiled-WASM rehearsal pass. Public TLSNotary proof passed separately. No authenticated payment, deployed escrow or live settlement is established by this branch.
+**What is actually verified?** Component suites, an app-model → policy → compiled-WASM rehearsal, and a two-browser mutual-recovery rehearsal with mocked chain services pass. Public TLSNotary proof passed separately. No authenticated payment, deployed escrow or live settlement is established by this branch.

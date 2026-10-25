@@ -47,7 +47,7 @@ Synthetic stores and public fixture keys are separated from live bootstrap. `nor
 
 Instructions require a confirmed `Paying` order and independently bound destination. Release requires trusted non-synthetic authorization and a canonical signature. Receipts require the exact contract/order transaction and matching token-transfer events.
 
-Authenticated HTTP transport, consistent chain reads, atomic event reconciliation and buyer-envelope/seller-Soroban recovery are implemented as Node modules; see [live service continuation](release/live-services.md). The separate live browser, Freighter client and host composition are also implemented. Approved deployment/private offer/policy configuration and counterparty signing transport remain. `resolve` requires the configured seller authorization port and never submits unilateral recovery.
+Authenticated HTTP transport, consistent chain reads, atomic event reconciliation and buyer-envelope/seller-Soroban recovery are implemented as Node modules; see [live service continuation](release/live-services.md). The separate live browser, Freighter client and host composition are also implemented. Authenticated seller approval transport is implemented with one-use claims and exact preimage signatures, followed by the buyer envelope. Approved deployment/private offer/policy configuration remains. `resolve` requires the configured seller authorization port and never submits unilateral recovery.
 
 ## Recovery and deadlines
 

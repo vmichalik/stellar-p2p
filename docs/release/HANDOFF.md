@@ -2,7 +2,7 @@
 
 Objective: deliver one reviewed Pactlane candidate from frozen app, policy and escrow snapshots, with an actual local cross-component rehearsal and an honest live gap list.
 
-Host: Mac mini, 25 October 2026. Worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`. Branch: `codex/pactlane-integration`. Base: `807412686da2cdad494ee284675dbefc35110257`. Integration source snapshot: `c8f44752b82b1fe8f766028a782e7759caef2cc7`. Current local intake is in `/private/tmp/pactlane-coordinator-review-20261025` on `codex/pactlane-live-services`, importing TLS snapshot `2c98f8e86ee3fb6c9f89c14883c43b0a0d38f03a`. Runtime commit: `006ab023e4d44600d03f320f220457e5b5545f0e`; final handoff/evidence revision is the branch HEAD. Run `git rev-parse HEAD` and `git status --short` before continuation.
+Host: Mac mini, 25 October 2026. Worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`. Branch: `codex/pactlane-integration`. Base: `807412686da2cdad494ee284675dbefc35110257`. Integration source snapshot: `c8f44752b82b1fe8f766028a782e7759caef2cc7`. Current local intake is in `/private/tmp/pactlane-coordinator-review-20261025` on `codex/pactlane-mutual-recovery`, importing TLS snapshot `2c98f8e86ee3fb6c9f89c14883c43b0a0d38f03a`. Runtime commit: `006ab023e4d44600d03f320f220457e5b5545f0e`; final handoff/evidence revision is the branch HEAD. Run `git rev-parse HEAD` and `git status --short` before continuation.
 
 ## Delivered
 
@@ -27,7 +27,7 @@ These are local/synthetic checks. Network calls in this lane were read-only test
 
 The live payment gate is `NOT_CLEARED`. Public proof success reported by the proof lane is separate; no authenticated transfer has been accepted here. Sanitized cloud proof source and deployment/uptime evidence are imported through `2c98f8e`; the final video/deck handoffs are still missing. The server disconnect was explained by Fly’s five-minute trial stop. After an owner-reported PAYG upgrade, the same VM passed a finite 391.5-second uptime check. The deployed plugin allocation mitigation is not a complete QuickJS/disposal fix. **Bank tests remain paused** pending the owner’s decision to resume and normal per-attempt consent/disclosure review. The proof owner's running services and main's dirty files are untouched.
 
-The [live continuation](live-services.md) implements a separate live browser, Freighter client and host composition alongside authenticated transport, a consistent chain reader, event reconciliation and mutual-recovery signatures. Approved deployment/private offer/policy configuration and counterparty recovery transport remain. Live normalization deliberately rejects unknown semantics.
+The [live continuation](live-services.md) implements a separate live browser, Freighter client and host composition alongside authenticated transport, a consistent chain reader, event reconciliation and mutual-recovery signatures. The seller recovery transport is now implemented and locally checked. Approved deployment/private offer/policy configuration remains. Live normalization deliberately rejects unknown semantics.
 
 The optimized artifact requires protocol 29; official testnet RPC reported protocol 29 at 13:03 UTC. No token, signer, deployer or fee configuration is established. No network account creation, funding, signature, deployment, settlement, hosted app URL, reviewer invitation or submission was performed.
 

@@ -816,3 +816,191 @@ test('preserves only explicit wallet refusal as safely rejected', async (t) => {
   );
   assert.equal((await f.poll(cookie, id)).error, 'WALLET_REJECTED');
 });
+
+test('routes one-use recovery claims only to the authenticated seller and strips private broker fields', async (t) => {
+  const sessions = new Map(),
+    ended = [];
+  const requestId = 'r'.repeat(43),
+    claimToken = 'c'.repeat(43);
+  const dto = {
+    requestId,
+    orderId: '7',
+    networkPassphrase: Networks.TESTNET,
+    contract,
+    token: contract,
+    buyer: alice.publicKey(),
+    seller: bob.publicKey(),
+    tokenAmount: '220000000',
+    buyerTokens: '100000000',
+    sellerTokens: '120000000',
+    fiatMinor: '2000',
+    currency: 'EUR',
+    rail: 'revolut',
+    orderState: 'Paying',
+    expirationLedger: 200,
+    expiresAt: Date.now() + 45000,
+    status: 'queued',
+  };
+  let claimed = null,
+    delivered = null;
+  const rejected = (code) => {
+    throw Object.assign(Error(code), { code });
+  };
+  const broker = {
+    openSession(session) {
+      sessions.set(session.id, session);
+    },
+    closeSession(id) {
+      sessions.delete(id);
+      ended.push(id);
+    },
+    async list(id) {
+      return sessions.get(id)?.account === dto.seller
+        ? [{ ...dto, buyerSessionId: 'PRIVATE_SESSION', preimageXdr: 'PRIVATE_PREIMAGE' }]
+        : [];
+    },
+    async claim(id, requested) {
+      if (sessions.get(id)?.account !== dto.seller || requested !== requestId)
+        rejected('RECOVERY_REQUEST_MISMATCH');
+      if (claimed) rejected('RECOVERY_ALREADY_CLAIMED');
+      claimed = id;
+      return {
+        ...dto,
+        status: 'claimed',
+        claimToken,
+        preimageXdr: 'cHVibGljLWZpeHR1cmU=',
+        internalSecret: 'PRIVATE_BROKER',
+      };
+    },
+    async respond(id, requested, reply) {
+      if (id !== claimed || requested !== requestId || reply.claimToken !== claimToken)
+        rejected('RECOVERY_REQUEST_MISMATCH');
+      delivered = reply;
+    },
+  };
+  const f = await fixture(t, {
+    recovery: broker,
+    readView: () => ({
+      configured: true,
+      deployment: {
+        networkPassphrase: Networks.TESTNET,
+        contract,
+        token: contract,
+        tokenDecimals: 7,
+        tokenLabel: 'Test token',
+      },
+      offers: [],
+      ownerOrders: [],
+      sellerDrafts: [],
+      balances: null,
+      serverTime: '100',
+      unavailableReasons: [],
+      readiness: { recovery: true },
+    }),
+  });
+  const buyerCookie = await f.login(alice),
+    sellerCookie = await f.login(bob);
+  const buyerView = await f.request('/api/view', { cookie: buyerCookie });
+  assert.deepEqual(buyerView.body.recoveryRequests, []);
+  const sellerView = await f.request('/api/view', { cookie: sellerCookie });
+  assert.deepEqual(sellerView.body.recoveryRequests, [dto]);
+  assert.doesNotMatch(
+    JSON.stringify(sellerView.body),
+    /PRIVATE|preimageXdr|claimToken|buyerSessionId/,
+  );
+  const path = `/api/recovery/${requestId}`;
+  assert.equal(
+    (await f.request(path + '/claim', { method: 'POST', body: {}, cookie: buyerCookie })).status,
+    409,
+  );
+  const claim = await f.request(path + '/claim', {
+    method: 'POST',
+    body: {},
+    cookie: sellerCookie,
+  });
+  assert.equal(claim.status, 200);
+  assert.equal(claim.body.claimToken, claimToken);
+  assert.doesNotMatch(JSON.stringify(claim.body), /PRIVATE|internalSecret/);
+  assert.equal(
+    (await f.request(path + '/claim', { method: 'POST', body: {}, cookie: sellerCookie })).body
+      .error,
+    'RECOVERY_ALREADY_CLAIMED',
+  );
+  const signature = Buffer.from(bob.signMessage('public fixture')).toString('base64');
+  assert.equal(
+    (
+      await f.request(path + '/respond', {
+        method: 'POST',
+        cookie: sellerCookie,
+        body: { claimToken, signature, signerAddress: alice.publicKey() },
+      })
+    ).status,
+    400,
+  );
+  assert.equal(delivered, null);
+  assert.equal(
+    (
+      await f.request(path + '/respond', {
+        method: 'POST',
+        cookie: sellerCookie,
+        body: { claimToken, signature, signerAddress: bob.publicKey() },
+      })
+    ).status,
+    200,
+  );
+  assert.deepEqual(delivered, { claimToken, signature, signerAddress: bob.publicKey() });
+  await f.request('/api/session', { method: 'DELETE', cookie: sellerCookie });
+  assert.ok(ended.length > 0);
+  assert.equal(
+    (
+      await f.request(path + '/respond', {
+        method: 'POST',
+        cookie: sellerCookie,
+        body: { claimToken, error: 'RECOVERY_REJECTED' },
+      })
+    ).status,
+    401,
+  );
+});
+
+test('resolve dispatch binds the authenticated buyer and exposes only confirmed order results', async (t) => {
+  let captured;
+  const f = await fixture(t, {
+    createServices: ({ account, sessionId, getOperationDeadline }) => ({
+      async resolve(orderId, buyerTokens) {
+        captured = { account, sessionId, deadline: getOperationDeadline(), orderId, buyerTokens };
+        return {
+          order: { ...order(account), state: 'Resolved' },
+          transaction: confirmed,
+          private: 'PRIVATE_AUTH',
+        };
+      },
+    }),
+  });
+  const cookie = await f.login();
+  const result = await f.poll(
+    cookie,
+    await f.start(cookie, 'resolve', { orderId: '7', buyerTokens: '0' }),
+  );
+  assert.equal(result.status, 'completed');
+  assert.equal(result.result.order.state, 'Resolved');
+  assert.equal(captured.account, alice.publicKey());
+  assert.equal(captured.orderId, '7');
+  assert.equal(captured.buyerTokens, '0');
+  assert.match(captured.sessionId, /^[A-Za-z0-9_-]{43}$/);
+  assert.ok(captured.deadline > Date.now());
+  assert.doesNotMatch(JSON.stringify(result), /PRIVATE|sessionId|deadline/);
+  assert.equal(
+    (
+      await f.request('/api/commands', {
+        method: 'POST',
+        cookie,
+        body: {
+          action: 'resolve',
+          args: { orderId: '7', buyerTokens: '0', seller: bob.publicKey() },
+        },
+      })
+    ).status,
+    400,
+  );
+});

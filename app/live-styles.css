@@ -196,3 +196,44 @@
     animation: none;
   }
 }
+.live-app .live-trade-primary {
+  min-width: 0;
+}
+.live-app .live-recovery {
+  margin-top: 24px;
+  padding: 28px;
+}
+.live-app .live-recovery h2 {
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+}
+.live-app .live-recovery p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 14px 0;
+}
+.live-app .live-recovery .field-label {
+  display: block;
+  margin: 20px 0 8px;
+  font-size: 12px;
+}
+.live-app .live-recovery-domain {
+  margin: 18px 0;
+  font-size: 11px;
+}
+.live-app .live-recovery-domain summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.live-app .live-recovery-domain code {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.live-app .live-recovery-domain .detail-row {
+  align-items: flex-start;
+  gap: 16px;
+}
+.live-app .live-recovery-domain strong {
+  max-width: 65%;
+}

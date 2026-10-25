@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-25T14:40:32.966747+00:00",
+  "executionHost": "Mac mini",
+  "worktree": "/private/tmp/pactlane-coordinator-review-20261025",
+  "branch": "codex/pactlane-mutual-recovery",
+  "baseRevision": "4cb97bf0d96d284fbcaeec813f9371fe9df8b8ce",
+  "scope": "Authenticated two-session mutual recovery, exact seller authorization preimage/signature, buyer final envelope, durable confirmed receipt and repetition reconciliation. No unilateral post-lock refund.",
+  "javascript": {
+    "root": 148,
+    "policy": 55,
+    "canonicalProtocol": 11,
+    "integration": 95,
+    "total": 309,
+    "failures": 0,
+    "skipped": 0
+  },
+  "pythonBenchmarkPreparation": {
+    "tests": 8,
+    "failures": 0
+  },
+  "syntaxModulesAndInlineScripts": 91,
+  "syntaxIncludesGeneratedDemoCopies": true,
+  "frozenProtocolSync": true,
+  "formatting": "Whole-repository Prettier passed",
+  "compositionTest": {
+    "client": "actual host client",
+    "http": "actual loopback server",
+    "host": "actual runtime, broker, collector and disk journal",
+    "wallet": "public fixture keys through mocked Freighter API",
+    "rpc": "mocked",
+    "sellerApprovalAloneSubmits": false,
+    "buyerFinalSignatureRequired": true,
+    "confirmedSubmissions": 1,
+    "repeatReconcilesWithoutSignatureOrSubmission": true,
+    "exactSplitReceipt": true,
+    "buyerCanRefreshWhileSellerApprovalPending": true
+  },
+  "browser": {
+    "report": "recovery-browser-flow.json",
+    "scope": "Actual two-context browser UI, broker and HTTP with mocked chain/Freighter",
+    "widths": [1440, 390, 320],
+    "pageErrors": 0,
+    "horizontalOverflow": false,
+    "console": "Two expected anonymous session 401 responses",
+    "paymentProofAvailable": false,
+    "screenshots": [
+      "screenshots/recovery-seller-exact-split.png",
+      "screenshots/recovery-buyer-receipt-desktop.png"
+    ]
+  },
+  "submissionRequirements": {
+    "deadline": "2026-10-26T12:00:00+00:00",
+    "timezone": "Europe/Lisbon",
+    "source": "https://www.hackmeridian.com/schedule",
+    "requiredMaterials": ["demo video", "pitch deck", "GitHub repository", "submission answers"],
+    "sourceForMaterials": "https://www.hackmeridian.com/faq",
+    "portalLimitsAndReviewerAccess": "unverified behind login",
+    "answersDraft": "docs/submission-draft.md",
+    "submitted": false
+  },
+  "remaining": [
+    "approved deployment and private offer/policy configuration",
+    "accepted TLS payment semantics and normalizer",
+    "complete manual-payment reconciliation operator workflow",
+    "real authorized wallet/testnet verification",
+    "reachable hosting",
+    "final silent video/deck",
+    "reviewer access and submission"
+  ],
+  "bankTestsPaused": true,
+  "livePaymentGate": "NOT_CLEARED",
+  "deployed": false,
+  "networkTransactionsSubmitted": false,
+  "realWalletSigned": false,
+  "newPaymentLocksEnabled": false,
+  "nativeWasmRerun": false,
+  "nativeWasmRerunReason": "Contract source and artifact unchanged; retain historical evidence"
+}

@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomBytes } from 'node:crypto';
 import { Keypair, Networks, StrKey } from '@stellar/stellar-sdk';
+import { RECOVERY_ERROR_CODES } from './recovery-broker.mjs';
 
 // Transport only: services still enforce chain authorization, deployment identity,
 // policy acceptance and durable reconciliation. A session is not a chain signature.
@@ -99,6 +100,51 @@ function publicTransaction(value) {
     status: 'confirmed',
   };
 }
+function publicRecovery(value, owner) {
+  check(object(value) && value.seller === owner && value.buyer !== owner);
+  check(typeof value.requestId === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value.requestId));
+  check(
+    value.networkPassphrase === Networks.TESTNET &&
+      StrKey.isValidContract(value.contract) &&
+      StrKey.isValidContract(value.token),
+  );
+  check(
+    ['Reserved', 'Paying'].includes(value.orderState) &&
+      ['queued', 'claimed'].includes(value.status),
+  );
+  check(value.currency === 'EUR' && value.rail === 'revolut');
+  check(
+    Number.isSafeInteger(value.expirationLedger) &&
+      value.expirationLedger > 0 &&
+      value.expirationLedger <= 0xffffffff,
+  );
+  check(Number.isSafeInteger(value.expiresAt) && value.expiresAt > 0);
+  const tokenAmount = uint(value.tokenAmount, 127),
+    buyerTokens = uint(value.buyerTokens, 127),
+    sellerTokens = uint(value.sellerTokens, 127);
+  check(
+    BigInt(tokenAmount) > 0n && BigInt(buyerTokens) + BigInt(sellerTokens) === BigInt(tokenAmount),
+  );
+  return {
+    requestId: value.requestId,
+    orderId: uint(value.orderId),
+    networkPassphrase: Networks.TESTNET,
+    contract: value.contract,
+    token: value.token,
+    buyer: account(value.buyer),
+    seller: account(value.seller),
+    tokenAmount,
+    buyerTokens,
+    sellerTokens,
+    fiatMinor: uint(value.fiatMinor, 127),
+    currency: 'EUR',
+    rail: 'revolut',
+    orderState: value.orderState,
+    expirationLedger: value.expirationLedger,
+    expiresAt: value.expiresAt,
+    status: value.status,
+  };
+}
 function publicResult(action, result, owner, args) {
   if (action === 'connectWallet') {
     check(result?.account === owner && result.networkPassphrase === Networks.TESTNET);
@@ -165,6 +211,12 @@ function command(body, owner) {
     uint(args.orderId);
     return [action, args, action === 'reserve' ? [args.orderId, owner] : [args.orderId]];
   }
+  if (action === 'resolve') {
+    keys(args, ['orderId', 'buyerTokens']);
+    uint(args.orderId);
+    uint(args.buyerTokens, 127);
+    return [action, args, [args.orderId, args.buyerTokens]];
+  }
   if (action === 'release') {
     keys(args, ['orderId', 'authorization']);
     uint(args.orderId);
@@ -181,6 +233,7 @@ function command(body, owner) {
   fail('ACTION_UNAVAILABLE');
 }
 const SERVICE_ERRORS = new Set([
+  ...RECOVERY_ERROR_CODES,
   'TRANSACTION_PREPARATION_RETRYABLE',
   'WALLET_REJECTED',
   'WALLET_OPERATION_UNKNOWN',
@@ -222,6 +275,7 @@ export function createBrowserBridge({
   publicOrigin,
   createServices,
   readView,
+  recovery,
   clock = Date.now,
   challengeTtlMs = 60_000,
   sessionTtlMs = 900_000,
@@ -298,6 +352,7 @@ export function createBrowserBridge({
     if (job.session.active === job.id) job.session.active = null;
   }
   function expire(session, code = 'SESSION_EXPIRED') {
+    recovery?.closeSession(session.id);
     sessions.delete(session.id);
     clearTimeout(session.timer);
     for (const job of session.jobs.values()) finish(job, 'failed', code);
@@ -363,7 +418,14 @@ export function createBrowserBridge({
     if (session.jobs.size >= maxOperationsPerSession)
       session.jobs.delete(session.jobs.keys().next().value);
     const [action, args, parameters] = parsed;
-    const job = { id: token(), session, action, status: 'running', pending: null };
+    const job = {
+      id: token(),
+      session,
+      action,
+      status: 'running',
+      pending: null,
+      deadline: clock() + operationTimeoutMs,
+    };
     session.jobs.set(job.id, job);
     session.active = job.id;
     activeAccounts.add(session.account);
@@ -373,7 +435,12 @@ export function createBrowserBridge({
     context
       .run(job, async () => {
         session.services ??= Promise.resolve().then(() =>
-          createServices({ wallet: walletFor(session), account: session.account }),
+          createServices({
+            wallet: walletFor(session),
+            account: session.account,
+            sessionId: session.id,
+            getOperationDeadline: () => context.getStore()?.deadline,
+          }),
         );
         const services = await session.services;
         check(job.status === 'running', 'OPERATION_ENDED');
@@ -518,6 +585,18 @@ export function createBrowserBridge({
         check(owner && terms.seller === owner);
         return { id: text(draft.id, 80), publicTerms: terms };
       });
+      const recoveryRequests =
+        recovery && viewer
+          ? collection(await recovery.list(viewer.id))
+              .filter((item) => item.seller === owner)
+              .map((item) => publicRecovery(item, owner))
+          : [];
+      if (viewer)
+        check(
+          sessions.get(viewer.id) === viewer && viewer.expiresAt > clock(),
+          'AUTHENTICATION_REQUIRED',
+          401,
+        );
       const readiness = value.readiness ?? {};
       respond(response, 200, {
         configured: value.configured,
@@ -526,6 +605,7 @@ export function createBrowserBridge({
         offers,
         ownerOrders,
         sellerDrafts,
+        recoveryRequests,
         balances:
           owner && value.balances ? { tokenAtoms: uint(value.balances.tokenAtoms, 127) } : null,
         serverTime: uint(value.serverTime),
@@ -536,7 +616,7 @@ export function createBrowserBridge({
         readiness: {
           paymentProof: readiness.paymentProof === true,
           submission: readiness.submission === true,
-          recovery: readiness.recovery === true,
+          recovery: Boolean(recovery) && readiness.recovery === true,
         },
       });
       return;
@@ -600,6 +680,11 @@ export function createBrowserBridge({
         jobs: new Map(),
         active: null,
       };
+      recovery?.openSession({
+        id: session.id,
+        account: session.account,
+        expiresAt: session.expiresAt,
+      });
       session.timer = timer(() => expire(session), sessionTtlMs);
       sessions.set(session.id, session);
       respond(
@@ -631,6 +716,51 @@ export function createBrowserBridge({
     if (path === '/api/commands' && method === 'POST') {
       const operationId = launch(session, command(await readJson(request), session.account));
       respond(response, 202, { operationId });
+      return;
+    }
+    const recoveryRoute = /^\/api\/recovery\/([A-Za-z0-9_-]{43})\/(claim|respond)$/.exec(path);
+    if (recoveryRoute) {
+      check(recovery && method === 'POST', 'RECOVERY_UNAVAILABLE', 409);
+      const body = await readJson(request);
+      check(authenticated(request) === session, 'AUTHENTICATION_REQUIRED', 401);
+      try {
+        if (recoveryRoute[2] === 'claim') {
+          keys(body, []);
+          const claim = await recovery.claim(session.id, recoveryRoute[1]);
+          const publicRequest = publicRecovery(claim, session.account);
+          check(
+            typeof claim.claimToken === 'string' && /^[A-Za-z0-9_-]{43}$/.test(claim.claimToken),
+          );
+          const preimageXdr = text(claim.preimageXdr, 16384);
+          respond(response, 200, { ...publicRequest, claimToken: claim.claimToken, preimageXdr });
+        } else {
+          const rejected = object(body) && Object.hasOwn(body, 'error');
+          keys(
+            body,
+            rejected ? ['claimToken', 'error'] : ['claimToken', 'signature', 'signerAddress'],
+          );
+          check(typeof body.claimToken === 'string' && /^[A-Za-z0-9_-]{43}$/.test(body.claimToken));
+          if (rejected)
+            check(
+              ['RECOVERY_REJECTED', 'WALLET_REJECTED', 'WALLET_OPERATION_UNKNOWN'].includes(
+                body.error,
+              ),
+            );
+          else {
+            check(body.signerAddress === session.account, 'WALLET_ACCOUNT_MISMATCH');
+            check(
+              typeof body.signature === 'string' && /^[A-Za-z0-9+/]{86}==$/.test(body.signature),
+            );
+            check(Buffer.from(body.signature, 'base64').toString('base64') === body.signature);
+          }
+          await recovery.respond(session.id, recoveryRoute[1], body);
+          respond(response, 200, { accepted: true });
+        }
+      } catch (error) {
+        if (error instanceof BridgeError) throw error;
+        const code = serviceError(error);
+        throw new BridgeError(code === 'SERVICE_UNAVAILABLE' ? 'RECOVERY_UNAVAILABLE' : code, 409);
+      }
       return;
     }
     const matched =

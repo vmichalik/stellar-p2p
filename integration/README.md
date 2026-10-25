@@ -46,6 +46,6 @@ Funding, reserve, payment lock, signed release, unlocked-expiry refund and recei
 
 **Implemented Node modules:** authenticated browser transport, consistent chain reader, event reconciliation with atomic replay checkpoints, and buyer-envelope plus seller-Soroban recovery authorization. See [live service continuation](../docs/release/live-services.md) for their APIs and boundaries.
 
-**Live entry point:** `npm run dev:live` composes the host, public view, Freighter client and separate live UI, initially unconfigured. **Missing:** approved private offer/policy composition, counterparty signing transport, accepted TLSNotary normalization and deployment configuration. `resolve()` requires a configured seller authorization port. Tests mock RPC/wallet while using real SDK signing/encoding, loopback HTTP and disk/restart journals.
+**Live entry point:** `npm run dev:live` composes the host, public view, Freighter client and separate live UI, initially unconfigured. **Missing:** approved private offer/policy composition, accepted TLSNotary normalization and deployment configuration. The live broker routes exact seller authorization to the authenticated seller, followed by the buyer envelope. `resolve()` requires a configured seller authorization port. Tests mock RPC/wallet while using real SDK signing/encoding, loopback HTTP and disk/restart journals.
 
 These are software/configuration gaps. Deployment authorization alone would not finish them. See [testnet handoff](../deploy/testnet/README.md).

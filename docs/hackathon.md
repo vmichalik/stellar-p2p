@@ -6,7 +6,7 @@ Pactlane brings an existing P2P on-ramp pattern to Stellar. Show the preparation
 
 Checked against the official pages on 25 October 2026: HackMeridian is in Lisbon on 25–26 October. Submission closes at noon on Monday 26 October. The prize pool is $30,000 across six winners, paid in the equivalent value of XLM. Review is asynchronous using the demo video, pitch deck, GitHub repo and submission answers; finalists pitch on 28 October. AI-assisted development is allowed. The stated judging priority is Adoption, Discovery, then Continuation. [Event overview](https://www.hackmeridian.com/), [build guide](https://www.hackmeridian.com/build).
 
-The public deadline has no explicit timezone. Check it in the submission portal; Lisbon local is a working assumption. Portal format limits and the exact prize split are not established here.
+The [official schedule](https://www.hackmeridian.com/schedule) explicitly places all times in Lisbon local time and lists submissions closing Monday 26 October at 12:00. This is noon Europe/Lisbon (UTC+0 on that date). Portal media limits, complete answer fields and private-repo reviewer access instructions remain unverified; the public portal exposes login only.
 
 ## What to show judges
 

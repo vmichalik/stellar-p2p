@@ -12,7 +12,7 @@ Done when the server accepts a real completed transfer, live normalization has s
 
 ## 2. Connect app and host
 
-Keep the demo usable. The Node browser bridge, chain reader/indexer and mutual-recovery collector are now implemented; [compose their ports](release/live-services.md) with private offer/policy configuration and connect the actual browser wallet and view adapter. Finish counterparty signing transport. Use the existing durable journals and reconciliation.
+Keep the demo usable. The separate live browser, authenticated host, chain reader/indexer and two-party recovery transport are implemented and locally checked. [Configure their ports](release/live-services.md) with approved deployment, private offer bindings and trusted policy/verifier services. Use the existing durable journals and reconciliation.
 
 Done when the UI uses confirmed service results, instructions appear only after the lock, unknown submission cannot duplicate a transaction, late proof remains possible, and receipts match chain evidence.
 

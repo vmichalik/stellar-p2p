@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createLiveViewAdapter, formatUnits } from './live-view-adapter.mjs';
+import { createLiveViewAdapter, formatUnits, parseTokenUnits } from './live-view-adapter.mjs';
 
 const TESTNET = 'Test SDF Network ; September 2015';
 const buyer = 'G' + 'A'.repeat(55),
@@ -32,6 +32,25 @@ const chainOrder = (state = 'Reserved') => ({
   reserved_at: '1000',
   pay_by: '1100',
   locked_at: state === 'Reserved' ? '0' : '1000',
+});
+const recovery = () => ({
+  requestId: 'r'.repeat(43),
+  orderId: '0',
+  networkPassphrase: TESTNET,
+  contract: escrow,
+  token,
+  buyer,
+  seller,
+  tokenAmount: terms.token_amount,
+  buyerTokens: '100000001',
+  sellerTokens: '119999999',
+  orderState: 'Paying',
+  expirationLedger: 512,
+  expiresAt: 1_060_000,
+  fiatMinor: terms.fiat_minor,
+  currency: 'EUR',
+  rail: 'revolut',
+  status: 'queued',
 });
 const deferred = () => {
   let resolve, reject;
@@ -365,4 +384,138 @@ test('funding uses approved terms only and lets the authenticated host supply th
   assert.equal(f.adapter.snapshot().view.ownerOrders[0].state, 'Funded');
   assert.equal(f.adapter.snapshot().view.ownerOrders[0].terms.seller, buyer);
   assert.deepEqual(f.adapter.snapshot().receipts, {});
+});
+
+test('recovery decimal input keeps exact atoms and rejects rounding, exponent notation and out-of-range splits', async () => {
+  assert.equal(parseTokenUnits('10.0000001'), '100000001');
+  assert.equal(parseTokenUnits('0'), '0');
+  assert.equal(parseTokenUnits('9007199254740993.0000001'), '90071992547409930000001');
+  for (const input of ['1e3', '-1', '0.00000001', '1,25', '', 'Infinity'])
+    assert.throws(() => parseTokenUnits(input), { code: 'INVALID_RESOLUTION_SPLIT' });
+  const f = await connected({ paymentProof: false });
+  f.view().ownerOrders = [chainOrder('Paying')];
+  f.view().readiness.recovery = true;
+  await f.adapter.refresh();
+  await assert.rejects(f.adapter.proposeRecovery('0', '220000001'), {
+    code: 'INVALID_RESOLUTION_SPLIT',
+  });
+  assert.equal(
+    f.calls.some(([action]) => action === 'resolve'),
+    false,
+  );
+});
+
+test('both-wallet recovery stays independent of payment proof and requires the confirmed exact-split receipt', async () => {
+  const f = await connected({ paymentProof: false });
+  f.view().ownerOrders = [chainOrder('Paying')];
+  f.view().readiness.recovery = true;
+  await f.adapter.refresh();
+  const actions = [];
+  f.client.command = async (action, args) => {
+    actions.push([action, args]);
+    if (action === 'resolve') {
+      f.view().ownerOrders = [chainOrder('Resolved')];
+      return {
+        operationId: 'resolution',
+        result: { order: chainOrder('Resolved'), transaction: tx() },
+      };
+    }
+    assert.equal(action, 'reconcileReceipt');
+    return {
+      operationId: 'receipt',
+      result: {
+        orderId: '0',
+        orderState: 'Resolved',
+        buyerReceivedAtoms: '100000001',
+        sellerReturnedAtoms: '119999999',
+        transaction: tx(),
+      },
+    };
+  };
+  await f.adapter.proposeRecovery('0', '100000001');
+  assert.deepEqual(
+    actions.map(([action]) => action),
+    ['resolve', 'reconcileReceipt'],
+  );
+  assert.deepEqual(actions[0][1], { orderId: '0', buyerTokens: '100000001' });
+  assert.equal(f.adapter.snapshot().receipts['0'].buyerReceivedAtoms, '100000001');
+  f.client.command = async () => ({
+    operationId: 'wrong-receipt',
+    result: {
+      orderId: '0',
+      orderState: 'Resolved',
+      buyerReceivedAtoms: '100000000',
+      sellerReturnedAtoms: '120000000',
+      transaction: tx(),
+    },
+  });
+  await assert.rejects(f.adapter.loadReceipt('0'), { code: 'RECEIPT_UNAVAILABLE' });
+});
+
+test('uncertain recovery keeps the buyer operation pending without another proposal or receipt', async () => {
+  const f = await connected({ paymentProof: false });
+  f.view().ownerOrders = [chainOrder('Reserved')];
+  f.view().readiness.recovery = true;
+  await f.adapter.refresh();
+  let proposals = 0;
+  f.client.command = async () => {
+    proposals++;
+    throw Object.assign(Error('unknown'), {
+      outcome: 'unknown',
+      operationId: 'recovery-operation',
+    });
+  };
+  await assert.rejects(f.adapter.proposeRecovery('0', '0'));
+  await assert.rejects(f.adapter.proposeRecovery('0', '1'), { code: 'OPERATION_PENDING' });
+  assert.equal(proposals, 1);
+  assert.equal(f.adapter.snapshot().pending.operationId, 'recovery-operation');
+  assert.deepEqual(f.adapter.snapshot().receipts, {});
+});
+
+test('seller approval requires the matching confirmed order and does not fabricate settlement', async () => {
+  const f = fixture({ paymentProof: false });
+  f.view().account = seller;
+  f.view().ownerOrders = [chainOrder('Paying')];
+  f.view().readiness.recovery = true;
+  f.view().recoveryRequests = [recovery()];
+  await f.adapter.initialize();
+  await f.adapter.connect('seller');
+  let reviewed;
+  f.client.approveRecovery = async (value) => {
+    reviewed = value;
+    f.view().recoveryRequests = [];
+    return { requestId: value.requestId, accepted: true, approved: true };
+  };
+  await f.adapter.approveRecovery(recovery().requestId);
+  assert.deepEqual(reviewed, recovery());
+  assert.equal(f.adapter.snapshot().view.ownerOrders[0].state, 'Paying');
+  assert.equal(f.adapter.snapshot().recoveryNotice.approved, true);
+  assert.deepEqual(f.adapter.snapshot().receipts, {});
+  f.view().recoveryRequests = [{ ...recovery(), buyer: seller }];
+  await f.adapter.refresh();
+  assert.equal(f.adapter.snapshot().status, 'error');
+});
+
+test('expired proposals and late seller approvals after logout cannot authorize or restore a trade view', async () => {
+  const f = fixture({ paymentProof: false });
+  f.view().account = seller;
+  f.view().ownerOrders = [chainOrder('Paying')];
+  f.view().readiness.recovery = true;
+  f.view().recoveryRequests = [recovery()];
+  await f.adapter.initialize();
+  await f.adapter.connect('seller');
+  f.advance(61_000);
+  await assert.rejects(f.adapter.approveRecovery(recovery().requestId), {
+    code: 'RECOVERY_EXPIRED',
+  });
+  f.advance(-61_000);
+  const approval = deferred();
+  f.client.approveRecovery = () => approval.promise;
+  const pending = f.adapter.approveRecovery(recovery().requestId);
+  f.view().recoveryRequests = [];
+  await f.adapter.logout();
+  approval.resolve({ requestId: recovery().requestId, accepted: true, approved: true });
+  await pending;
+  assert.equal(f.adapter.snapshot().account, null);
+  assert.equal(f.adapter.snapshot().recoveryNotice, null);
 });

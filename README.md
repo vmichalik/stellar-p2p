@@ -17,6 +17,12 @@ Open the address printed by the server on that machine. Create Ben’s 22 USDC o
 
 The server binds to loopback. A Mac-mini loopback address is not a preview link for another device. No public Pactlane app URL is established by this branch.
 
+## Live-service implementation
+
+`npm run dev:live` serves a separate live browser and host after integration dependencies are prepared. It starts unconfigured, with no wallet or transaction action enabled. The host/client implementation includes authenticated Freighter sessions, confirmed chain views, durable transaction recovery, mutual authorization and reconciled receipts. See [the live service handoff](docs/release/live-services.md) for configuration and current evidence.
+
+Local browser checks use fixture signatures and mocked chain services. A real payment, approved deployment and reachable hosted app remain unverified. New payment locks remain disabled while payment verification is unavailable. This entry point does not turn the synthetic demo into a live trade.
+
 ## The trade
 
 1. The seller funds one fixed whole offer.
@@ -62,10 +68,10 @@ npm run build:demo
 ## Code map
 
 ```text
-app/                 Browser demo and live service interface
+app/                 Separate synthetic demo, live browser and Freighter client
 contracts/escrow/    Soroban escrow, canonical protocol, vectors and reviewed WASM
 policy/              Server evidence rules, signer boundary and SQLite replay registry
-integration/         App → policy → WASM rehearsal and wallet/RPC service candidate
+integration/         Local WASM rehearsal, authenticated host and wallet/RPC services
 tlsn/                Earlier private proof launcher and bank-free diagnostics
 deploy/              Static/demo and testnet handoff instructions
 evidence/            Sanitized results; no bank values or raw proofs

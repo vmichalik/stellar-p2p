@@ -17,6 +17,7 @@ import { createChainReader } from './chain-reader.mjs';
 import { createChainReconciler } from './chain-reconciler.mjs';
 import { createStellarServices } from './stellar-rpc-adapter.mjs';
 import { TransactionJournal } from './transaction-journal.mjs';
+import { createRecoveryBroker } from './recovery-broker.mjs';
 
 const check = (value, code) => {
   if (!value) throw Error(code);
@@ -256,6 +257,11 @@ export function createHostRuntime({
       reconciler,
       clock,
     });
+    const recovery = createRecoveryBroker({
+      deployment: cfg,
+      readOrder: (input) => reader.readSnapshot(input),
+      getLatestLedger: () => remote.getLatestLedger(),
+    });
     const preflight = async () => {
       try {
         await reader.readDeployment();
@@ -329,6 +335,7 @@ export function createHostRuntime({
       return { tokenAtoms: value.toString() };
     }
     return Object.freeze({
+      recovery,
       async readView({ account = null } = {}) {
         const reasons = ['PAYMENT_VERIFICATION_UNAVAILABLE'];
         let values = [],
@@ -397,10 +404,14 @@ export function createHostRuntime({
             : [],
           balances,
           unavailableReasons: reasons,
-          readiness: { paymentProof: false, submission: submissionEnabled, recovery: false },
+          readiness: {
+            paymentProof: false,
+            submission: submissionEnabled,
+            recovery: submissionEnabled,
+          },
         };
       },
-      async createServices({ wallet, account }) {
+      async createServices({ wallet, account, sessionId, getOperationDeadline }) {
         check(!closed && StrKey.isValidEd25519PublicKey(account), 'AUTHENTICATION_REQUIRED');
         const policy = policyFor
           ? await policyFor({ account, domain, ledgerReader: reader, store, reconciler })
@@ -410,6 +421,16 @@ export function createHostRuntime({
                 throw Error('LIVE_POLICY_UNAVAILABLE');
               },
             };
+        let recoveryPort = null;
+        const sellerPort = Object.fromEntries(
+          ['selected', 'network', 'signAuthorization'].map((method) => [
+            method,
+            (...args) => {
+              check(recoveryPort, 'RECOVERY_UNAVAILABLE');
+              return recoveryPort[method](...args);
+            },
+          ]),
+        );
         const services = createStellarServices({
           deployment: cfg,
           wallet,
@@ -417,6 +438,7 @@ export function createHostRuntime({
           journal,
           policy,
           instructions: reader.instructionsFor(account),
+          recovery: { seller: sellerPort, validForLedgers: 24 },
           submissionEnabled,
         });
         return Object.freeze({
@@ -453,6 +475,32 @@ export function createHostRuntime({
             cache = null;
             return result;
           },
+          async resolve(orderId, buyerTokens) {
+            check(submissionEnabled, 'TESTNET_SUBMISSION_NOT_AUTHORIZED');
+            check(typeof getOperationDeadline === 'function' && sessionId, 'RECOVERY_UNAVAILABLE');
+            await preflight();
+            id(orderId);
+            const prior = journal.get(`${cfg.contract}:resolve:${orderId}`);
+            // Reconciliation of an existing attempt must not ask the seller for
+            // a new approval, including when the order is already Resolved.
+            recoveryPort =
+              prior && prior.state !== 'retryable'
+                ? null
+                : await recovery.sellerPort({
+                    buyerSessionId: sessionId,
+                    orderId,
+                    buyerTokens,
+                    deadline: getOperationDeadline(),
+                  });
+            try {
+              const result = await services.resolve(orderId, buyerTokens);
+              rememberReceipt(result);
+              cache = null;
+              return result;
+            } finally {
+              recoveryPort = null;
+            }
+          },
           async refundExpiredReservation(orderId) {
             await preflight();
             const result = await services.refundExpiredReservation(orderId);
@@ -465,6 +513,7 @@ export function createHostRuntime({
       close() {
         if (closed) return;
         closed = true;
+        recovery.close();
         closeStorage();
       },
     });

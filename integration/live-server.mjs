@@ -43,6 +43,7 @@ export async function createLiveServer({
     publicOrigin,
     createServices: (input) => runtime.createServices(input),
     readView: (input) => runtime.readView(input),
+    recovery: runtime.recovery,
   });
   const headers = {
     'Cache-Control': 'no-store',

@@ -12,6 +12,7 @@ const ACTIONS = new Set([
   'release',
   'refundExpiredReservation',
   'reconcileReceipt',
+  'resolve',
 ]);
 const SAFE_FAILURES = new Set([
   'ACTION_UNAVAILABLE',
@@ -28,6 +29,21 @@ const SAFE_FAILURES = new Set([
   'PAYMENT_INSTRUCTIONS_LOCKED',
   'ORDER_NOT_PAYING',
   'LIVE_POLICY_UNAVAILABLE',
+  'RECOVERY_UNAVAILABLE',
+  'RECOVERY_REJECTED',
+  'RECOVERY_EXPIRED',
+  'RECOVERY_REQUEST_NOT_FOUND',
+  'RECOVERY_REQUEST_ALREADY_CLAIMED',
+  'RECOVERY_SESSION_INVALID',
+  'RECOVERY_REQUEST_EXPIRED',
+  'RECOVERY_ALREADY_CLAIMED',
+  'RECOVERY_REQUEST_MISMATCH',
+  'RECOVERY_SIGNATURE_INVALID',
+  'RECOVERY_CAPACITY',
+  'RECOVERY_ARGUMENT_INVALID',
+  'RECOVERY_CLOSED',
+  'INVALID_RESOLUTION_SPLIT',
+  'RESOLUTION_NOT_AVAILABLE',
 ]);
 const PUBLIC_ERRORS = new Set([
   ...SAFE_FAILURES,
@@ -86,6 +102,64 @@ const fail = (code) => {
 const check = (condition, code) => {
   if (!condition) fail(code);
 };
+
+/** Public recovery terms only. No signature material is kept in the view. */
+export function readRecoveryRequest(value) {
+  const uint = (number, bits) =>
+    typeof number === 'string' &&
+    /^(0|[1-9][0-9]*)$/.test(number) &&
+    number.length <= 39 &&
+    BigInt(number) < 1n << BigInt(bits);
+  check(
+    plain(value) &&
+      validId(value.requestId) &&
+      uint(value.orderId, 64) &&
+      value.networkPassphrase === TESTNET_PASSPHRASE &&
+      [value.contract, value.token].every(
+        (address) => typeof address === 'string' && /^C[A-Z2-7]{55}$/.test(address),
+      ) &&
+      validAccount(value.buyer) &&
+      validAccount(value.seller) &&
+      value.buyer !== value.seller &&
+      [value.tokenAmount, value.buyerTokens, value.sellerTokens, value.fiatMinor].every((amount) =>
+        uint(amount, 127),
+      ) &&
+      BigInt(value.tokenAmount) > 0n &&
+      BigInt(value.fiatMinor) > 0n &&
+      BigInt(value.buyerTokens) + BigInt(value.sellerTokens) === BigInt(value.tokenAmount) &&
+      value.currency === 'EUR' &&
+      value.rail === 'revolut' &&
+      ['Reserved', 'Paying'].includes(value.orderState) &&
+      Number.isInteger(value.expirationLedger) &&
+      value.expirationLedger > 0 &&
+      value.expirationLedger <= 0xffffffff &&
+      Number.isSafeInteger(value.expiresAt) &&
+      value.expiresAt > 0 &&
+      ['queued', 'claimed'].includes(value.status),
+    'RECOVERY_REQUEST_INVALID',
+  );
+  return Object.fromEntries(
+    [
+      'requestId',
+      'orderId',
+      'networkPassphrase',
+      'contract',
+      'token',
+      'buyer',
+      'seller',
+      'tokenAmount',
+      'buyerTokens',
+      'sellerTokens',
+      'orderState',
+      'expirationLedger',
+      'expiresAt',
+      'fiatMinor',
+      'currency',
+      'rail',
+      'status',
+    ].map((key) => [key, value[key]]),
+  );
+}
 
 function canonicalBase64(value, requiredBytes = null) {
   let encoded;
@@ -156,6 +230,7 @@ export function createHostClient({
     last = null,
     sessionEpoch = 0;
   const walletRequests = new Map();
+  const recoveryClaims = new Set();
 
   function guard(ctx) {
     check(!ctx.signal?.aborted, 'CLIENT_ABORTED');
@@ -268,9 +343,9 @@ export function createHostClient({
       // Pinned 6.0.1 source map: FreighterApiDeclinedError.code === -4.
       // Only an explicit returned transaction-signing refusal permits retry.
       fail(
-        method === 'signTransaction' &&
+        ((method === 'signTransaction' && result.signedTxXdr === '') ||
+          (method === 'signAuthEntry' && result.signedAuthEntry === null)) &&
           result.error.code === -4 &&
-          result.signedTxXdr === '' &&
           result.signerAddress === ''
           ? 'WALLET_REJECTED'
           : 'WALLET_UNAVAILABLE',
@@ -558,6 +633,100 @@ export function createHostClient({
       throw error;
     });
   }
+  async function respondRecovery(reviewed, approve, options = {}) {
+    const expected = readRecoveryRequest(reviewed);
+    check(expected.status === 'queued', 'RECOVERY_REQUEST_ALREADY_CLAIMED');
+    check(expected.expiresAt > clock(), 'RECOVERY_EXPIRED');
+    return exclusive(options, async (ctx) => {
+      if (!current || current.expiresAt <= clock())
+        await session({ signal: ctx.signal, deadline: ctx.deadline });
+      check(current?.account === expected.seller, 'WALLET_ACCOUNT_CHANGED');
+      ctx.account = current.account;
+      await sameWallet(ctx.account, ctx);
+      check(!recoveryClaims.has(expected.requestId), 'RECOVERY_REQUEST_ALREADY_CLAIMED');
+      check(recoveryClaims.size < maxRememberedWalletRequests, 'CLIENT_REQUEST_CAPACITY');
+      recoveryClaims.add(expected.requestId);
+      let claimed,
+        responseStarted = false;
+      try {
+        claimed = await request(`/api/recovery/${expected.requestId}/claim`, {
+          method: 'POST',
+          body: {},
+          ctx,
+        });
+        const actual = readRecoveryRequest(claimed);
+        check(
+          actual.status === 'claimed' &&
+            Object.keys(expected).every(
+              (key) =>
+                key === 'status' ||
+                (key === 'expiresAt'
+                  ? actual[key] <= expected[key]
+                  : actual[key] === expected[key]),
+            ),
+          'RECOVERY_REQUEST_CHANGED',
+        );
+        check(validId(claimed.claimToken), 'HOST_RESPONSE_INVALID');
+        check(actual.expiresAt > clock(), 'RECOVERY_EXPIRED');
+        let body = { claimToken: claimed.claimToken, error: 'RECOVERY_REJECTED' };
+        if (approve) {
+          const preimageXdr = canonicalBase64(claimed.preimageXdr);
+          await sameWallet(ctx.account, ctx);
+          progress(options.onProgress, {
+            status: 'wallet',
+            walletMethod: 'signAuthEntry',
+            requestId: expected.requestId,
+          });
+          // Freighter 6.0.1 signs HashIdPreimage and returns a raw 64-byte
+          // signature. The host reconstructs and verifies the signed entry.
+          const signed = await wallet(
+            'signAuthEntry',
+            [preimageXdr, { address: ctx.account, networkPassphrase: TESTNET_PASSPHRASE }],
+            ctx,
+          );
+          check(signed.signerAddress === ctx.account, 'WALLET_ACCOUNT_CHANGED');
+          body = {
+            claimToken: claimed.claimToken,
+            signature: canonicalBase64(signed.signedAuthEntry, 64),
+            signerAddress: ctx.account,
+          };
+          await sameWallet(ctx.account, ctx);
+          check(actual.expiresAt > clock(), 'RECOVERY_EXPIRED');
+        }
+        guard(ctx);
+        responseStarted = true;
+        const accepted = await request(`/api/recovery/${expected.requestId}/respond`, {
+          method: 'POST',
+          body,
+          ctx,
+        });
+        check(accepted.accepted === true, 'HOST_RESPONSE_INVALID');
+        return { requestId: expected.requestId, accepted: true, approved: approve };
+      } catch (error) {
+        const safe =
+          error instanceof HostClientError ? error : new HostClientError('HOST_UNREACHABLE');
+        if (!responseStarted && validId(claimed?.claimToken)) {
+          try {
+            guard(ctx);
+            await request(`/api/recovery/${expected.requestId}/respond`, {
+              method: 'POST',
+              body: {
+                claimToken: claimed.claimToken,
+                error:
+                  safe.code === 'WALLET_REJECTED' ? 'WALLET_REJECTED' : 'WALLET_OPERATION_UNKNOWN',
+              },
+              ctx,
+            });
+          } catch {
+            /* A lost response must never trigger a second signature. */
+          }
+        }
+        safe.outcome =
+          safe.code === 'WALLET_REJECTED' || SAFE_FAILURES.has(safe.code) ? 'failed' : 'unknown';
+        throw safe;
+      }
+    });
+  }
   return Object.freeze({
     authenticate,
     session,
@@ -576,6 +745,8 @@ export function createHostClient({
       check(ACTIONS.has(action) && plain(args), 'ACTION_UNAVAILABLE');
       return operate(action, args, null, options);
     },
+    approveRecovery: (reviewed, options) => respondRecovery(reviewed, true, options),
+    rejectRecovery: (reviewed, options) => respondRecovery(reviewed, false, options),
     resumeOperation(operationId, options) {
       check(validId(operationId), 'INVALID_OPERATION_ID');
       return operate(null, null, operationId, options);

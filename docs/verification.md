@@ -26,7 +26,7 @@ The [combined intake record](../evidence/release/tls-intake-checks.json) identif
 
 ## Live service continuation
 
-The later [live service continuation](release/live-services.md) passed 232 JavaScript tests with zero skips, eight Python checks and 77 syntax checks (including generated demo copies). It adds recovery authorization, authenticated HTTP transport, consistent chain reads and atomic event reconciliation. These are local mocked-RPC/wallet checks with real SDK signatures and loopback HTTP. The separate public testnet read confirmed RPC response shapes only. See [its evidence](../evidence/release/live-service-checks.json); browser app wiring, deployment and authenticated payment verification remain incomplete.
+The later [live service continuation](release/live-services.md) passed 232 JavaScript tests with zero skips, eight Python checks and 77 syntax checks (including generated demo copies). It adds recovery authorization, authenticated HTTP transport, consistent chain reads and atomic event reconciliation. These are local mocked-RPC/wallet checks with real SDK signatures and loopback HTTP. The separate public testnet read confirmed RPC response shapes only. See [its evidence](../evidence/release/live-service-checks.json); browser app wiring was still incomplete at that checkpoint. Subsequent live browser/host and mutual-recovery checks are recorded separately in [current recovery evidence](../evidence/release/mutual-recovery-checks.json); deployment and authenticated payment verification remain unverified.
 
 ## Integration-source results
 

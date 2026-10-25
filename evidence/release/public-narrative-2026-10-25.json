@@ -1,0 +1,622 @@
+{
+  "startedAt": "2026-10-25T15:44:46.946820+00:00",
+  "observedAt": "2026-10-25T15:44:48.170815+00:00",
+  "origin": "https://pactlane.io",
+  "client": "ordinary curl, default user agent; curl config disabled; no credentials; no redirects followed",
+  "reportedWorkerVersion": "e95529b6-f423-483e-a19c-f95c44e43508",
+  "workerVersionSource": "coordinator deployment handoff; not independently exposed by HTTP",
+  "revision": "88ba889f1927ec9283b45c2120d9c8df6a661419",
+  "manifestSha256": "57976a8918229887b98629139bf2f94ed729bad6acf2181b3f51b8fd886ebebe",
+  "requestCount": 19,
+  "publicMetadata": {
+    "title": "Pactlane \u00b7 Trade euros for USDC on Stellar",
+    "viewport": [
+      "width=device-width, initial-scale=1, viewport-fit=cover"
+    ],
+    "robots": [
+      "noindex, nofollow"
+    ],
+    "description": [
+      "Pay someone through Revolut and receive USDC in a Stellar wallet. Explore the peer-to-peer prototype with sample payments and simulated settlement."
+    ],
+    "theme-color": [
+      "#f7f5ee"
+    ],
+    "canonical": [
+      "https://pactlane.io/"
+    ],
+    "og:type": [
+      "website"
+    ],
+    "og:site_name": [
+      "Pactlane"
+    ],
+    "og:title": [
+      "Pactlane \u00b7 Trade euros for USDC on Stellar"
+    ],
+    "og:description": [
+      "Pay someone through Revolut and receive USDC in a Stellar wallet. Explore the peer-to-peer prototype with sample payments and simulated settlement."
+    ],
+    "og:url": [
+      "https://pactlane.io/"
+    ],
+    "og:image": [
+      "https://pactlane.io/assets/social-preview.png"
+    ],
+    "og:image:width": [
+      "1200"
+    ],
+    "og:image:height": [
+      "630"
+    ],
+    "og:image:alt": [
+      "Pactlane interactive demo. Sample payments and simulated settlement."
+    ],
+    "twitter:card": [
+      "summary_large_image"
+    ],
+    "twitter:title": [
+      "Pactlane \u00b7 Trade euros for USDC on Stellar"
+    ],
+    "twitter:description": [
+      "Pay someone through Revolut and receive USDC in a Stellar wallet. Explore the peer-to-peer prototype with sample payments and simulated settlement."
+    ],
+    "twitter:image": [
+      "https://pactlane.io/assets/social-preview.png"
+    ]
+  },
+  "checks": [
+    {
+      "check": "transport:apex",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:apex",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:manifest",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:manifest",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:index.html",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 307
+    },
+    {
+      "check": "headers:asset:index.html",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:styles.css",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:asset:styles.css",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:app.mjs",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:asset:app.mjs",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:model.mjs",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:asset:model.mjs",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:demo-adapter.mjs",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:asset:demo-adapter.mjs",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:presentation.mjs",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:asset:presentation.mjs",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:assets/fonts/manrope.woff2",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:asset:assets/fonts/manrope.woff2",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:assets/fonts/OFL.txt",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:asset:assets/fonts/OFL.txt",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:assets/social-preview.png",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:asset:assets/social-preview.png",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:assets/favicon.svg",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:asset:assets/favicon.svg",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:demo.mp4",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:asset:demo.mp4",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:demo-script.txt",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:asset:demo-script.txt",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:redirect:www.pactlane.io",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 308
+    },
+    {
+      "check": "headers:redirect:www.pactlane.io",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:redirect:app.pactlane.io",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 308
+    },
+    {
+      "check": "headers:redirect:app.pactlane.io",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:missing-path",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 404
+    },
+    {
+      "check": "headers:missing-path",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:read-only",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 405
+    },
+    {
+      "check": "headers:read-only",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:video-range",
+      "passed": true,
+      "required": true,
+      "curlExit": 0,
+      "status": 200
+    },
+    {
+      "check": "headers:video-range",
+      "passed": true,
+      "required": true,
+      "differences": {}
+    },
+    {
+      "check": "apex",
+      "passed": true,
+      "required": true,
+      "status": 200
+    },
+    {
+      "check": "canonical",
+      "passed": true,
+      "required": true
+    },
+    {
+      "check": "og-origin",
+      "passed": true,
+      "required": true
+    },
+    {
+      "check": "social-image-origin",
+      "passed": true,
+      "required": true
+    },
+    {
+      "check": "manifest",
+      "passed": true,
+      "required": true,
+      "status": 200
+    },
+    {
+      "check": "manifest-bytes",
+      "passed": true,
+      "required": true,
+      "publicSha256": "57976a8918229887b98629139bf2f94ed729bad6acf2181b3f51b8fd886ebebe"
+    },
+    {
+      "check": "synthetic-boundary",
+      "passed": true,
+      "required": true
+    },
+    {
+      "check": "media-included",
+      "passed": true,
+      "required": true
+    },
+    {
+      "check": "index-canonical-redirect",
+      "passed": true,
+      "required": true,
+      "status": 307,
+      "location": "/"
+    },
+    {
+      "check": "asset:index.html",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/",
+      "expectedBytes": 2503,
+      "actualBytes": 2503,
+      "expectedSha256": "daba60631074d95b802b6b4a67d107cded33b79bf0e929b72a37debe7f60d63d",
+      "actualSha256": "daba60631074d95b802b6b4a67d107cded33b79bf0e929b72a37debe7f60d63d"
+    },
+    {
+      "check": "asset:styles.css",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/styles.css",
+      "expectedBytes": 55454,
+      "actualBytes": 55454,
+      "expectedSha256": "92cb540f735a50a4f708a145c79f65071d91022527609a46706ec5f7d77a0a08",
+      "actualSha256": "92cb540f735a50a4f708a145c79f65071d91022527609a46706ec5f7d77a0a08"
+    },
+    {
+      "check": "asset:app.mjs",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/app.mjs",
+      "expectedBytes": 60797,
+      "actualBytes": 60797,
+      "expectedSha256": "3b8104ea46b4052f3d2293e335dbf7dca8715a1e4128e9c2d27c6c7cf64a49ef",
+      "actualSha256": "3b8104ea46b4052f3d2293e335dbf7dca8715a1e4128e9c2d27c6c7cf64a49ef"
+    },
+    {
+      "check": "asset:model.mjs",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/model.mjs",
+      "expectedBytes": 13610,
+      "actualBytes": 13610,
+      "expectedSha256": "6bab9aeed89e15686ea1ae281a2d46751bb43b82ee2f421c8447dda81e8a89ce",
+      "actualSha256": "6bab9aeed89e15686ea1ae281a2d46751bb43b82ee2f421c8447dda81e8a89ce"
+    },
+    {
+      "check": "asset:demo-adapter.mjs",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/demo-adapter.mjs",
+      "expectedBytes": 3668,
+      "actualBytes": 3668,
+      "expectedSha256": "a594e7b29e1570a9fccebe1ecd4b6f8f224a71e9cae5959c4ac129a3d8bf41aa",
+      "actualSha256": "a594e7b29e1570a9fccebe1ecd4b6f8f224a71e9cae5959c4ac129a3d8bf41aa"
+    },
+    {
+      "check": "asset:presentation.mjs",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/presentation.mjs",
+      "expectedBytes": 7303,
+      "actualBytes": 7303,
+      "expectedSha256": "1ecfe5cbc0c61686780eb1d50c9389df0610c30805e245bc3b1ab97d39bd4d15",
+      "actualSha256": "1ecfe5cbc0c61686780eb1d50c9389df0610c30805e245bc3b1ab97d39bd4d15"
+    },
+    {
+      "check": "asset:assets/fonts/manrope.woff2",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/assets/fonts/manrope.woff2",
+      "expectedBytes": 24576,
+      "actualBytes": 24576,
+      "expectedSha256": "e310b55a7fd9677f5e3555e6c6c4d064fa1f1d24393f0ddbe217cea12a8c432f",
+      "actualSha256": "e310b55a7fd9677f5e3555e6c6c4d064fa1f1d24393f0ddbe217cea12a8c432f"
+    },
+    {
+      "check": "asset:assets/fonts/OFL.txt",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/assets/fonts/OFL.txt",
+      "expectedBytes": 4386,
+      "actualBytes": 4386,
+      "expectedSha256": "d6a309fcfb963d329a93baf9df66fa5f3c23a4be2b5f67edf24d6cafecde12ac",
+      "actualSha256": "d6a309fcfb963d329a93baf9df66fa5f3c23a4be2b5f67edf24d6cafecde12ac"
+    },
+    {
+      "check": "asset:assets/social-preview.png",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/assets/social-preview.png",
+      "expectedBytes": 85170,
+      "actualBytes": 85170,
+      "expectedSha256": "2c9c8922ec256b8248a2ea1a2b5b25425cc1bd18036681f7a0805f17ff05f37d",
+      "actualSha256": "2c9c8922ec256b8248a2ea1a2b5b25425cc1bd18036681f7a0805f17ff05f37d"
+    },
+    {
+      "check": "asset:assets/favicon.svg",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/assets/favicon.svg",
+      "expectedBytes": 334,
+      "actualBytes": 334,
+      "expectedSha256": "a88935722e815d49768c99e9eed87d6ba758e0b19342db7c6456821425f8b6fe",
+      "actualSha256": "a88935722e815d49768c99e9eed87d6ba758e0b19342db7c6456821425f8b6fe"
+    },
+    {
+      "check": "asset:demo.mp4",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/demo.mp4",
+      "expectedBytes": 4764952,
+      "actualBytes": 4764952,
+      "expectedSha256": "49f8ec2b46b35981bcee0398ed0206dcafa5131e20afa24be608a8eba2129436",
+      "actualSha256": "49f8ec2b46b35981bcee0398ed0206dcafa5131e20afa24be608a8eba2129436"
+    },
+    {
+      "check": "asset:demo-script.txt",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "servedPath": "/demo-script.txt",
+      "expectedBytes": 2821,
+      "actualBytes": 2821,
+      "expectedSha256": "d664a70fae94ce25d3d9bbb2e29769a8f925beef2172fa716b3311fd7e293645",
+      "actualSha256": "d664a70fae94ce25d3d9bbb2e29769a8f925beef2172fa716b3311fd7e293645"
+    },
+    {
+      "check": "redirect:www.pactlane.io",
+      "passed": true,
+      "required": true,
+      "status": 308,
+      "location": "https://pactlane.io/test-path?demo=1&ref=a%2Fb"
+    },
+    {
+      "check": "redirect:app.pactlane.io",
+      "passed": true,
+      "required": true,
+      "status": 308,
+      "location": "https://pactlane.io/test-path?demo=1&ref=a%2Fb"
+    },
+    {
+      "check": "missing-path",
+      "passed": true,
+      "required": true,
+      "status": 404
+    },
+    {
+      "check": "read-only",
+      "passed": true,
+      "required": true,
+      "status": 405,
+      "allow": "GET, HEAD"
+    },
+    {
+      "check": "video-content-type",
+      "passed": true,
+      "required": true,
+      "actual": "video/mp4"
+    },
+    {
+      "check": "script-content-type",
+      "passed": true,
+      "required": true,
+      "actual": "text/plain"
+    },
+    {
+      "check": "video-range-content-integrity",
+      "passed": true,
+      "required": true,
+      "status": 200,
+      "actualBytes": 4764952
+    },
+    {
+      "check": "video-range-206",
+      "passed": false,
+      "required": false,
+      "status": 200,
+      "contentRange": null,
+      "acceptRanges": null
+    },
+    {
+      "check": "local-manifest-still-frozen",
+      "passed": true,
+      "required": true
+    }
+  ],
+  "passed": false,
+  "requiredChecksPassed": true,
+  "rangeSupported": false,
+  "knownLimitations": [
+    "Range bytes=0-1023 returned HTTP 200 and the complete verified MP4; byte-range seeking support remains unverified."
+  ],
+  "kind": "PUBLIC_NARRATIVE_RELEASE_AUDIT",
+  "livePaymentGate": "NOT_CLEARED",
+  "publicBrowserReview": {
+    "observedAt": "2026-10-25T15:47:09.984910+00:00",
+    "source": "root CUA observation after publication",
+    "heroAndMotivationVisible": true,
+    "expandedPrivacyLimitsVisible": true,
+    "videoLinkOpens": true,
+    "consoleWarningsOrErrors": 0,
+    "video": {
+      "durationSeconds": 180,
+      "width": 1920,
+      "height": 1080,
+      "readyState": 4,
+      "playing": true,
+      "error": null
+    },
+    "limitation": "Public desktop smoke and media playback; full synthetic flow and responsive QA were performed on identical source before publication."
+  },
+  "sourceChecks": {
+    "uiRevision": "5bd17fde42340d898435eaecd873ba25366c32ee",
+    "reportedByIntegrationOwner": {
+      "appTestsPassed": 21,
+      "releaseTestsPassed": 10,
+      "syntaxChecksPassed": 79
+    },
+    "rootConfirmedFinancialAndProofSourcesUnchanged": true,
+    "rootLocalResponsiveReview": {
+      "mobileViewport": [
+        390,
+        844
+      ],
+      "navButtonHeight": 56,
+      "narrowGuideViewport": [
+        320,
+        700
+      ],
+      "horizontalOverflow": false,
+      "guideExitVisible": true
+    }
+  },
+  "mediaVerification": {
+    "durationSeconds": 180,
+    "width": 1920,
+    "height": 1080,
+    "frames": 5400,
+    "fps": 30,
+    "audioStreams": 0,
+    "bytes": 4764952,
+    "sha256": "49f8ec2b46b35981bcee0398ed0206dcafa5131e20afa24be608a8eba2129436",
+    "narrationSha256": "d664a70fae94ce25d3d9bbb2e29769a8f925beef2172fa716b3311fd7e293645",
+    "fullDecodePassed": true,
+    "decodedScenesReviewed": 24,
+    "captureTrades": [
+      "PL-3EEB4639",
+      "PL-2349196A"
+    ]
+  }
+}

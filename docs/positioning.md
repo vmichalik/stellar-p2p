@@ -26,7 +26,7 @@ Pactlane is being built to verify the payment and release a funded offer without
 
 **Trade-flow prompt:** After you pay, know what happens next.
 
-These are the next copy direction. The published app and video remain the recorded 14:42 release; this document does not establish a copy deployment. Keep intended privacy benefits visibly separate from the simulated functionality.
+This direction is implemented in UI commit `5bd17fde42340d898435eaecd873ba25366c32ee` and integration source `88ba889f1927ec9283b45c2120d9c8df6a661419`. The app now puts the motivation before the quote, offers a first-person explanation, names the payment recipient and explains the possible seller margin. Its mobile navigation and desktop setup guide make the next action clearer without implying cross-device resume. Intended privacy benefits remain separate from the simulated functionality. This revision is published at [pactlane.io](https://pactlane.io), with the revised silent video and dub script. The [25 October public audit](../evidence/release/public-narrative-2026-10-25.json) records frozen source `88ba889`, Worker `e95529b6-f423-483e-a19c-f95c44e43508`, matching assets and all 67 required checks passing. The known video range limitation remains; direct Chrome playback works.
 
 ## What the evidence supports
 
@@ -70,11 +70,11 @@ For cost research, [Ramp's published processing rates](https://support.rampnetwo
 
 ## Pitch and demo
 
-Proposed opening narration: "I already have a bank account. If I need USDC in my wallet, I don't want another exchange account or another company holding my passport. I'd rather pay the person supplying the USDC. I'm building Pactlane to make that trade directly through Revolut, using proof of the payment to authorize release. This demo shows the intended flow with sample payments."
+Revised opening narration: “If I need USDC for a Stellar app or payment, I don’t want another exchange account or another company holding my passport. I’d rather use the payment account I have and pay the person supplying the USDC. That’s why I’m building Pactlane. This walkthrough uses sample payments.”
 
 The main story follows seller funding, buyer whole-offer reservation, confirmed payment locking, then fiat instructions, sample payment verification and a simulated receipt. A separate order demonstrates unavailable proof and two-wallet recovery. The local policy/compiled-WASM rehearsal is distinct implementation evidence. Do not intercut it as if it proves the browser made a live payment.
 
-Closing narration: “This walkthrough uses simulated payment verification. The next milestone is reliable acceptance of a real Revolut payment. If a payment cannot be verified, funds remain held until valid proof arrives or both parties authorize recovery.”
+Revised closing narration: “That’s the prototype: a funded direct trade, with a payment check before release. Reliable live verification is still the next hurdle, followed by a confirmed testnet trade. You can try the demo at pactlane dot io.” The recovery sequence explicitly explains that a locked trade can remain unresolved if either person will not cooperate.
 
 The new public demo address is `https://pactlane.io`. Use `https://proof.pactlane.io` for proof tooling only after DNS, certificate and public-origin configuration are verified. Domain ownership does not establish service availability. Keep video audio absent for Vijay's own dub.
 

@@ -1,8 +1,10 @@
 # Domain and release-source handoff
 
+This is the historical domain/source preparation record. Its candidate, publication-readiness and next-action sections are superseded by the [published narrative release handoff](NARRATIVE-HANDOFF.md), which records source `88ba889`, Worker `e95529b6-f423-483e-a19c-f95c44e43508` and the verified app/video publication. Retain the earlier snapshots and evidence below as history.
+
 Objective: prepare Pactlane's app/proof domain topology, research-backed metadata and stable source intake. Execution host: Mac mini. Worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`; branch `codex/pactlane-integration`. This is local preparation. No DNS, cloud resource, deployment or new remote push was performed by this lane.
 
-## Current candidate
+## Candidate at the initial freeze (historical)
 
 - App `https://pactlane.io`; aliases `www.pactlane.io` and `app.pactlane.io` redirect with path/query preserved.
 - Workers Static Assets configuration is root `wrangler.jsonc`, Worker `deploy/demo/worker.mjs`. Only built-in ASSETS; no paid service bindings, schedule, source maps or observability. workers.dev and preview URLs disabled.
@@ -28,7 +30,7 @@ After DNS and cert are independently verified, root/proof owner can stage the ex
 
 After acceptance, update `SITE.proofDomainVerified` and the operational runbook. Domain ownership and a certificate request are not service availability.
 
-## Verification and next action
+## Verification and next action at the initial freeze (historical)
 
 The new domain/config/redirect tests and integrated JS suites pass; details and exact source hashes are in the domain evidence record. Worker dry run uses installed official Wrangler 4.152.0 and creates no service. Source syntax/format checks and Python preparation tests run locally. The prior compiled-WASM rehearsal remains local/synthetic; none of this establishes a bank payment or network settlement.
 
@@ -40,7 +42,7 @@ The duplicate coordinator's exact TLS branch push was previously rejected by aut
 
 Root may provide reviewed `demo.mp4` and `demo-script.txt` through explicit `npm run build:demo -- --media-dir …`. No media is included by default; no video UI link was added. The exact two-file whitelist, strict size/regular-file/container/text checks, per-file hashes and private source-path provenance are implemented. MP4 stays outside Git. Playback permission is same-origin and limited to a present exact video response. This can ship after the app and is not a reason to hold the final app snapshot.
 
-## Final app publication candidate
+## Initial app publication candidate (historical)
 
 The branch HEAD after the final freeze is the ready source commit; `dist/demo/manifest.json` records that same revision after rebuilding. `.private/release/domain-bundle.json` is the exact 14-file/hash inventory, with `sourceDirty: false`. These generated artifacts stay ignored; they are review/deploy inputs, not a new source push.
 

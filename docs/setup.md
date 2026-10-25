@@ -15,7 +15,7 @@ For policy, protocol and wallet/RPC checks, run `npm run setup:integration` then
 
 ## Earlier private proof prototype
 
-The instructions below reproduce the packaged private launcher. They are not the current cloud deployment's source/runbook. The proof owner operates that runtime; its sanitized source handoff is still pending. Do not restart or replace it from these instructions. Current owner browser: MacBook Pro. Historical Windows results do not establish current device readiness.
+The instructions below reproduce the earlier private launcher. The reviewed cloud snapshot is now under `tlsn/benchmark/` and `infra/proof-benchmark/`, but the proof owner still operates the running service. Do not restart it from these private-launcher instructions. See [domain handoff](release/DOMAIN-HANDOFF.md) for staged custom-origin support; the operational Fly hostname remains unchanged and bank tests remain paused. Current owner browser: MacBook Pro. Historical Windows results do not establish current device readiness.
 
 ## Source checks
 

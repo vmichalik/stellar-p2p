@@ -13,7 +13,9 @@ import {
 const PUBLIC_ORIGIN = 'https://proof.example.test:9492';
 
 function mockResponse() {
+  const completion = Promise.withResolvers();
   return {
+    completed: completion.promise,
     statusCode: null,
     headers: null,
     body: null,
@@ -24,9 +26,11 @@ function mockResponse() {
     end(body = '') {
       this.body = body;
       this.writableEnded = true;
+      completion.resolve();
     },
     destroy() {
       this.destroyed = true;
+      completion.resolve();
     },
   };
 }
@@ -34,8 +38,16 @@ function mockResponse() {
 async function dispatch(server, request) {
   const response = mockResponse();
   server.emit('request', { headers: {}, ...request }, response);
-  for (let i = 0; i < 20 && !response.writableEnded && !response.destroyed; i++) {
-    await new Promise((resolve) => setImmediate(resolve));
+  let timeout;
+  try {
+    await Promise.race([
+      response.completed,
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('Mock response did not finish')), 2000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
   }
   return response;
 }

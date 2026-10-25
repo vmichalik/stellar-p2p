@@ -3,6 +3,8 @@ import { lstat, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { SITE, siteMetadata } from '../deploy/demo/site.mjs';
+import { STATIC_HEADERS } from '../deploy/demo/headers.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
 export const DEMO_FILES = [
@@ -13,15 +15,11 @@ export const DEMO_FILES = [
   'demo-adapter.mjs',
   'assets/fonts/manrope.woff2',
   'assets/fonts/OFL.txt',
+  'assets/social-preview.png',
+  'assets/favicon.svg',
 ];
-const GENERATED = ['manifest.json', '_headers'];
-export const DEMO_HEADERS = `/*
-  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: no-referrer
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Cache-Control: no-store
-`;
+const GENERATED = ['manifest.json', '_headers', 'robots.txt', 'sitemap.xml'];
+export const DEMO_HEADERS = STATIC_HEADERS;
 
 async function filesUnder(root) {
   const found = [];
@@ -60,7 +58,12 @@ export async function buildDemo({
     const info = await lstat(path);
     if (!info.isFile() || info.isSymbolicLink())
       throw new Error('Demo inputs must be regular files.');
-    inputs.push({ name, data: await readFile(path) });
+    const sourceData = await readFile(path);
+    inputs.push({
+      name,
+      data:
+        name === 'index.html' ? Buffer.from(siteMetadata(sourceData.toString('utf8'))) : sourceData,
+    });
   }
   const manifest = {
     schemaVersion: 1,
@@ -68,6 +71,11 @@ export async function buildDemo({
     revision,
     livePaymentVerification: false,
     liveSettlement: false,
+    intendedOrigins: { app: SITE.appOrigin, proof: SITE.proofOrigin },
+    proofCustomDomainReady: SITE.proofDomainVerified,
+    operationalProofOrigin: SITE.proofDomainVerified
+      ? SITE.proofOrigin
+      : SITE.operationalProofOrigin,
     files: inputs.map(({ name, data }) => ({
       path: name,
       sha256: createHash('sha256').update(data).digest('hex'),
@@ -81,6 +89,14 @@ export async function buildDemo({
   }
   await writeFile(join(output, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
   await writeFile(join(output, '_headers'), DEMO_HEADERS);
+  await writeFile(
+    join(output, 'robots.txt'),
+    `User-agent: *\nAllow: /\nSitemap: ${SITE.appOrigin}/sitemap.xml\n`,
+  );
+  await writeFile(
+    join(output, 'sitemap.xml'),
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE.appOrigin}/</loc></url></urlset>\n`,
+  );
   return manifest;
 }
 

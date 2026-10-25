@@ -13,7 +13,12 @@ async function fixture(t) {
   for (const name of DEMO_FILES) {
     const path = join(source, name);
     await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, 'synthetic fixture: ' + name);
+    await writeFile(
+      path,
+      name === 'index.html'
+        ? '<!doctype html><html><head><title>Old title</title></head><body>Sample demo</body></html>'
+        : 'synthetic fixture: ' + name,
+    );
   }
   return { source, output };
 }
@@ -35,6 +40,21 @@ test('demo build copies only allowlisted app assets and labels every manifest sy
   const headers = await readFile(join(paths.output, '_headers'), 'utf8');
   assert.match(headers, /connect-src 'none'/);
   assert.doesNotMatch(headers, /https:|wss:/);
+  const index = await readFile(join(paths.output, 'index.html'), 'utf8');
+  assert.match(index, /rel="canonical" href="https:\/\/pactlane\.io\/"/);
+  assert.equal(result.intendedOrigins.proof, 'https://proof.pactlane.io');
+  assert.equal(result.proofCustomDomainReady, false);
+  assert.match(index, /https:\/\/stellar-p2p-proof-vijay\.fly\.dev\/extension-check\//);
+  assert.match(
+    index,
+    /property="og:image" content="https:\/\/pactlane\.io\/assets\/social-preview\.png"/,
+  );
+  assert.match(index, /sample payments and simulated settlement/);
+  assert.doesNotMatch(index, /<title>Old title<\/title>/);
+  assert.match(
+    await readFile(join(paths.output, 'sitemap.xml'), 'utf8'),
+    /<loc>https:\/\/pactlane\.io\/<\/loc>/,
+  );
 });
 
 test('demo build rejects unexpected existing output without deleting or publishing it', async (t) => {

@@ -1,0 +1,8 @@
+{
+  "sourceRevision": "2c98f8e86ee3fb6c9f89c14883c43b0a0d38f03a",
+  "sourceBundleSha256": "9b4742fd49cde789e26cb5f2e8256aa2923a4ec26f1b7f4030a5dbdd26fb3fe8",
+  "sourceOnly": true,
+  "independentlyRetestedDeployment": false,
+  "runtimeReadiness": null,
+  "authenticatedTlsnTransferAccepted": false
+}

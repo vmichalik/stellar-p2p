@@ -137,7 +137,7 @@ async function checkExtension() {
   } catch (error) {
     const errorText = typeof error?.message === 'string' ? error.message : '';
     let errorCode = 'EXTENSION_CHECK_FAILED';
-    if (/setupProver timed out after 30000ms|MPC_SETUP_TIMEOUT/i.test(errorText)) {
+    if (/setupProver timed out after (?:30000|60000)ms|MPC_SETUP_TIMEOUT/i.test(errorText)) {
       errorCode = 'MPC_SETUP_TIMEOUT';
     } else if (/context mux error|maximum number of streams|MPC_SETUP_FAILED/i.test(errorText)) {
       errorCode = 'MPC_SETUP_FAILED';

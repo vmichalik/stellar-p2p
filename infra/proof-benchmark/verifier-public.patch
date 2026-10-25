@@ -1,0 +1,116 @@
+--- a/servers/verifier/src/main.rs
++++ b/servers/verifier/src/main.rs
+@@ -75,7 +75,7 @@
+         .ok()
+         .and_then(|p| p.parse().ok())
+         .unwrap_or(7047);
+-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
++    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+     info!("TLSNotary Verifier Server starting on {}", addr);
+ 
+     let listener = tokio::net::TcpListener::bind(addr)
+@@ -395,6 +395,64 @@
+     }
+ }
+ 
++fn host_allowed(host: &str) -> bool {
++    host == "app.revolut.com"
++}
++
++#[cfg(test)]
++mod public_budget_tests {
++    use super::*;
++    use futures_util::{SinkExt, StreamExt};
++    use serde_json::{json, Value};
++
++    async fn registration(max_recv_data: usize, max_sent_data: usize) -> (Value, usize) {
++        let state = Arc::new(AppState {
++            sessions: Arc::new(Mutex::new(HashMap::new())),
++            config: Arc::new(Config::default()),
++        });
++        let app = Router::new()
++            .route("/session", get(session_ws_handler))
++            .with_state(state.clone());
++        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
++        let address = listener.local_addr().unwrap();
++        let task = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
++        let (mut client, _) = tokio_tungstenite::connect_async(format!("ws://{address}/session")).await.unwrap();
++        client.send(tokio_tungstenite::tungstenite::Message::Text(json!({
++            "type": "register", "maxRecvData": max_recv_data,
++            "maxSentData": max_sent_data, "sessionData": {}
++        }).to_string().into())).await.unwrap();
++        let message = tokio::time::timeout(Duration::from_secs(2), client.next()).await.unwrap().unwrap().unwrap();
++        let response: Value = serde_json::from_str(message.to_text().unwrap()).unwrap();
++        if response["type"] == "session_registered" {
++            for _ in 0..20 {
++                if !state.sessions.lock().await.is_empty() { break; }
++                tokio::time::sleep(Duration::from_millis(5)).await;
++            }
++        }
++        let stored = state.sessions.lock().await.len();
++        let _ = client.close(None).await;
++        task.abort();
++        (response, stored)
++    }
++
++    #[tokio::test]
++    async fn public_budget_rejects_oversized_registration_without_allocating_verifier() {
++        for (recv, sent) in [(16_385, 4_096), (16_384, 4_097), (usize::MAX, usize::MAX)] {
++            let (response, stored) = registration(recv, sent).await;
++            assert_eq!(response["type"], "error");
++            assert_eq!(response["message"], "Requested budgets exceed public diagnostic limits");
++            assert_eq!(stored, 0);
++        }
++    }
++
++    #[tokio::test]
++    async fn public_budget_accepts_the_unchanged_fixed_benchmark_limits() {
++        let (response, stored) = registration(16_384, 4_096).await;
++        assert_eq!(response["type"], "session_registered");
++        assert_eq!(stored, 1);
++    }
++}
++
+ // Health check endpoint handler
+ async fn health_handler() -> impl IntoResponse {
+     "ok"
+@@ -501,6 +559,12 @@
+             return;
+         }
+     };
++
++    // Public bank-free benchmark admission: bound resources before registration or task allocation.
++    if max_recv_data > 16_384 || max_sent_data > 4_096 {
++        send_error(&mut socket, "Requested budgets exceed public diagnostic limits").await;
++        return;
++    }
+ 
+     info!(
+         "[{}] Received registration: maxRecvData={}, maxSentData={}, sessionData keys: {:?}",
+@@ -738,7 +802,11 @@
+     Query(query): Query<ProxyQuery>,
+     State(state): State<Arc<AppState>>,
+ ) -> Result<impl IntoResponse, (StatusCode, String)> {
++    // stellar-p2p benchmark restrictions: fixed public target only.
+     let host = query.token;
++    if !host_allowed(&host) {
++        return Err((StatusCode::FORBIDDEN, "Target is not permitted".to_string()));
++    }
+     let session_id = query.session_id;
+ 
+     info!(
+@@ -1106,6 +1174,14 @@
+ 
+             // Check if webhook is configured for this server_name
+             let server_name_str = server_name.as_ref();
++            if !host_allowed(server_name_str) {
++                let _ = result_tx.send(VerificationResult {
++                    results: vec![],
++                    error: Some("TLS server is not permitted".to_string()),
++                });
++                cleanup_session(&state, &session_id).await;
++                return;
++            }
+             if let Some(webhook_config) = state.config.get_webhook(server_name_str) {
+                 info!(
+                     "[{}] Webhook configured for {}, sending POST to {}",

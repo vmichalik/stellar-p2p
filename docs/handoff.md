@@ -20,7 +20,7 @@ Main's dirty proof docs/evidence and coordinator note were preserved. Component 
 
 App, policy and escrow work together locally. The browser demo is simulated. Live TLSNotary payment ingestion rejects unverified records. No accepted authenticated payment, deployed escrow, network receipt or public app URL is established by this branch.
 
-The Node wallet/RPC service candidate is implemented and unit checked, but browser transport, trusted live readers/indexer and two-wallet recovery collection remain. These need code, not just deployment approval. The current cloud proof runtime needs its own sanitized source handoff; do not operate it from this branch's earlier private-launcher instructions.
+The Node wallet/RPC service candidate is implemented and unit checked, but browser transport, trusted live readers/indexer and two-wallet recovery collection remain. These need code, not just deployment approval. The reviewed cloud source snapshot through `2c98f8e` is integrated locally. Keep its operational Fly origin until root verifies DNS/certificate and the new origin; see [domain handoff](release/DOMAIN-HANDOFF.md). Bank tests remain paused.
 
 ## Checks and artifacts
 

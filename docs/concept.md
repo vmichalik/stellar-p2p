@@ -1,12 +1,14 @@
 # The idea
 
-I want to get from euros in my bank app to USDC in my Stellar wallet without sending money to an exchange first.
+I already use Revolut and Stellar. When a P2P payment has been sent, I want to know what still has to happen before the USDC arrives.
 
 The starting point is ZKP2P’s model: prove an off-chain payment, then use that proof to settle an on-chain trade. The Stellar version should feel simple: pick an offer, pay the seller in Revolut, prove the payment, receive USDC.
 
 ## Who it’s for
 
-The first user is someone who already has Revolut and wants USDC on Stellar. The seller supplies the USDC and accepts EUR. A useful first pilot would be a small group trading with known limits; liquidity and reliable payment verification matter more than adding more rails.
+The first user is an existing Stellar-wallet user with EUR in Revolut who uses or would consider P2P liquidity. The seller supplies USDC and needs an exact payment match before release. Start with a small Stellar-community cohort and known limits. This is an early-adopter hypothesis; the [desk research](positioning.md) is not customer validation.
+
+The product promise is a clearer handoff from payment to release: exact amounts, current actor, release conditions and recoverability. Fees, speed and fewer disputes need measurement before becoming claims. Selected-field disclosure is a supporting aim, with an operator who still needs to be trusted.
 
 ## Why Stellar
 

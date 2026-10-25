@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="tlsn-public-origin" content="__TLSN_PUBLIC_ORIGIN__" />
+    <title>Check an existing transfer response</title>
+    <style>
+      body {
+        font: 16px/1.5 system-ui;
+        background: #f5f7fa;
+        color: #16202a;
+        margin: 0;
+      }
+      main {
+        max-width: 740px;
+        margin: 5vh auto;
+        padding: 28px;
+        background: white;
+        border: 1px solid #d9e0e8;
+        border-radius: 14px;
+      }
+      button {
+        font: inherit;
+        padding: 10px 16px;
+        cursor: pointer;
+      }
+      pre {
+        white-space: pre-wrap;
+        background: #f0f3f7;
+        padding: 16px;
+        overflow-wrap: anywhere;
+      }
+      code {
+        overflow-wrap: anywhere;
+      }
+      label {
+        display: block;
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Check an existing transfer response</h1>
+      <p>
+        This authenticated diagnostic checks HTTP status and JSON structure for one existing
+        outgoing Revolut-to-Revolut transfer. It creates no payment and cannot authorize settlement.
+      </p>
+      <p>Verifier: <code id="verifier-origin"></code></p>
+      <p>
+        The approved disclosure is the transfer request path (including its transaction ID), HTTP
+        status, Content-Type, the JSON root marker and selected field names. Cookie and
+        authorization values, payment amounts, recipient values and other financial values are not
+        selected for disclosure.
+      </p>
+      <p>
+        After opening the extension, navigate to the existing transfer and use
+        <strong>Check response only</strong>. Review the extension's disclosure prompt before
+        approving it.
+      </p>
+      <label
+        ><input id="consent" type="checkbox" /> I am the account owner and approve this
+        response-shape disclosure to the verifier shown above for one check.</label
+      >
+      <button id="run" type="button" disabled>Open response check</button>
+      <pre id="result" role="status" aria-live="polite">
+Checking the pinned extension and verifier…</pre
+      >
+      <p><a href="/">Back</a></p>
+      <details>
+        <summary>Review response-only plugin</summary>
+        <pre id="source"></pre>
+      </details>
+      <script nonce="__TLSN_SCRIPT_NONCE__">
+        const publicOrigin = document.querySelector('meta[name="tlsn-public-origin"]')?.content;
+        const button = document.querySelector('#run');
+        const consent = document.querySelector('#consent');
+        const output = document.querySelector('#result');
+        const sourceView = document.querySelector('#source');
+        document.querySelector('#verifier-origin').textContent = publicOrigin || 'Unavailable';
+        let source = '',
+          verifierReady = false,
+          running = false;
+        const FIELD_NAMES = [
+          'amount',
+          'currency',
+          'recipient',
+          'code',
+          'id',
+          'state',
+          'completedDate',
+          'type',
+          'data',
+          'error',
+          'errors',
+          'message',
+          'status',
+          'transactions',
+          'transaction',
+        ];
+        function ready() {
+          const supported =
+            window.tlsn?.version === '0.1.0.1501' && typeof window.tlsn?.execCode === 'function';
+          button.disabled = !supported || !verifierReady || !source || !consent.checked || running;
+          if (!running && !supported)
+            output.textContent = 'This check needs TLSNotary extension 0.1.0.1501.';
+          else if (!running && supported && verifierReady && source)
+            output.textContent = consent.checked
+              ? 'Ready for one response-shape check. No proof has been requested.'
+              : 'Review the verifier and disclosure, then approve the checkbox to continue. No proof has been requested.';
+        }
+        window.addEventListener('tlsn_loaded', ready);
+        consent.addEventListener('change', ready);
+        function renderResult(value) {
+          let data;
+          try {
+            data = typeof value === 'string' ? JSON.parse(value) : value;
+          } catch {
+            data = null;
+          }
+          if (
+            data?.diagnosticOnly === true &&
+            data.releaseGate === 'NOT_CLEARED' &&
+            data.mode === 'response-shape'
+          ) {
+            const status =
+              Number.isInteger(data.httpStatus) && data.httpStatus >= 100 && data.httpStatus <= 599
+                ? data.httpStatus
+                : 'unknown';
+            const content = ['json', 'html', 'other-or-unknown'].includes(data.contentType)
+              ? data.contentType
+              : 'unknown';
+            const root = ['array', 'object', 'unknown'].includes(data.rootType)
+              ? data.rootType
+              : 'unknown';
+            const keys = Array.isArray(data.fieldNames)
+              ? [...new Set(data.fieldNames.filter((key) => FIELD_NAMES.includes(key)))]
+              : [];
+            output.textContent = `Response check: HTTP ${status}; content ${content}; JSON root ${root}; fields ${keys.join(', ') || 'none detected'}. Payment remains unverified. Release gate: NOT_CLEARED.`;
+            return;
+          }
+          if (
+            data?.diagnosticOnly === true &&
+            data.releaseGate === 'NOT_CLEARED' &&
+            data.mode === 'attempt-error'
+          ) {
+            const codes = [
+              'MPC_SETUP_TIMEOUT',
+              'MPC_SETUP_FAILED',
+              'RESPONSE_FIELD_MISSING',
+              'HTTP_REQUEST_TIMEOUT',
+              'VERIFICATION_RESPONSE_TIMEOUT',
+              'PROOF_FAILED',
+            ];
+            const code = codes.includes(data.errorCode) ? data.errorCode : 'PROOF_FAILED';
+            output.textContent = `Response check: ${code}. Payment remains unverified. Release gate: NOT_CLEARED.`;
+            return;
+          }
+          output.textContent =
+            'Response check: UNRECOGNIZED_DIAGNOSTIC. Payment remains unverified. Release gate: NOT_CLEARED.';
+        }
+        async function initialize() {
+          try {
+            const [plugin, health, info] = await Promise.all([
+              fetch('/response-check/plugin.mjs', {
+                cache: 'no-store',
+                signal: AbortSignal.timeout(8000),
+              }),
+              fetch('/health', { cache: 'no-store', signal: AbortSignal.timeout(8000) }),
+              fetch('/info', { cache: 'no-store', signal: AbortSignal.timeout(8000) }),
+            ]);
+            if (!plugin.ok || !health.ok || !info.ok || (await health.text()).trim() !== 'ok')
+              throw new Error('not-ready');
+            const version = await info.json();
+            if (
+              version.git_hash !== '68bbd380d6e1a89d79748e5294661c752f5d1205' ||
+              version.tlsn_version !== '0.1.0-alpha.15'
+            )
+              throw new Error('not-ready');
+            source = await plugin.text();
+            if (!source.includes('const RESPONSE_SHAPE_ONLY = true;'))
+              throw new Error('wrong-mode');
+            sourceView.textContent = source;
+            verifierReady = true;
+            ready();
+          } catch {
+            output.textContent = 'The pinned response-only diagnostic or verifier is unavailable.';
+          }
+        }
+        button.addEventListener('click', async () => {
+          if (button.disabled || !consent.checked || running || !verifierReady || !source) return;
+          running = true;
+          consent.disabled = true;
+          button.disabled = true;
+          output.textContent =
+            'In the extension, open the existing transfer and click Check response only. Review the limited disclosure before approving it.';
+          try {
+            const result = await window.tlsn.execCode(source, {
+              requestId: 'response-shape-' + Date.now(),
+            });
+            renderResult(result);
+          } catch {
+            output.textContent =
+              'Response check: PROOF_FAILED. Payment remains unverified. Release gate: NOT_CLEARED.';
+          } finally {
+            running = false;
+            consent.checked = false;
+            consent.disabled = false;
+            button.disabled = true;
+          }
+        });
+        initialize();
+      </script>
+    </main>
+  </body>
+</html>

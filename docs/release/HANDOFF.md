@@ -1,5 +1,7 @@
 # Release integration handoff
 
+Follow-up: [domain/source handoff](DOMAIN-HANDOFF.md) supersedes the initial snapshot below for domains, TLS source, policy presentation and final app-intake status. Do not deploy the intermediate app while its two pending recovery fixes remain open.
+
 Objective: deliver one reviewed Pactlane candidate from frozen app, policy and escrow snapshots, with an actual local cross-component rehearsal and an honest live gap list.
 
 Host: Mac mini, 25 October 2026. Worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-integration`. Branch: `codex/pactlane-integration`. Base: `807412686da2cdad494ee284675dbefc35110257`. Runtime commit: `006ab023e4d44600d03f320f220457e5b5545f0e`; final handoff/evidence revision is the branch HEAD. Run `git rev-parse HEAD` and `git status --short` before continuation.
@@ -23,7 +25,7 @@ These are local/synthetic checks. Network calls in this lane were read-only test
 
 ## Current limitations
 
-The live payment gate is `NOT_CLEARED`. Public proof success reported by the proof lane is separate; no authenticated transfer has been accepted here. The cloud proof source and final video/deck handoffs are missing. The proof owner's running services and main's dirty files are untouched.
+The live payment gate is `NOT_CLEARED`. Public proof success reported by the proof lane is separate; no authenticated transfer has been accepted here. The reviewed TLS source and revised demo text are integrated in the follow-up. Final rendered video/deck remain separate. The proof owner's running services and main's dirty files are untouched.
 
 The Node wallet/RPC candidate is not wired into the browser. Authenticated transport, private offer/chain/policy readers, a complete indexer and dual-wallet recovery collection still need implementation. `resolve` deliberately refuses a one-wallet shortcut. Live normalization deliberately rejects unknown semantics.
 

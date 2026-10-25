@@ -1,8 +1,12 @@
 # Pactlane
 
-Buy USDC on Stellar with a payment from the bank app you already use.
+Trade euros for USDC on Stellar.
+
+A clearer handoff from Revolut payment to USDC release.
 
 I’m building a small version of [ZKP2P](https://www.zkp2p.xyz/) for Stellar. A seller locks USDC in escrow, a buyer pays them in Revolut, and a payment-policy signature lets the escrow release once. The first version focuses on one EUR payment rail and one whole offer.
+
+The starting question is simple: “I’ve sent the euros. What has to happen before I get my USDC?” Pactlane shows the exact quote, who acts next, what permits release and what happens if verification stops. The first audience is existing Stellar-wallet users with EUR in Revolut. That is a pilot hypothesis, not validated demand or measured savings. See [the research and positioning](docs/positioning.md).
 
 **Current stage: integrated local prototype.** The buyer/seller demo, payment-policy package and Soroban escrow are implemented. A local rehearsal connects the app’s order model to the real policy signer and compiled escrow WASM, using synthetic payment evidence. A real authenticated payment has not been accepted, and this branch has no testnet deployment or live settlement.
 
@@ -16,6 +20,8 @@ npm run dev:app
 Open the address printed by the server on that machine. Create Ben’s 22 USDC offer, approve its demo deposit, switch to Ana, reserve it, and confirm the payment lock. Only then do the €20 Revolut instructions appear. Demo settings let you try unavailable or mismatched verification. Every wallet, payment and receipt in this app is simulated.
 
 The server binds to loopback. A Mac-mini loopback address is not a preview link for another device. No public Pactlane app URL is established by this branch.
+
+The prepared app domain is `https://pactlane.io`; `www` and `app` redirect to it after the coordinator deploys and verifies routing. Proof tooling is separate. `https://proof.pactlane.io` is pending DNS/certificate verification, so operational instructions retain the existing Fly hostname. See [domain handoff](docs/release/DOMAIN-HANDOFF.md).
 
 ## The trade
 
@@ -75,3 +81,5 @@ archive/reclaim/     Retired signature experiment, outside the active path
 The contract trusts a configured payment-policy signer. It does not verify a raw TLS transcript. The operator sees disclosed fields; Revolut sees its payment; Stellar settlement remains public. See [the trust model](docs/architecture.md#trust-model).
 
 This private repo records the preparation spike and hackathon implementation without rewriting their history. Keep credentials, bank identifiers, raw proofs and private runtime logs outside Git.
+
+The [revised silent-demo script](docs/demo/revised-demo-script.md) and [shot list](docs/demo/shot-list.md) are capture instructions, not evidence that the existing video has been updated.

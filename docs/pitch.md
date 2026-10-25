@@ -2,13 +2,15 @@
 
 ## Short pitch
 
-I’m building Pactlane, a ZKP2P-style on-ramp for Stellar. You pay a seller in Revolut, prove the payment, and receive USDC from a Soroban escrow. I want it to work with the bank app you already use, without sending the seller your whole transaction history.
+I’m building Pactlane for people who use Revolut and want USDC in a Stellar wallet. In a P2P trade, sending the euros and receiving the USDC are separate steps. Pactlane makes that handoff clearer: an exact quote, a confirmed payment lock, a payment check and a release decision. If verification stops, you can see what is held and who needs to act next.
 
 The escrow, policy signer and buyer/seller app are built. They work together locally with synthetic payment evidence and the compiled contract. The real bank-proof integration is still the blocker. MB WAY would be a useful second rail for Portugal once the first works reliably.
 
 ## Message for a judge
 
-I’m building Pactlane: Revolut payment in, Stellar USDC out. The seller funds escrow, the buyer locks the trade before paying, and a signed payment check releases the USDC once. I’ve got the contract and policy working together locally, including replay protection and recovery if proof fails. I’m still closing the real payment-proof gate. I’d love your take on the trust model and whether this is a useful first on-ramp for Stellar.
+I’m building Pactlane around the awkward bit of a P2P trade: “I’ve paid. What happens before I get my USDC?” The seller funds escrow, the buyer locks the trade before paying, and a signed payment check releases once. The contract and policy work together locally, including replay protection and mutual recovery. Real payment verification is still the blocker. I’d love your take on whether this clearer payment-to-release flow is useful for existing Stellar users.
+
+The [research](positioning.md) supports this as a focused problem to test. It does not establish customer demand, lower fees or fewer disputes. Scoped disclosure is secondary; do not describe the operator-run verifier as trustless or the settlement as anonymous.
 
 ## Demo sequence
 

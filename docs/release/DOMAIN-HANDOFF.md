@@ -6,7 +6,7 @@ Objective: prepare Pactlane's app/proof domain topology, research-backed metadat
 
 - App `https://pactlane.io`; aliases `www.pactlane.io` and `app.pactlane.io` redirect with path/query preserved.
 - Workers Static Assets configuration is root `wrangler.jsonc`, Worker `deploy/demo/worker.mjs`. Only built-in ASSETS; no paid service bindings, schedule, source maps or observability. workers.dev and preview URLs disabled.
-- Exact deploy input is ignored `dist/demo`; its `manifest.json` lists each asset/hash and intended origins. `npm run check:demo -- --record` records the exact output inventory and hashes in `evidence/release/domain-bundle.json` after the final build. Source/config fingerprints belong in the companion domain verification record.
+- Exact deploy input is ignored `dist/demo`; its `manifest.json` lists each asset/hash and intended origins. `npm run check:demo -- --record` records the exact output inventory and hashes in `.private/release/domain-bundle.json` after the final build. Source/config fingerprints belong in the companion domain verification record.
 - Metadata, favicon, 1200×630 social card, robots/sitemap and restricted headers are prepared. The help link retains the current operational Fly URL until the proof transition is verified.
 - Product direction copied from coordinator-reviewed `docs/positioning.md`: payment-to-release uncertainty for existing Stellar/Revolut users. No cheapest, instant, anonymous, first, trustless or no-disputes claim.
 
@@ -16,7 +16,7 @@ TLS local bundle verified against baseline `8074126`. Scoped source from `38eb91
 
 Policy follow-up `668adfc147ff83cbc6f647ffa50a9b4b6d37d820` is integrated as `9be14e2`: browser-safe presentation tokens, 55 policy tests, no protocol or live-normalizer change. Bank source namespace remains `https://app.revolut.com`; product domain migration never changes payment identity encoding.
 
-**Publication blocker:** final app polish is pending. Coordinator identified two real behavior gaps being fixed: an unreported timely payment must remain verifiable while mutual recovery is proposed, and an expired pre-lock Reserved order must keep its refund path. Do not deploy before the app owner's scoped final snapshot includes both and passes checks. Revised demo narration/shot list is pending intake. Existing video remains separate and silent.
+**Final app accepted:** `572f2b92289f3466e4db2bde4fc6bb739e513f4a` is integrated as `4181b31`. Both presentation gaps are fixed and tested: recovery proposals retain verification of an unreported timely payment, and expired unlocked Reserved orders retain refund. The new `presentation.mjs` is explicitly allowlisted. Revised demo narration and shot list are included; the rendered silent video is separate and optional.
 
 ## Proof migration: root-owned, not executed here
 
@@ -32,10 +32,18 @@ After acceptance, update `SITE.proofDomainVerified` and the operational runbook.
 
 The new domain/config/redirect tests and integrated JS suites pass; details and exact source hashes are in the domain evidence record. Worker dry run uses installed official Wrangler 4.152.0 and creates no service. Source syntax/format checks and Python preparation tests run locally. The prior compiled-WASM rehearsal remains local/synthetic; none of this establishes a bank payment or network settlement.
 
-Root should intake the final app snapshot, read this handoff again, inspect the exact manifest/config, deploy the app with its existing authorization, and verify the public result. Proof migration is a separate root-owned step after DNS/cert. The bank-test pause remains.
+Root can now review the frozen final app candidate, inspect the exact manifest/config, deploy with its existing authorization, and verify the public result. Proof migration is a separate root-owned step after DNS/cert. The bank-test pause remains.
 
 The duplicate coordinator's exact TLS branch push was previously rejected by automatic approval review for insufficient publication authorization. This lane has not retried that push through another route. The local TLS integration is not authorization to push its source remotely.
 
 ## Optional media intake prepared
 
 Root may provide reviewed `demo.mp4` and `demo-script.txt` through explicit `npm run build:demo -- --media-dir …`. No media is included by default; no video UI link was added. The exact two-file whitelist, strict size/regular-file/container/text checks, per-file hashes and private source-path provenance are implemented. MP4 stays outside Git. Playback permission is same-origin and limited to a present exact video response. This can ship after the app and is not a reason to hold the final app snapshot.
+
+## Final app publication candidate
+
+The branch HEAD after the final freeze is the ready source commit; `dist/demo/manifest.json` records that same revision after rebuilding. `.private/release/domain-bundle.json` is the exact 14-file/hash inventory, with `sourceDirty: false`. These generated artifacts stay ignored; they are review/deploy inputs, not a new source push.
+
+Final checks: 202 JS tests passed (125 root including 21 app/10 release, 55 policy, 11 canonical protocol, 11 wallet/RPC), zero skipped/failed; 8 Python preparation tests passed; shared protocol sync passed. Wrangler 4.152.0 dry run passed with ASSETS only. Final built-page smoke shows the new hero, synthetic badge, start-as-seller guidance, canonical/OG metadata, retained noindex and operational Fly help link, with no console warning/error. Syntax/format and diff checks pass. Earlier native/WASM results remain pinned to the unchanged contract; no broader Rust rerun was needed for presentation/domain changes.
+
+Publication readiness applies to the synthetic app only. No deployment, DNS change, bank test, origin cutover, accepted real payment or network settlement was performed by this lane. The proof domain remains pending. Root owns external publication and reachability verification.

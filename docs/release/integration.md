@@ -30,3 +30,5 @@ See [verification](../verification.md) for counts and [the recorded local run](.
 - Final silent video/deck, portal limits/timezone, reviewer access and submission remain with owner/coordinator.
 
 No new bank disclosure, account, funding, hosting, repository visibility, invitation or final-submission action is inferred from this integration.
+
+Final domain intake: UI polish `572f2b9` is integrated as `4181b31`, policy presentation `668adfc` as `9be14e2`, contract copy audit `8ef8b6b` as `601440d`. Frozen contract/encoder bytes remain unchanged. See [domain handoff](DOMAIN-HANDOFF.md) for the exact ready artifact and external steps.

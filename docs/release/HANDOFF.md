@@ -1,6 +1,6 @@
 # Release integration handoff
 
-Follow-up: [domain/source handoff](DOMAIN-HANDOFF.md) supersedes the initial snapshot below for domains, TLS source, policy presentation and final app-intake status. Do not deploy the intermediate app while its two pending recovery fixes remain open.
+Follow-up: [domain/source handoff](DOMAIN-HANDOFF.md) supersedes the initial snapshot below for domains, TLS source, policy presentation and final app-intake status. Final polish `572f2b9` and both recovery fixes are integrated; use the domain handoff for the frozen publication candidate.
 
 Objective: deliver one reviewed Pactlane candidate from frozen app, policy and escrow snapshots, with an actual local cross-component rehearsal and an honest live gap list.
 

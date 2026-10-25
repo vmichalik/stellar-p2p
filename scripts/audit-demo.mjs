@@ -95,9 +95,9 @@ const report = {
   files: files.sort((a, b) => a.path.localeCompare(b.path)),
 };
 if (process.argv.includes('--record')) {
-  await mkdir(resolve(root, 'evidence/release'), { recursive: true });
+  await mkdir(resolve(root, '.private/release'), { recursive: true, mode: 0o700 });
   await writeFile(
-    resolve(root, 'evidence/release/domain-bundle.json'),
+    resolve(root, '.private/release/domain-bundle.json'),
     JSON.stringify(report, null, 2) + '\n',
   );
 }

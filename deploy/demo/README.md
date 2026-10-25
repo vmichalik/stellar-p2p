@@ -10,7 +10,7 @@ npm run check:demo -- --record
 npm run preview:demo
 ```
 
-The build copies nine allowlisted assets, renders canonical/social metadata and writes the synthetic hash manifest, security headers, robots and sitemap into ignored `dist/demo`. No policy, proof source, bank data or signer is copied. The audit records every output file, including generated headers/metadata, with exact hashes and source dirty status in `evidence/release/domain-bundle.json`. The preview binds only loopback; it is not a remote handoff.
+The build copies ten allowlisted assets, renders canonical/social metadata and writes the synthetic hash manifest, security headers, robots and sitemap into ignored `dist/demo`. No policy, proof source, bank data or signer is copied. The audit records every output file, including generated headers/metadata, with exact hashes and source dirty status in `.private/release/domain-bundle.json`. The preview binds only loopback; it is not a remote handoff.
 
 `deploy/demo/site.mjs` owns metadata. Social preview is a checked-in 1200×630 PNG using the local licensed Manrope font. `scripts/render-social.py` is an optional Pillow authoring tool; building does not require Pillow. No analytics or external resource loading is added.
 
@@ -28,7 +28,7 @@ The existing CLI passed `wrangler deploy --dry-run`. The coordinator should insp
 
 The intended proof origin is `https://proof.pactlane.io`. Its DNS/certificate transition is not established. `SITE.proofDomainVerified` stays false; the help link retains `https://stellar-p2p-proof-vijay.fly.dev/extension-check/`. The static app never calls either proof service.
 
-See [domain handoff](../../docs/release/DOMAIN-HANDOFF.md) for the root-owned migration sequence and final app-intake blocker. Do not publish the old app snapshot while its two pending recovery fixes remain unintegrated.
+See [domain handoff](../../docs/release/DOMAIN-HANDOFF.md) for the root-owned migration sequence and final candidate. App polish `572f2b9` and both recovery corrections are now integrated; publication and public reachability verification remain with the coordinator.
 
 ## Optional reviewed video
 

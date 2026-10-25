@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-25T23:09:06.901Z",
+  "acceptedRecords": 1,
+  "lastAcceptedAt": "2026-10-25T23:08:23.290Z",
+  "schema": 1,
+  "sourceMatches": true,
+  "paymentTypeMatches": true,
+  "completedOutgoing": true,
+  "eurCents": true,
+  "releaseGate": "NOT_CLEARED",
+  "payerIdentityPresent": true,
+  "recipientIdentityPresent": true,
+  "walletIdentityBindingApproved": false,
+  "scope": "Historical transfer record accepted by private verifier ingress; no new order payment, mainnet deployment or release."
+}

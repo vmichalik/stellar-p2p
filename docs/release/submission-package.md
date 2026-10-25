@@ -4,6 +4,8 @@ Use the [interactive demo](https://pactlane.io/?demo=1) for the current product 
 
 The [90-second film](https://pactlane.io/demo.mp4) and [optional narration](https://pactlane.io/demo-script.txt) use the current interface and evidence. Editable composition and captures are in [design/demo](../../design/demo/README.md). The film keeps one Demo mode label for sample scenes, with a separate verified-results card.
 
+[Current export and publication hashes](../../evidence/release/judge-review-publication.json).
+
 ## Morning capture
 
 Follow the [shot list](../demo/shot-list.md) and [revised script](../demo/revised-demo-script.md). Use the current interface for the main journey, then show the accepted bank record and confirmed testnet receipt with their actual scope. Replace the settlement sequence with a mainnet transaction only when its matching receipt is available.

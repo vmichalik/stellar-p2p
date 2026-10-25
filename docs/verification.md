@@ -22,3 +22,5 @@ The published mode-toggle build passed 102 app/release tests and a full browser 
 Run the current combined suites with `npm run test:all` and `npm run check` after [setup](setup.md). The review handoff records the latest actual run. The remaining end-to-end mainnet result belongs in [status](status.md), with its transaction receipt.
 
 The review also completed a fresh sample recovery with both approvals, the integrated live-host browser check and 18 video composition snapshots with deterministic seeking. [Current review receipt](../evidence/release/judge-review-checks.json).
+
+[Public verification](../evidence/release/judge-review-publication.json) matched all 42 website assets to source `8b9d653`, including the refreshed 90-second film.

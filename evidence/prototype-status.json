@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "activeProofStack": "TLSNotary MPC-TLS",
+  "releaseGate": "NOT_CLEARED",
+  "historicalObservations": {
+    "publicExtensionProof": {
+      "observedAt": "2026-10-23T17:53:56Z",
+      "host": "Mac mini, isolated Chrome for Testing profile",
+      "method": "GET",
+      "url": "https://app.revolut.com/robots.txt",
+      "httpStatus": 200,
+      "verifierAccepted": true,
+      "disclosed": ["public request line", "HTTP status"],
+      "accountCredentialsUsed": false,
+      "paymentProof": false
+    },
+    "windowsBrowserMpcSetup": {
+      "source": "user-reported diagnostic result",
+      "passed": true,
+      "elapsedSeconds": 10.7,
+      "queuedMegabytes": 76.1,
+      "receivedMegabytes": 3.4,
+      "pendingMegabytes": 0,
+      "threads": 32,
+      "bankRequestMade": false,
+      "extensionWorkerVerified": false
+    }
+  },
+  "authenticatedTlsnTransferAccepted": false,
+  "policySignerImplemented": false,
+  "tlsnSorobanAdapterImplemented": false,
+  "escrowDeployed": false,
+  "fundsReleased": false,
+  "rawProofsIncluded": false
+}

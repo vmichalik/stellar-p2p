@@ -1,0 +1,51 @@
+--- upstream/servers/verifier/src/main.rs
++++ local/servers/verifier/src/main.rs
+@@ -75,7 +75,7 @@
+         .ok()
+         .and_then(|p| p.parse().ok())
+         .unwrap_or(7047);
+-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
++    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+     info!("TLSNotary Verifier Server starting on {}", addr);
+ 
+     let listener = tokio::net::TcpListener::bind(addr)
+@@ -395,6 +395,12 @@
+     }
+ }
+ 
++fn host_allowed(host: &str) -> bool {
++    let allowed = std::env::var("TLSN_ALLOWED_HOSTS")
++        .unwrap_or_else(|_| "app.revolut.com".to_string());
++    allowed.split(',').any(|candidate| candidate.trim() == host)
++}
++
+ // Health check endpoint handler
+ async fn health_handler() -> impl IntoResponse {
+     "ok"
+@@ -738,7 +744,11 @@
+     Query(query): Query<ProxyQuery>,
+     State(state): State<Arc<AppState>>,
+ ) -> Result<impl IntoResponse, (StatusCode, String)> {
++    // stellar-proof-gate local restrictions: no general-purpose TCP proxy.
+     let host = query.token;
++    if !host_allowed(&host) {
++        return Err((StatusCode::FORBIDDEN, "Target is not permitted".to_string()));
++    }
+     let session_id = query.session_id;
+ 
+     info!(
+@@ -1106,6 +1116,14 @@
+ 
+             // Check if webhook is configured for this server_name
+             let server_name_str = server_name.as_ref();
++            if !host_allowed(server_name_str) {
++                let _ = result_tx.send(VerificationResult {
++                    results: vec![],
++                    error: Some("TLS server is not permitted".to_string()),
++                });
++                cleanup_session(&state, &session_id).await;
++                return;
++            }
+             if let Some(webhook_config) = state.config.get_webhook(server_name_str) {
+                 info!(
+                     "[{}] Webhook configured for {}, sending POST to {}",

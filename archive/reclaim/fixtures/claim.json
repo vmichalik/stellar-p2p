@@ -1,0 +1,15 @@
+{
+  "synthetic": true,
+  "provider": "http",
+  "parameters": "{\"example\":\"synthetic fixture\"}",
+  "context": "{\"a\":{\"amount\":\"-100\",\"recipient\":\"fixture\"},\"z\":\"demo\"}",
+  "owner": "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a",
+  "timestamp": 1792750000,
+  "epoch": 1,
+  "signature": "50a0d6a01b889fc618c297f8786ef03abd76063c8a5ca8ea08df6aa253b131785e02f44a1db286e67dff4a12a87971820284a16d18d1a8a2802e5534e09addef",
+  "recovery_id": 1,
+  "trusted_signer": "19e7e376e7c213b7e7e7e46cc70a5dd086daff2a",
+  "identifier": "0xa7c3d35bea1355afff6c4d88bcb49e8ec31417531e9ddff9101cbdf7787095d6",
+  "message": "0xa7c3d35bea1355afff6c4d88bcb49e8ec31417531e9ddff9101cbdf7787095d6\n0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a\n1792750000\n1",
+  "digest": "0x95c909cb2638b9ad9287ced5bc980a983984916a8884f942db4fa51945281640"
+}

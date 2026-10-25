@@ -1,0 +1,13 @@
+{
+  "name": "stellar-p2p-archived-signature-spike",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "fixture": "node scripts/generate-fixture.mjs"
+  },
+  "dependencies": {
+    "canonicalize": "2.1.0",
+    "ethers": "6.17.0"
+  }
+}

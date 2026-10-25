@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="tlsn-public-origin" content="__TLSN_PUBLIC_ORIGIN__" />
+    <title>Stellar P2P · Check a Revolut payment</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        color: #16202a;
+        background: #f5f7fa;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 760px;
+        margin: 5vh auto;
+        padding: 28px;
+        background: white;
+        border: 1px solid #d9e0e8;
+        border-radius: 14px;
+      }
+      h1 {
+        margin-top: 0;
+        font-size: 1.6rem;
+      }
+      p {
+        max-width: 70ch;
+      }
+      .status {
+        padding: 12px 14px;
+        border-radius: 8px;
+        background: #f0f3f7;
+        margin: 12px 0;
+      }
+      .status[data-state='ready'] {
+        background: #e8f5ec;
+      }
+      .status[data-state='error'] {
+        background: #fff0ed;
+      }
+      button {
+        padding: 11px 16px;
+        border: 0;
+        border-radius: 7px;
+        color: white;
+        background: #155eef;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        background: #8b98a8;
+        cursor: not-allowed;
+      }
+      ul {
+        padding-left: 1.3rem;
+      }
+      details {
+        margin-top: 24px;
+      }
+      pre {
+        overflow: auto;
+        padding: 14px;
+        background: #101820;
+        color: #e7edf4;
+        border-radius: 8px;
+        white-space: pre-wrap;
+      }
+      .small {
+        color: #526171;
+        font-size: 0.92rem;
+      }
+      code {
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Check a Revolut payment</h1>
+      <p>
+        Choose an <strong>existing outgoing Revolut-to-Revolut transfer</strong> to test its payment
+        proof. This check does not move money.
+      </p>
+      <p>
+        The extension will ask to share a proof with the verifier shown below. It includes the
+        transfer’s amount, currency, recipient code, transaction ID, status, completion time and
+        type, plus the request path, HTTP status and response date. Review the disclosure and
+        approve it only if you trust the verifier operator.
+      </p>
+      <p class="small">
+        A valid proof authenticates Revolut’s response. Payment checks and escrow release still need
+        to be built. The planned contract will trust the verifier’s signing key.
+      </p>
+
+      <div id="extension" class="status" role="status">Checking TLSNotary extension…</div>
+      <div id="verifier" class="status" role="status">Checking the configured verifier…</div>
+      <p><button id="connection-check" type="button">Check connection only</button></p>
+      <p class="small">
+        Sends 1 MiB of random test data to your verifier host, without a bank login. Full MPC setup
+        currently uploads about 76 MB before contacting Revolut.
+      </p>
+      <div id="connection-result" class="status" role="status" aria-live="polite">
+        Connection check has not run.
+      </div>
+      <p><a href="/setup-check/">Check MPC setup</a></p>
+      <p><a href="/extension-check/">Check the extension with a public request</a></p>
+      <p><button id="run" type="button" disabled>Open transfer check</button></p>
+      <div id="result" class="status" role="status" aria-live="polite">
+        No proof has been requested.
+      </div>
+
+      <details>
+        <summary>Review the plugin source</summary>
+        <p class="small">
+          This is the plugin the extension will run, with your verifier and proxy addresses filled
+          in. Account headers stay in the extension. This page receives field-presence checks,
+          limited response metadata or fixed error codes.
+        </p>
+        <pre><code id="source">Source has not been loaded.</code></pre>
+      </details>
+    </main>
+    <script nonce="__TLSN_SCRIPT_NONCE__">
+      const publicOrigin = document.querySelector('meta[name="tlsn-public-origin"]')?.content;
+      const extensionStatus = document.querySelector('#extension');
+      const verifierStatus = document.querySelector('#verifier');
+      const resultStatus = document.querySelector('#result');
+      const runButton = document.querySelector('#run');
+      const connectionButton = document.querySelector('#connection-check');
+      const connectionStatus = document.querySelector('#connection-result');
+      const sourceView = document.querySelector('#source');
+      let pluginSource = '';
+      let verifierReady = false;
+      let activeRequestId = null;
+
+      connectionButton.addEventListener('click', async () => {
+        connectionButton.disabled = true;
+        setStatus(connectionStatus, 'Uploading synthetic data to measure this connection…');
+        const payload = new Uint8Array(1048576);
+        for (let i = 0; i < payload.length; i += 65536)
+          crypto.getRandomValues(payload.subarray(i, i + 65536));
+        const started = performance.now();
+        try {
+          const response = await fetch('/connection-check', {
+            method: 'POST',
+            credentials: 'omit',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: payload,
+            signal: AbortSignal.timeout(21000),
+          });
+          const result = await response.json();
+          if (!response.ok || result.receivedBytes !== payload.length)
+            throw new Error('check-failed');
+          const seconds = (performance.now() - started) / 1000;
+          const mbps = (payload.length * 8) / seconds / 1000000;
+          const estimatedSetupSeconds = (76113802 * 8) / (mbps * 1000000);
+          setStatus(
+            connectionStatus,
+            `Connection check: ${mbps.toFixed(1)} Mbps effective upload; estimated setup upload ${Math.ceil(estimatedSetupSeconds)} seconds; extension limit 30 seconds. Estimate only; no payment proof was attempted.`,
+            estimatedSetupSeconds >= 30 ? 'error' : '',
+          );
+        } catch {
+          setStatus(
+            connectionStatus,
+            'CONNECTION_CHECK_FAILED: the synthetic upload did not complete. No payment proof was attempted.',
+            'error',
+          );
+        } finally {
+          connectionButton.disabled = false;
+        }
+      });
+
+      function setStatus(element, message, state = '') {
+        element.textContent = message;
+        element.dataset.state = state;
+      }
+
+      function hasLauncherApi() {
+        return typeof window.tlsn?.execCode === 'function';
+      }
+
+      function checkExtension() {
+        const available = hasLauncherApi();
+        const version = available ? window.tlsn.version : null;
+        const compatible = available && version === '0.1.0.1501';
+        setStatus(
+          extensionStatus,
+          compatible
+            ? 'TLSNotary 0.1.0.1501 is ready.'
+            : available
+              ? 'The extension version does not match this test. Stop here so we can check compatibility.'
+              : 'Waiting for the TLSNotary extension on this page.',
+          compatible ? 'ready' : 'error',
+        );
+        runButton.disabled = !compatible || !verifierReady || !pluginSource;
+        return compatible;
+      }
+
+      function getSummary(value) {
+        if (typeof value === 'string') {
+          try {
+            return JSON.parse(value);
+          } catch {
+            return null;
+          }
+        }
+        return value && typeof value === 'object' ? value : null;
+      }
+
+      function renderResult(value) {
+        const summary = getSummary(value);
+        if (summary?.diagnosticOnly === true && summary.mode === 'attempt-error') {
+          const messages = {
+            MPC_SETUP_TIMEOUT:
+              'Proof setup exceeded the extension’s 30-second limit. Use Check connection only before another bank test.',
+            MPC_SETUP_FAILED: 'MPC setup could not start.',
+            RESPONSE_FIELD_MISSING:
+              'The response did not contain a required payment field. Use Check response only on a fresh run.',
+            HTTP_REQUEST_TIMEOUT:
+              'The bank request did not finish within the extension’s time limit.',
+            VERIFICATION_RESPONSE_TIMEOUT:
+              'The verifier result did not arrive within the extension’s time limit.',
+            PROOF_FAILED: 'The proof attempt did not complete.',
+          };
+          const code = Object.hasOwn(messages, summary.errorCode)
+            ? summary.errorCode
+            : 'PROOF_FAILED';
+          setStatus(
+            resultStatus,
+            `${code}: ${messages[code]} Payment remains unverified. Nothing has been released.`,
+            'error',
+          );
+          return;
+        }
+        if (summary?.diagnosticOnly === true && summary.mode === 'response-shape') {
+          const status =
+            Number.isInteger(summary.httpStatus) &&
+            summary.httpStatus >= 100 &&
+            summary.httpStatus <= 599
+              ? summary.httpStatus
+              : 'unknown';
+          const root = ['object', 'array', 'unknown'].includes(summary.rootType)
+            ? summary.rootType
+            : 'unknown';
+          const content = ['json', 'html', 'other-or-unknown'].includes(summary.contentType)
+            ? summary.contentType
+            : 'unknown';
+          const allowed = [
+            'amount',
+            'currency',
+            'recipient',
+            'code',
+            'id',
+            'state',
+            'completedDate',
+            'type',
+            'data',
+            'error',
+            'errors',
+            'message',
+            'status',
+            'transactions',
+            'transaction',
+          ];
+          const keys = Array.isArray(summary.fieldNames)
+            ? summary.fieldNames.filter((key) => allowed.includes(key))
+            : [];
+          setStatus(
+            resultStatus,
+            `Response check: HTTP ${status}; content ${content}; JSON root ${root}; fields ${keys.join(', ') || 'none detected'}. Payment remains unverified. Nothing has been released.`,
+            status === 200 ? 'ready' : 'error',
+          );
+          return;
+        }
+        const fields = summary?.fieldsPresent;
+        if (!summary || summary.diagnosticOnly !== true || !fields || typeof fields !== 'object') {
+          setStatus(
+            resultStatus,
+            'The proof call ended without a recognized diagnostic summary. Payment remains unverified. Nothing has been released.',
+            'error',
+          );
+          return;
+        }
+        const fieldNames = [
+          '0.amount',
+          '0.currency',
+          '0.recipient.code',
+          '0.id',
+          '0.state',
+          '0.completedDate',
+          '0.type',
+        ];
+        const list = document.createElement('ul');
+        for (const name of fieldNames) {
+          const item = document.createElement('li');
+          item.textContent = `${name}: ${fields[name] === true ? 'present' : 'missing'}`;
+          list.append(item);
+        }
+        resultStatus.replaceChildren(
+          document.createTextNode(
+            'Proof completed. These checks show whether fields are present, not whether the order was paid. Release gate: NOT CLEARED.',
+          ),
+          list,
+        );
+        resultStatus.dataset.state = 'ready';
+      }
+
+      async function loadPlugin() {
+        const response = await fetch('/plugin.mjs', {
+          cache: 'no-store',
+          credentials: 'same-origin',
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!response.ok) throw new Error('plugin-unavailable');
+        pluginSource = await response.text();
+        if (!pluginSource.includes('export default { config, main, generateProof, checkResponse }'))
+          throw new Error('plugin-shape-invalid');
+        sourceView.textContent = pluginSource;
+      }
+
+      async function checkVerifier() {
+        const [health, info] = await Promise.all([
+          fetch('/health', {
+            cache: 'no-store',
+            credentials: 'same-origin',
+            signal: AbortSignal.timeout(8000),
+          }),
+          fetch('/info', {
+            cache: 'no-store',
+            credentials: 'same-origin',
+            signal: AbortSignal.timeout(8000),
+          }),
+        ]);
+        if (!health.ok || !info.ok) throw new Error('verifier-unavailable');
+        const healthText = await health.text();
+        const serverInfo = await info.json();
+        if (
+          healthText.trim() !== 'ok' ||
+          serverInfo?.git_hash !== '68bbd380d6e1a89d79748e5294661c752f5d1205' ||
+          serverInfo?.tlsn_version !== '0.1.0-alpha.15'
+        )
+          throw new Error('verifier-unavailable');
+        verifierReady = true;
+        setStatus(verifierStatus, `Configured verifier is responding at ${publicOrigin}.`, 'ready');
+      }
+
+      async function initialize() {
+        checkExtension();
+        try {
+          if (!publicOrigin || !/^https:\/\/[a-z0-9.-]+(?::\d+)?$/i.test(publicOrigin))
+            throw new Error('configuration-unavailable');
+          await Promise.all([loadPlugin(), checkVerifier()]);
+          checkExtension();
+        } catch {
+          setStatus(
+            verifierStatus,
+            'The configured verifier or plugin is unavailable. No proof can be requested.',
+            'error',
+          );
+        }
+      }
+
+      runButton.addEventListener('click', async () => {
+        if (!checkExtension() || !verifierReady || !pluginSource) {
+          setStatus(
+            resultStatus,
+            'The extension, plugin, or verifier is unavailable. No proof was requested.',
+            'error',
+          );
+          return;
+        }
+        runButton.disabled = true;
+        setStatus(
+          resultStatus,
+          'Opening the payment check. Choose an existing transfer in the Revolut window, then review the proof disclosure before approving it.',
+        );
+        try {
+          activeRequestId = `revolut-transfer-${Date.now()}`;
+          const value = await window.tlsn.execCode(pluginSource, { requestId: activeRequestId });
+          renderResult(value);
+        } catch {
+          setStatus(
+            resultStatus,
+            'The proof attempt did not complete. Payment remains unverified. Nothing has been released.',
+            'error',
+          );
+        } finally {
+          activeRequestId = null;
+          checkExtension();
+        }
+      });
+
+      window.addEventListener('message', (event) => {
+        if (event.source !== window || event.origin !== window.location.origin) return;
+        if (
+          event.data?.type === 'TLSN_PROVE_PROGRESS' &&
+          activeRequestId &&
+          event.data.requestId === activeRequestId
+        ) {
+          const step = typeof event.data.step === 'string' ? event.data.step : 'in progress';
+          setStatus(resultStatus, `Proof progress: ${step}. Payment is still unverified.`);
+        }
+      });
+
+      window.addEventListener('tlsn_loaded', checkExtension);
+      initialize();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "stellar-p2p",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A Revolut payment-proof prototype for a Stellar P2P on-ramp.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tlsn/*.test.mjs",
+    "check": "node scripts/check.mjs",
+    "start": "node --env-file=.env tlsn/launcher.mjs",
+    "prepare:tlsn": "python3 scripts/prepare-tlsn.py",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:legacy": "npm --prefix archive/reclaim test"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}

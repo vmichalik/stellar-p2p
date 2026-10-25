@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MPC setup check</title>
+    <style>
+      body {
+        font: 16px/1.5 system-ui;
+        background: #f5f7fa;
+        color: #16202a;
+        margin: 0;
+      }
+      main {
+        max-width: 720px;
+        margin: 5vh auto;
+        padding: 28px;
+        background: white;
+        border: 1px solid #d9e0e8;
+        border-radius: 14px;
+      }
+      button {
+        font: inherit;
+        padding: 10px 16px;
+        cursor: pointer;
+      }
+      pre {
+        white-space: pre-wrap;
+        background: #f0f3f7;
+        padding: 16px;
+        overflow-wrap: anywhere;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>MPC setup check</h1>
+      <p>
+        This checks whether your browser can complete MPC setup with the configured private
+        verifier. It uses no bank credentials and sends no request to Revolut.
+      </p>
+      <p>
+        Expect about 76 MB of setup upload. This diagnostic waits up to 90 seconds to measure
+        completion; the installed extension’s 30-second limit stays unchanged.
+      </p>
+      <button id="start" type="button">Check MPC setup only</button>
+      <pre id="result" role="status" aria-live="polite">Not started.</pre>
+      <p><a href="/">Back to transfer test</a></p>
+      <script nonce="__TLSN_SCRIPT_NONCE__">
+        const button = document.querySelector('#start');
+        const output = document.querySelector('#result');
+        const finite = (value) =>
+          typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
+        const mb = (value) => (finite(value) / 1000000).toFixed(1);
+        button.addEventListener('click', () => {
+          button.disabled = true;
+          output.textContent = 'Starting browser runtime…';
+          const worker = new Worker('/setup-check/worker.mjs', { type: 'module' });
+          const guard = setTimeout(() => {
+            worker.terminate();
+            output.textContent = 'MPC check: BROWSER_GUARD_TIMEOUT. No bank request was made.';
+            button.disabled = false;
+          }, 120000);
+          worker.onmessage = (event) => {
+            const data = event.data;
+            if (data.type === 'phase') {
+              const phases = ['Loading released WASM runtime', 'Initializing browser worker pools'];
+              output.textContent = phases.includes(data.phase) ? data.phase + '…' : 'Initializing…';
+            } else if (data.type === 'progress') {
+              output.textContent = `MPC setup: ${Math.round(finite(data.elapsedMs) / 1000)}s; queued ${mb(data.queuedBytes)} MB; received ${mb(data.receivedBytes)} MB; pending upload ${mb(data.bufferedBytes)} MB. No bank request.`;
+            } else if (data.type === 'result') {
+              const codes = [
+                'CONNECTION_TIMEOUT',
+                'CONNECTION_CLOSED',
+                'CONNECTION_FAILED',
+                'REGISTRATION_TIMEOUT',
+                'REGISTRATION_FAILED',
+                'DIAGNOSTIC_SETUP_TIMEOUT',
+              ];
+              const code =
+                data.passed === true
+                  ? 'PASSED'
+                  : codes.includes(data.code)
+                    ? data.code
+                    : 'BROWSER_RUNTIME_FAILED';
+              const seconds = finite(data.elapsedMs) / 1000;
+              output.textContent = `MPC check: ${code}; ${seconds.toFixed(1)}s; queued ${mb(data.queuedBytes)} MB; received ${mb(data.receivedBytes)} MB; pending ${mb(data.bufferedBytes)} MB; threads ${finite(data.hardwareConcurrency)}; socket ${data.socketOpen === true ? 'open' : 'closed'}; extension deadline ${seconds <= 30 && data.passed === true ? 'met' : 'not met'}. No bank request was made.`;
+              if (data.atThirtySeconds)
+                output.textContent += ` At 30s: queued ${mb(data.atThirtySeconds.queuedBytes)} MB; received ${mb(data.atThirtySeconds.receivedBytes)} MB; pending ${mb(data.atThirtySeconds.bufferedBytes)} MB.`;
+            } else if (data.type === 'done') {
+              clearTimeout(guard);
+              worker.terminate();
+              button.disabled = false;
+            }
+          };
+          worker.onerror = () => {
+            clearTimeout(guard);
+            worker.terminate();
+            output.textContent = 'MPC check: WORKER_FAILED. No bank request was made.';
+            button.disabled = false;
+          };
+        });
+      </script>
+    </main>
+  </body>
+</html>

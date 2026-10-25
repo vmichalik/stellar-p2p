@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>TLSNotary extension check</title>
+    <style>
+      body {
+        font: 16px/1.5 system-ui;
+        background: #f5f7fa;
+        color: #16202a;
+        margin: 0;
+      }
+      main {
+        max-width: 740px;
+        margin: 5vh auto;
+        padding: 28px;
+        background: white;
+        border: 1px solid #d9e0e8;
+        border-radius: 14px;
+      }
+      button {
+        font: inherit;
+        padding: 10px 16px;
+        cursor: pointer;
+      }
+      pre {
+        white-space: pre-wrap;
+        background: #f0f3f7;
+        padding: 16px;
+        overflow-wrap: anywhere;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>TLSNotary extension check</h1>
+      <p>
+        This uses the installed extension to prove a public
+        <code>GET https://app.revolut.com/robots.txt</code> response. This small public file fits
+        the runtime’s existing proof budget. The request contains no account cookies, login tokens
+        or payment data. It does not log into Revolut or create a payment.
+      </p>
+      <p>
+        The extension opens a private control window. Review its requested permissions, click the
+        public-request button in that window, then approve only disclosure of the public request
+        line and HTTP status.
+      </p>
+      <button id="start" type="button" disabled>Check extension only</button>
+      <pre id="result" role="status" aria-live="polite">Checking extension and verifier…</pre>
+      <p><a href="/">Back to transfer test</a></p>
+      <details>
+        <summary>Review diagnostic plugin</summary>
+        <pre id="source"></pre>
+      </details>
+      <script nonce="__TLSN_SCRIPT_NONCE__">
+        const button = document.querySelector('#start');
+        const output = document.querySelector('#result');
+        let source = '',
+          verifierReady = false,
+          running = false,
+          requestId = null;
+        function ready() {
+          const supported =
+            window.tlsn?.version === '0.1.0.1501' && typeof window.tlsn?.execCode === 'function';
+          button.disabled = !supported || !verifierReady || !source || running;
+          if (!running && supported && verifierReady && source)
+            output.textContent =
+              'Extension and pinned verifier are ready. No request has been made.';
+          else if (!running && !supported)
+            output.textContent = 'This check needs TLSNotary extension 0.1.0.1501.';
+        }
+        window.addEventListener('tlsn_loaded', ready);
+        async function initialize() {
+          try {
+            const [plugin, health, info] = await Promise.all([
+              fetch('/extension-check/plugin.mjs', {
+                cache: 'no-store',
+                signal: AbortSignal.timeout(8000),
+              }),
+              fetch('/health', { cache: 'no-store', signal: AbortSignal.timeout(8000) }),
+              fetch('/info', { cache: 'no-store', signal: AbortSignal.timeout(8000) }),
+            ]);
+            if (!plugin.ok || !health.ok || !info.ok || (await health.text()).trim() !== 'ok')
+              throw new Error('not-ready');
+            const version = await info.json();
+            if (
+              version.git_hash !== '68bbd380d6e1a89d79748e5294661c752f5d1205' ||
+              version.tlsn_version !== '0.1.0-alpha.15'
+            )
+              throw new Error('not-ready');
+            source = await plugin.text();
+            document.querySelector('#source').textContent = source;
+            verifierReady = true;
+            ready();
+          } catch {
+            output.textContent = 'The pinned diagnostic or verifier is unavailable.';
+          }
+        }
+        button.addEventListener('click', async () => {
+          if (button.disabled) return;
+          running = true;
+          button.disabled = true;
+          output.textContent =
+            'Review the extension prompt, then use the public-request button in its private control window.';
+          try {
+            requestId = 'public-get-check-' + Date.now();
+            const value = await window.tlsn.execCode(source, { requestId });
+            const data = typeof value === 'string' ? JSON.parse(value) : value;
+            if (
+              data?.diagnosticOnly !== true ||
+              data.mode !== 'extension-check' ||
+              data.releaseGate !== 'NOT_CLEARED'
+            )
+              throw new Error('unknown-result');
+            if (
+              data.bankRequestMade === false &&
+              data.publicRequestMade === true &&
+              Number.isInteger(data.httpStatus) &&
+              data.httpStatus >= 100 &&
+              data.httpStatus <= 599
+            ) {
+              output.textContent = `Extension check: PUBLIC_PROOF_COMPLETED; HTTP ${data.httpStatus}. No authenticated bank request or payment proof was made. Release gate: NOT CLEARED.`;
+            } else {
+              const codes = ['MPC_SETUP_TIMEOUT', 'MPC_SETUP_FAILED', 'EXTENSION_CHECK_FAILED'];
+              output.textContent = `Extension check: ${codes.includes(data.errorCode) ? data.errorCode : 'EXTENSION_CHECK_FAILED'}. No payment proof or release is established.`;
+            }
+          } catch {
+            output.textContent =
+              'Extension check: EXTENSION_CHECK_FAILED. No payment proof or release is established.';
+          } finally {
+            running = false;
+            requestId = null;
+            button.disabled = false;
+          }
+        });
+        window.addEventListener('message', (event) => {
+          if (
+            event.source !== window ||
+            event.origin !== location.origin ||
+            event.data?.requestId !== requestId ||
+            !requestId
+          )
+            return;
+          const allowed = [
+            'CONNECTING',
+            'VERIFIER_CONNECTING',
+            'MPC_SETUP',
+            'MPC_SETUP_COMPLETE',
+            'SESSION_SETUP',
+            'CONNECTING_TO_SERVER',
+            'SERVER_CONNECTING',
+            'SENDING_REQUEST',
+            'HTTP_SENDING',
+            'REQUEST_COMPLETE',
+            'HTTP_RESPONSE_RECEIVED',
+            'PROCESSING_TRANSCRIPT',
+            'WAITING_FOR_REVEAL_APPROVAL',
+            'SENDING_REVEAL_CONFIG',
+            'GENERATING_PROOF',
+            'PROOF_GENERATING',
+            'WAITING_FOR_VERIFICATION',
+            'PROOF_FINALIZED',
+            'COMPLETE',
+          ];
+          if (event.data.type === 'TLSN_PROVE_PROGRESS' && allowed.includes(event.data.step))
+            output.textContent = 'Extension check progress: ' + event.data.step;
+        });
+        initialize();
+      </script>
+    </main>
+  </body>
+</html>

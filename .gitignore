@@ -1,0 +1,18 @@
+# Account data and runtime output
+.private/
+.env
+.env.*
+!.env.example
+*.log
+*.har
+*.crx
+*.zip
+
+# Downloaded tools and generated files
+.toolchain/
+node_modules/
+target/
+test_snapshots/
+__pycache__/
+*.pyc
+.DS_Store

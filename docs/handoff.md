@@ -14,7 +14,7 @@ The earlier private test services are separate from this checkout. Packaging thi
 2. Read [status](status.md) before making a live proof claim.
 3. Prepare the pinned verifier and HTTPS route using [setup](setup.md).
 4. Read the latest MacBook and cloud results below; repeat checks after a device, runtime or route change.
-5. Read the failed cloud attempt below. Infrastructure is frozen; isolate the failure after disclosure approval before requesting another authenticated attempt.
+5. Read the failed cloud attempt and later trial-shutdown finding below. The owner approved the plugin-only deployment; bank tests remain paused.
 
 ## Current boundary
 
@@ -56,7 +56,19 @@ A narrow transport check from Node.js on the Mac mini kept an unregistered WebSo
 
 A local plugin mitigation retains only the newest matching transfer from the sorted selector and avoids serializing captured headers while a proof is pending. Two tests run the actual rendered plugin through the checksum-verified shipped host, evaluator, serializer and QuickJS. With either one or twenty synthetic captured transfers, idle main calls allocate 87 callbacks and pending calls allocate 9; pending calls perform no captured-header serialization. The earlier implementation allocated 277 callbacks per main call with twenty entries in the temporary reproduction. Selection remains stable, no automatic proof starts, and the non-null pending UI preserves explicit Approve/Reject in the host disclosure overlay. The proof result is synthetic; no MPC or bank request is run by these tests.
 
-This mitigation does not fix the extension's finite callback-ID space or establish successful bank verification. The shipped SDK can also emit a runtime-disposal assertion below the allocation limit; the full-host tests distinguish operation health from that separate teardown problem. The extension package and deployed Fly image remain unchanged. Final local checks: 93 tests passed, zero skipped; syntax checks passed for 37 modules and inline scripts. See [verification](verification.md) for scope and limitations.
+This mitigation does not fix the extension's finite callback-ID space or establish successful bank verification. The shipped SDK can also emit a runtime-disposal assertion below the allocation limit; the full-host tests distinguish operation health from that separate teardown problem. At completion of this local work the extension package and deployed image were unchanged. Local checks: 93 tests passed, zero skipped; syntax checks passed for 37 modules and inline scripts. See [verification](verification.md) for scope and limitations.
+
+## Approved plugin deployment and identified shutdown
+
+The owner explicitly approved “Deploy plugin only”, keeping bank tests paused. On 25 October, source commit `f433423e62eac2ed7d2fae8430c6bab2da1443c1` was deployed to the existing Fly VM as image `sha256:eb0e1d37fdc2883a2a21ea2c0d47fd8a71d5bc3550edef28c63243e217e83fb6`. Comparing the complete old and new build manifests showed exactly one changed build file: `revolut.plugin.mjs`. The deployment updated the existing machine only. Its region, CPU, memory, environment, services, restart policy and health configuration were unchanged. No extension package, billing setting or bank test was changed.
+
+At 13:31 UTC, public HTTPS checks confirmed health/version pins, exact served plugin content, forced response-only mode, fresh CSP nonces and denial of raw full-plugin routes. An isolated Chrome check with a synthetic extension API confirmed required consent, consent consumption and sanitized results. Machine health was passing at 13:31:57 UTC. These are deployment checks, not a real authenticated proof.
+
+During deployment preparation, Fly machine history showed a requested VM stop at `2026-10-25T12:54:26.857Z`, matching the earlier control-connection failure. Existing platform logs explicitly report **Trial machine stopping** at 12:54:26 UTC and again at 13:26:52 UTC. The latter stop occurred exactly five minutes after the machine started. This identifies a verifier-host shutdown at the failing instant and explains the lost connection; it supersedes the earlier unknown-cause assessment for that server disconnect. It does not prove that the separate client callback/disposal errors are fixed.
+
+[Fly's trial documentation](https://docs.fly.io/about/free-trial) confirms that trial machines stop after five minutes and that adding a payment method removes the trial limits and starts billing. The application was configured with auto-stop disabled, but that did not prevent the trial-enforced shutdown. The earlier 45-second socket check tested connection age, not survival beyond the VM's five-minute lifetime. No payment method was added by the agent.
+
+The owner then reported upgrading to PAYG and adding a card. The boot that began before that report still stopped under the trial timer at 13:36:27 UTC. The agent started the same stopped VM once, without changing its configuration. That start completed at `13:38:36.916Z`. At `13:45:08.707784Z`, the same instance had run continuously for **391.5 seconds**, with no intervening stop/restart and a final HTTP 200 health response. This bank-free check passed beyond the former five-minute cutoff. It registered no proof session and made no bank request; it is a finite uptime observation, not a guarantee of indefinite availability or payment verification.
 
 ## Completed bank-free comparison
 
@@ -73,7 +85,7 @@ The public default button runs one fixed cloud check. The owner comparison is in
 
 ## Remaining work
 
-The local callback-allocation mitigation is tested and ready for review. Deployment remains pending under the owner's infrastructure freeze; a proposed deployment would change only the application plugin on the existing Fly host. The failure after disclosure approval remains unresolved. Do not retry bank requests to discover the response schema, change selectors without local response evidence, or treat the new parser regressions as a fix for this incident. The public setup and public extension checks are not a completed P2P trade or payment-proof demo.
+The approved plugin-only mitigation is deployed, and the post-upgrade bank-free uptime check passed beyond the previous cutoff. Bank tests remain paused; a future authenticated check needs the owner's decision to resume and the normal per-attempt consent/disclosure review. The payment gate is still unresolved. Do not retry bank requests to discover schema, change selectors without local response evidence, or treat parser regressions, hosting checks and deployment checks as payment proof. The public setup and public extension checks are not a completed P2P trade or payment-proof demo.
 
 The [cloud response-only page](https://stellar-p2p-proof-vijay.fly.dev/response-check/) remains available, but a new authenticated attempt is not the next diagnostic step. It displays the verifier and exact disclosure, requires explicit account-owner consent and consumes that consent after each extension execution. Its plugin exposes only **Check response only** and rejects payment-field mode even through an explicit exported-function call. Read [setup](setup.md) before any later owner-approved use.
 

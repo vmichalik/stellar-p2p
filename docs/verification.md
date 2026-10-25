@@ -72,6 +72,20 @@ The plugin now retains only the newest matching transfer and skips captured-head
 
 Two tests pass: latest selection and bounded idle callback growth; pending behavior and explicit disclosure approval/rejection. With either one or twenty captured transfers, the patched plugin allocates 87 callback IDs per idle main call and 9 per pending call. Pending rendering performs no captured-header serialization. Selected transfer, explicit-click behavior and 4096/16384 proof budgets are preserved. The prior plugin allocated 277 per main call with twenty entries in the temporary reproduction.
 
-These checks assert runtime health during operation. The shipped SDK can separately log its `JS_FreeRuntime` disposal assertion in the synthetic host even below the callback limit, so teardown is not claimed fixed. The finite callback-ID limit also remains. The application mitigation is local and undeployed; it does not establish a completed live proof.
+These checks assert runtime health during operation. The shipped SDK can separately log its `JS_FreeRuntime` disposal assertion in the synthetic host even below the callback limit, so teardown is not claimed fixed. The finite callback-ID limit also remains. At this checkpoint the application mitigation was local and undeployed; these results do not establish a completed live proof.
 
-Final local run: **93/93 tests passed, zero skipped**, and **37 JavaScript modules and inline scripts** passed syntax checks. Independent review found no blocking issue and passed seventeen focused tests plus a deferred-proof selection check. The deployed image, extension package, protocol budgets and infrastructure are unchanged.
+Final local run: **93/93 tests passed, zero skipped**, and **37 JavaScript modules and inline scripts** passed syntax checks. Independent review found no blocking issue and passed seventeen focused tests plus a deferred-proof selection check. At this local checkpoint the deployed image, extension package, protocol budgets and infrastructure were unchanged.
+
+## Plugin-only deployment, 25 October 2026
+
+After explicit owner approval, commit `f433423e62eac2ed7d2fae8430c6bab2da1443c1` was deployed to the existing machine as image `sha256:eb0e1d37fdc2883a2a21ea2c0d47fd8a71d5bc3550edef28c63243e217e83fb6`. The complete build-stage comparison identified only `revolut.plugin.mjs` as changed. Existing machine count, region, resources, environment, services and runtime configuration matched the pre-deployment snapshot.
+
+At `2026-10-25T13:31:31.711Z`, HTTPS checks passed health/version pins, exact served-plugin comparison, forced response-only mode, fresh CSP nonces and raw-plugin route denial. The rendered plugin SHA-256 was `18bfe27197bcf4cb120b4a1a6a570b3c17a3580fcd20f20b4d63becc9e364af2`. At `13:31:33.893Z`, isolated Chrome with a synthetic extension API passed required/consumed consent and callback sanitization. Machine health was passing at `13:31:57.219638Z`. These checks made no bank request and did not run a real extension proof.
+
+The initial machine-state read raced the first public request starting the updated VM; the subsequent read confirmed it started and healthy. This point-in-time result alone did not establish sustained uptime: existing Fly logs explicitly record trial-enforced stops, including `12:54:26Z` at the failed proof and `13:26:52Z`. [Fly documents a five-minute trial-machine lifetime](https://docs.fly.io/about/free-trial), lifted when a payment method is added and billing begins. No billing change was made by the agent.
+
+## Owner PAYG upgrade and bounded uptime check
+
+The owner reported adding a card and upgrading to PAYG. The running VM, which had started before that report, still stopped at `13:36:27Z` with the trial-stop message. The agent started the same stopped VM once. No image, resource, configuration or billing change accompanied that start.
+
+Machine-API observations tracked the same instance from its start at `2026-10-25T13:38:36.916Z`. The final observation at `13:45:08.707784Z` confirmed **391.5 seconds of continuous uptime**, no intervening stop/restart, the deployed `eb0e1d…` image and HTTP 200 from `/health`. The check registered no proof session and made no bank request. This passes beyond the former five-minute cutoff; it does not establish indefinite uptime or resolve the payment gate. Bank tests remain paused.

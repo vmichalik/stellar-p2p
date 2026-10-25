@@ -20,7 +20,8 @@ Stellar Composed is the likely Genesis track to discuss, based on the proposed c
 
 - [ ] Confirm path, track and treatment of preparatory work with organizers.
 - [x] Update the README with the integrated local scope and live gaps.
-- [ ] Record the demo with live, simulated and unfinished parts clearly labeled.
+- [x] Prepare a local silent demo and deck with synthetic, mocked and unfinished parts clearly labeled; see the [media handoff](release/submission-package.md).
+- [ ] Confirm the portal's media limits and review/upload the final materials.
 - [ ] Add verified testnet contract and transaction links.
 - [x] Include the operator trust model and approved mutual recovery policy.
 - [ ] Give the required reviewers access to this private repo; keep bank material out.

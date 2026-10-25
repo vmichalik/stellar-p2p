@@ -21,7 +21,9 @@ Keep synthetic settlement separate from an authenticated payment proof. Testnet 
 
 ## Current blockers
 
-Escrow, policy and app snapshots are integrated. The actual app-model → policy → compiled-WASM local rehearsal passes with synthetic payment evidence. The Node wallet/RPC candidate is tested with mocked wallet/RPC and a real disk journal. The Node browser bridge, chain reader/indexer and mutual-recovery collector are implemented locally. Host composition, private policy/offer ports and browser/counterparty wiring remain software gaps; see `integration/README.md`.
+Escrow, policy and app snapshots are integrated. The recorded app-model → policy → compiled-WASM rehearsal passed with synthetic payment evidence. The live host, authenticated browser bridge, chain reader/indexer, durable journal and two-party recovery wiring are implemented locally. Browser/HTTP recovery checks use fixture signatures and mocked wallet/chain services; they do not establish network settlement. See [the live service handoff](../../docs/release/live-services.md) for the implemented boundaries and configuration.
+
+Accepted bank-payment semantics and trusted private offer/policy configuration remain unfinished. The live host rejects new payment locks while `paymentProof` is false. An approved deployment, asset, policy key, deployer and fee limit are still required before an authorized real-wallet/testnet rehearsal. Existing held orders can exercise the implemented mutual recovery path independently of payment proof, with both parties' approval.
 
 A read-only call to `https://soroban-testnet.stellar.org` at 13:03 UTC on 25 October 2026 returned protocol 29 and the expected testnet passphrase; latest ledger was 5,381,965. This matches the artifact's required protocol. It is not deployment or transaction evidence.
 

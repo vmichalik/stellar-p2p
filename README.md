@@ -54,16 +54,17 @@ npm run build:demo
 
 ## Read next
 
-| Document                             | What it covers                                     |
-| ------------------------------------ | -------------------------------------------------- |
-| [Concept](docs/concept.md)           | Who this is for and why Revolut comes first        |
-| [Architecture](docs/architecture.md) | Trust, signing, identities and recovery            |
-| [Status](docs/status.md)             | Observed results and live gaps                     |
-| [Setup](docs/setup.md)               | Local demo, checks and older private proof tooling |
-| [Build plan](docs/build-plan.md)     | Remaining work and completion checks               |
-| [Pitch](docs/pitch.md)               | Short pitch and honest demo outline                |
-| [Verification](docs/verification.md) | Checks actually run                                |
-| [Handoff](docs/handoff.md)           | Branch, components, blockers and next action       |
+| Document                                         | What it covers                                                |
+| ------------------------------------------------ | ------------------------------------------------------------- |
+| [Concept](docs/concept.md)                       | Who this is for and why Revolut comes first                   |
+| [Architecture](docs/architecture.md)             | Trust, signing, identities and recovery                       |
+| [Status](docs/status.md)                         | Observed results and live gaps                                |
+| [Setup](docs/setup.md)                           | Local demo, checks and older private proof tooling            |
+| [Build plan](docs/build-plan.md)                 | Remaining work and completion checks                          |
+| [Pitch](docs/pitch.md)                           | Short pitch and honest demo outline                           |
+| [Verification](docs/verification.md)             | Checks actually run                                           |
+| [Handoff](docs/handoff.md)                       | Branch, components, blockers and next action                  |
+| [Submission](docs/release/submission-package.md) | Prepared media, evidence scope and remaining submission gates |
 
 ## Code map
 

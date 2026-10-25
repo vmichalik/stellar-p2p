@@ -36,7 +36,7 @@ After payment is locked, unavailable proof holds the tokens. A timely payment ca
 
 A real authenticated payment has not been accepted. The latest proof disconnect matched a Fly trial-machine shutdown; the later paid-host uptime observation did not establish payment proof. Bank tests remain paused, and live normalization rejects unknown payment semantics. The live host therefore blocks new payment locks.
 
-An approved testnet deployment, real wallet/trade validation, reachable hosted handoff, final silent demo video and deck, reviewer access and portal submission remain outstanding. Screenshots and receipt examples from local browser rehearsals must be labeled mocked. No deployed contract, real payout, transaction link or customer traction is invented for this submission.
+An approved testnet deployment, real wallet/trade validation, reachable hosted handoff, reviewer access and portal submission remain outstanding. A local 90-second silent video and seven-slide PDF deck are prepared and checked; their final acceptance still depends on owner review and the portal's media limits. See the [media handoff](release/submission-package.md). Screenshots and receipt examples from local browser rehearsals are labeled mocked. No deployed contract, real payout, transaction link or customer traction is invented for this submission.
 
 ## Progress and next pilot
 

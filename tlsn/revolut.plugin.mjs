@@ -60,17 +60,43 @@ function isDetail(request) {
 }
 
 function main() {
-  const [latest] = useHeaders((headers) =>
-    headers.filter(isDetail).sort((a, b) => b.timestamp - a.timestamp),
-  );
   useEffect(() => {
     openWindow('https://app.revolut.com/start');
   }, []);
+  const pending = useState('pending', false);
+  // The pinned QuickJS host allocates callbacks when serializing hook values.
+  // Avoid repeatedly copying captured headers while an explicit proof is pending.
+  // Keep a non-null DOM result so the host can append its disclosure-approval UI.
+  if (pending) {
+    return div(
+      {
+        style: {
+          position: 'fixed',
+          bottom: '12px',
+          right: '12px',
+          width: '300px',
+          zIndex: '2147483647',
+          backgroundColor: 'white',
+          color: '#111',
+          padding: '16px',
+          borderRadius: '12px',
+          fontFamily: 'system-ui',
+          fontSize: '14px',
+        },
+      },
+      ['Proof in progress. Review the TLSNotary disclosure prompt when it appears.'],
+    );
+  }
+  const [latest] = useHeaders((headers) =>
+    headers
+      .filter(isDetail)
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 1),
+  );
   // Header values stay inside the extension runtime and are never rendered.
   useEffect(() => {
     setState('selected', latest || null);
   }, [latest]);
-  const pending = useState('pending', false);
   const message = useState(
     'message',
     RESPONSE_SHAPE_ONLY

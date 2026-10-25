@@ -42,7 +42,9 @@ async function harness({
     if (fail) throw new Error(failureMessage);
     if (args[1].handlers.some((row) => row.part === 'STATUS_CODE')) {
       const body = typeof shapeBody === 'string' ? shapeBody : JSON.stringify(shapeBody);
-      const response = `HTTP/1.1 ${shapeStatus} Test\r\ncontent-type: ${shapeContentType}\r\n\r\n${body}`;
+      // This mock tests plugin selection/sanitization, not the shipped HTTP parser.
+      // Keep the fixture framed; response-parser.test.mjs exercises the actual WASM boundary.
+      const response = `HTTP/1.1 ${shapeStatus} Test\r\ncontent-type: ${shapeContentType}\r\ncontent-length: ${Buffer.byteLength(body)}\r\n\r\n${body}`;
       const results = [];
       for (const row of args[1].handlers) {
         const base = { type: row.type, part: row.part, action: { kind: 'REVEAL' } };

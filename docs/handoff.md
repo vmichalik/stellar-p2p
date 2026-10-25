@@ -14,7 +14,7 @@ The earlier private test services are separate from this checkout. Packaging thi
 2. Read [status](status.md) before making a live proof claim.
 3. Prepare the pinned verifier and HTTPS route using [setup](setup.md).
 4. Read the latest MacBook and cloud results below; repeat checks after a device, runtime or route change.
-5. Read the confirmed cloud public proof below, then revisit the authenticated response-shape check with owner approval for that verifier and disclosure.
+5. Read the failed cloud attempt below. Infrastructure is frozen; isolate the failure after disclosure approval before requesting another authenticated attempt.
 
 ## Current boundary
 
@@ -36,7 +36,27 @@ The public-extension deployment used image `registry.fly.io/stellar-p2p-proof-vi
 
 The owner then ran [the cloud extension check](https://stellar-p2p-proof-vijay.fly.dev/extension-check/) on the MacBook and reported `PUBLIC_PROOF_COMPLETED; HTTP 200`. Fly's verifier independently confirmed the `app.revolut.com` server identity, authenticated reveal ranges and delivery of `session_completed` at 12:34:28.445088 UTC on that image. The check used only the public request line and HTTP status. It made no authenticated bank request and established no payment fields.
 
-The later response-only deployment uses image `registry.fly.io/stellar-p2p-proof-vijay@sha256:2c6da2b1669d8592fe072439a225872d6530996fbb23b33a41bddb04c7ce6b89`. At 12:49 UTC, the single VM was started with a passing health check. Its new routes, fresh script nonce, forced response mode and denial of raw full-plugin routes were checked over HTTPS. An isolated Chrome check with a synthetic extension API confirmed consent and sanitized rendering. No real authenticated extension check was run on this image; the earlier accepted public proof retains its own image provenance.
+The later response-only deployment uses image `registry.fly.io/stellar-p2p-proof-vijay@sha256:2c6da2b1669d8592fe072439a225872d6530996fbb23b33a41bddb04c7ce6b89`. At 12:49 UTC, the single VM was started with a passing health check. Its new routes, fresh script nonce, forced response mode and denial of raw full-plugin routes were checked over HTTPS. An isolated Chrome check with a synthetic extension API confirmed consent and sanitized rendering. The owner subsequently ran one authenticated attempt on this image, described below; the earlier accepted public proof retains its own image provenance.
+
+## Failed cloud response check, 25 October 2026
+
+The owner ran the consent-gated response-only check on the MacBook and later confirmed that the disclosure preview appeared and they approved it. In the pinned extension, this preview follows successful response parsing. Framing and compression are therefore not the demonstrated failing stage for this attempt. The original Network entry is unavailable, so its HTTP status, framing, encoding and JSON structure remain unknown to this project.
+
+Sanitized Fly observations: the session registered at 12:53:55 UTC; the bank TLS connection completed and native verification began at 12:54:24; the control connection reset at 12:54:26 while the server was waiting for `reveal_config`. No disclosure configuration, authenticated response ranges or `session_completed` result was observed for this attempt. Encrypted transport byte counts do not establish an HTTP result.
+
+The owner's existing client log contains two untimestamped SDK sequences. One finalized; the other received a response, reached `Committed`, entered `reveal()` and then reported `WebSocket is closed`. These entries cannot independently be assigned to a server session. The released extension sends the control configuration before calling `reveal()`, but does not wait for server acknowledgement; a client reveal event does not establish server receipt. Released cleanup calls `free()` and does not initiate a fallback reveal.
+
+The same client log later reports `QuickJSContext had no callback with id -32768`, repeated `Lifetime not alive` errors, plugin termination at 12:58:42, and forced disposal after a 30-second callback-drain timeout at 12:59:12. The generic overlay stayed on “Generating proof…”. The pinned cleanup path awaits a worker RPC without a deadline, which can delay an error result; that source finding alone does not prove it caused this incident.
+
+The exact callback error was reproduced offline with the shipped QuickJS JavaScript and WASM: host-function allocation 65,535 succeeds, allocation 65,536 overflows its callback ID and produces `-32768`, and allocation 65,537 invokes the first callback instead of the intended one. `tlsn/extension-quickjs.test.mjs` retains this regression. No proof or network operation was involved. This confirms an extension runtime defect; the failed MacBook execution's allocation count and its causal relationship to the earlier connection reset remain unknown.
+
+The earlier plugin tests mocked `prove()` and accepted an unframed HTTP fixture. That fixture now has a byte-counted `Content-Length`. Five additional tests execute the checksum-pinned released WASM parser against synthetic transcripts: framed identity and chunked responses pass; unframed and gzip responses fail even for status-only disclosure. The actual response-shape handlers are also exercised. These are parser compatibility tests, not a reproduced bank failure or cryptographic proof.
+
+A narrow transport check from Node.js on the Mac mini kept an unregistered WebSocket open on the existing Fly `/session` route for 45 seconds after upgrade. No proof was registered and no bank connection was opened. A simple 30-second idle cutoff was not reproduced on that path; this does not reproduce the MacBook's active proof or rule out its connection failure.
+
+A local plugin mitigation retains only the newest matching transfer from the sorted selector and avoids serializing captured headers while a proof is pending. Two tests run the actual rendered plugin through the checksum-verified shipped host, evaluator, serializer and QuickJS. With either one or twenty synthetic captured transfers, idle main calls allocate 87 callbacks and pending calls allocate 9; pending calls perform no captured-header serialization. The earlier implementation allocated 277 callbacks per main call with twenty entries in the temporary reproduction. Selection remains stable, no automatic proof starts, and the non-null pending UI preserves explicit Approve/Reject in the host disclosure overlay. The proof result is synthetic; no MPC or bank request is run by these tests.
+
+This mitigation does not fix the extension's finite callback-ID space or establish successful bank verification. The shipped SDK can also emit a runtime-disposal assertion below the allocation limit; the full-host tests distinguish operation health from that separate teardown problem. The extension package and deployed Fly image remain unchanged. Final local checks: 93 tests passed, zero skipped; syntax checks passed for 37 modules and inline scripts. See [verification](verification.md) for scope and limitations.
 
 ## Completed bank-free comparison
 
@@ -53,9 +73,9 @@ The public default button runs one fixed cloud check. The owner comparison is in
 
 ## Remaining work
 
-Obtain an authenticated response-shape result for one existing outgoing transfer under the owner's approval for the cloud verifier and exact disclosure. Establish status and JSON structure before changing provisional selectors. The public setup and public extension checks are not a completed P2P trade or payment-proof demo.
+The local callback-allocation mitigation is tested and ready for review. Deployment remains pending under the owner's infrastructure freeze; a proposed deployment would change only the application plugin on the existing Fly host. The failure after disclosure approval remains unresolved. Do not retry bank requests to discover the response schema, change selectors without local response evidence, or treat the new parser regressions as a fix for this incident. The public setup and public extension checks are not a completed P2P trade or payment-proof demo.
 
-The next owner action is [the cloud response-only page](https://stellar-p2p-proof-vijay.fly.dev/response-check/). It displays the verifier and exact disclosure, requires explicit account-owner consent and consumes that consent after each extension execution. Its plugin exposes only **Check response only** and rejects payment-field mode even through an explicit exported-function call. This route does not make an authenticated request until the owner opens the extension, selects an existing transfer and explicitly requests the check. Read [setup](setup.md) before use.
+The [cloud response-only page](https://stellar-p2p-proof-vijay.fly.dev/response-check/) remains available, but a new authenticated attempt is not the next diagnostic step. It displays the verifier and exact disclosure, requires explicit account-owner consent and consumes that consent after each extension execution. Its plugin exposes only **Check response only** and rejects payment-field mode even through an explicit exported-function call. Read [setup](setup.md) before any later owner-approved use.
 
 After the bank response is independently verified, the payment-policy signer and escrow milestones in [the build plan](build-plan.md) remain. Do not release funds from browser callbacks, screenshots, field-presence summaries or setup results. Keep the Fly VM running for the intended public demo and review its lifetime after the submission; no shutdown schedule was created.
 

@@ -47,7 +47,8 @@
       "ownerApproved": true,
       "result": "MPC_SETUP_TIMEOUT",
       "bankRequestMade": false,
-      "responseShapeEstablished": false
+      "responseShapeEstablished": false,
+      "verifierHost": "Mac mini"
     },
     "macBookBrowserSetupDiagnosis": {
       "source": "owner-reported bank-free browser diagnostic",
@@ -117,7 +118,7 @@
       "webhooksEnabled": false,
       "oversizedRegistrationRejectedLive": true,
       "cloudPublicExtensionProofAccepted": true,
-      "bankRequestMade": false,
+      "bankRequestMade": true,
       "cloudPublicExtensionProofImageDigest": "sha256:9bb965a489c295f253b234c4ce748afe478da5ce4fc4664458ea983ea652be14",
       "oversizedRegistrationRejectedLiveImageDigest": "sha256:59770e9ed678081a5ec940bcf7b3f6c2fb30e15bdac1bd4d20a482e87cf6a55e",
       "healthObservedAt": "2026-10-25T12:49:31.401564+00:00"
@@ -163,8 +164,99 @@
         "authenticatedBankRequestMade": false
       },
       "authenticatedCloudResponseShapeEstablished": false,
-      "ownerApprovalForAuthenticatedCloudCheck": "PENDING",
+      "ownerApprovalForAuthenticatedCloudCheck": "ONE_ATTEMPT_EXECUTED",
       "releaseGate": "NOT_CLEARED"
+    },
+    "authenticatedCloudResponseAttempt": {
+      "ownerApproved": true,
+      "ownerConfirmedDisclosurePreviewApproved": true,
+      "imageDigest": "sha256:2c6da2b1669d8592fe072439a225872d6530996fbb23b33a41bddb04c7ce6b89",
+      "verifierHost": "Fly Paris",
+      "sessionRegisteredAt": "2026-10-25T12:53:55Z",
+      "tlsCompleteObservedAt": "2026-10-25T12:54:24Z",
+      "controlFailureObservedAt": "2026-10-25T12:54:26Z",
+      "result": "CONTROL_CONNECTION_CLOSED_BEFORE_REVEAL_CONFIG_RECEIVED",
+      "responseParsingReachedPreview": true,
+      "revealConfigReceived": false,
+      "sessionCompletedDelivered": false,
+      "httpMetadataAvailable": false,
+      "responseShapeEstablished": false,
+      "paymentProof": false,
+      "clientLog": {
+        "sdkSequences": 2,
+        "sdkSequenceTimestampsAvailable": false,
+        "oneSequenceFinalized": true,
+        "otherSequenceReachedRevealThenWebSocketClosed": true,
+        "sessionCorrelation": "UNCONFIRMED",
+        "callbackError": "QuickJSContext had no callback with id -32768",
+        "pluginTerminationLocalTime": "12:58:42",
+        "callbackDrainForcedDisposalLocalTime": "12:59:12",
+        "callbackDrainTimeoutMs": 30000,
+        "runtimeError": "Lifetime not alive",
+        "causalRelationshipToServerReset": "UNRESOLVED"
+      },
+      "bankRequestRetryPerformedByAgent": false,
+      "releaseGate": "NOT_CLEARED"
+    },
+    "parserRegression": {
+      "runtime": "Released TLSNotary extension 0.1.0.1501 WASM compute_reveal",
+      "wasmSha256": "bb3c73628f088867a1f99291275b56a379ce44fd239efca9445fb5908a97e318",
+      "syntheticTestsPassed": 5,
+      "framedIdentityAccepted": true,
+      "chunkedAccepted": true,
+      "unframedBodyRejectedEvenForStatusOnly": true,
+      "gzipRejectedEvenForStatusOnly": true,
+      "actualShapeHandlersExercised": true,
+      "bankResponseReproduced": false,
+      "actualFailureExplained": false,
+      "bankRequestMade": false
+    },
+    "releasedQuickJsCallbackReproduction": {
+      "source": "Checksum-verified official extension 0.1.0.1501 JavaScript and QuickJS WASM",
+      "quickJsWasmSha256": "a5920bb5789c1ad1236c54b0146a2b3a2eb262050e2baea0388bce574a2632bb",
+      "syntheticOnly": true,
+      "extensionStartupExecuted": false,
+      "bankRequestMade": false,
+      "lastCorrectAllocation": 65535,
+      "firstOverflowAllocation": 65536,
+      "overflowError": "QuickJSContext had no callback with id -32768",
+      "nextAllocationInvokesFirstCallback": true,
+      "liveAllocationCountKnown": false,
+      "controlConnectionFailureExplained": false
+    },
+    "idleControlTransportCheck": {
+      "observedDate": "2026-10-25",
+      "client": "Node.js on Mac mini",
+      "target": "Existing public Fly session WebSocket",
+      "result": "OPEN_AFTER_45_SECONDS",
+      "proofRegistered": false,
+      "bankRequestMade": false,
+      "scope": "Idle unregistered control socket only; does not reproduce MacBook or active proof flow",
+      "infrastructureChanged": false
+    },
+    "localPluginMitigation": {
+      "implemented": true,
+      "deployed": false,
+      "extensionRuntimeModified": false,
+      "changes": [
+        "Retain only newest matching transfer",
+        "Skip captured-header serialization while pending",
+        "Retain non-null pending UI for host disclosure approval"
+      ],
+      "shippedHostIntegrationTestsPassed": 2,
+      "syntheticTransferCounts": [1, 20],
+      "idleCallbackAllocationsPerMain": 87,
+      "pendingCallbackAllocationsPerMain": 9,
+      "pendingCapturedHeaderSerializations": 0,
+      "explicitApprovalAndRejectionPreserved": true,
+      "proofResultSynthetic": true,
+      "bankRequestMade": false,
+      "callbackIdLimitFixed": false,
+      "sdkDisposalAssertionFixed": false,
+      "originalConnectionFailureExplained": false,
+      "fullSuiteTestsPassed": 93,
+      "fullSuiteTestsSkipped": 0,
+      "syntaxModulesPassed": 37
     }
   }
 }

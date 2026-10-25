@@ -41,4 +41,37 @@ The response-only deployment, image `sha256:2c6da2b1669d8592fe072439a225872d6530
 
 The initial default-sandbox test run could not open synthetic loopback listeners. Rerunning with normal listener permissions passed. A fresh checkout without prepared assets skips the released-runtime and bundle integration cases; it is not equivalent to the zero-skip run above. Archived Reclaim checks were not repeated because their source was unchanged.
 
-No authenticated bank response, payment-policy acceptance, escrow deployment or release is established by these checks. A live authenticated response-shape check still needs the owner's approval for the cloud verifier and exact disclosure, including the private transaction ID in the request path. Keep that path and raw verifier transcript out of tool output, Git and chat.
+No authenticated bank response, payment-policy acceptance, escrow deployment or release is established by these checks. A subsequent owner-approved cloud attempt failed after disclosure approval; its sanitized observations are in [the handoff](handoff.md#failed-cloud-response-check-25-october-2026). Keep the private request path and raw verifier transcript out of tool output, Git and chat.
+
+## Parser coverage correction, 25 October 2026
+
+The 85-test result above did not establish compatibility between the real bank response and the shipped parser. Plugin tests replaced `prove()` with a mock and their HTTP fixture omitted framing headers. That fixture now includes a byte-counted `Content-Length`.
+
+Five new tests in `tlsn/response-parser.test.mjs` execute the actual released `compute_reveal` WASM against synthetic transcripts. The assets are hash-checked before loading; the crypto WASM digest is `bb3c73628f088867a1f99291275b56a379ce44fd239efca9445fb5908a97e318`, identical to the extension's packaged crypto WASM. SDK handler actions are canonicalized to the WASM enum representation. No network, MPC execution or bank response is involved.
+
+- Identity responses with `Content-Length` and correctly chunked responses pass.
+- A body without `Content-Length` or `Transfer-Encoding` is rejected, even when only HTTP status is selected.
+- A gzip body is rejected as invalid UTF-8, also for status-only selection.
+- The actual response-shape handlers disclose synthetic root markers and allowed field names without financial values, and reject the unsupported fixtures.
+
+The owner confirmed the failed bank attempt displayed a disclosure preview and they approved it. That preview follows parsing, so these parser limitations are not the established cause of the observed failure. They remain useful regression coverage. The HTTP metadata from the actual response was unavailable.
+
+After this correction, `npm test` passed **90 tests with zero skips** using the prepared released assets. `npm run check` passed **35 modules and inline scripts**. Runtime code, the extension package and the deployed Fly image were unchanged.
+
+## Released QuickJS callback failure reproduction
+
+The owner's existing log included `QuickJSContext had no callback with id -32768`. `tlsn/extension-quickjs.test.mjs` reproduces this exact error using the checksum-verified official extension archive, its released offscreen module implementations and shipped QuickJS WASM. Only extension startup is removed; the sandbox has no Chrome, fetch or WebSocket API. No dependency installation is needed.
+
+The host allocator starts at `-32768` and increments a JavaScript number. At allocation 65,536 the resulting ID 32768 becomes -32768 across the native callback bridge, which has no corresponding callback. At allocation 65,537 it becomes -32767 and calls the first callback. This deterministic synthetic regression establishes the released runtime bug, not the ordering or cause of the live connection failure. QuickJS WASM digest: `a5920bb5789c1ad1236c54b0146a2b3a2eb262050e2baea0388bce574a2632bb`.
+
+The real MacBook allocation count was not recorded. The callback-boundary reproduction above does not establish a fix or permission for another authenticated attempt.
+
+## Local plugin mitigation and final checks
+
+The plugin now retains only the newest matching transfer and skips captured-header serialization while pending. `tlsn/extension-plugin-runtime.test.mjs` executes the actual rendered response-only plugin through the shipped host, evaluator, serializer and QuickJS. Captured headers are synthetic objects created in the serializer's own realm. Worker startup, WebSocket and fetch are prohibited. Only the final `onProve` operation is synthetic; callback allocation, plugin evaluation and disclosure UI use released code.
+
+Two tests pass: latest selection and bounded idle callback growth; pending behavior and explicit disclosure approval/rejection. With either one or twenty captured transfers, the patched plugin allocates 87 callback IDs per idle main call and 9 per pending call. Pending rendering performs no captured-header serialization. Selected transfer, explicit-click behavior and 4096/16384 proof budgets are preserved. The prior plugin allocated 277 per main call with twenty entries in the temporary reproduction.
+
+These checks assert runtime health during operation. The shipped SDK can separately log its `JS_FreeRuntime` disposal assertion in the synthetic host even below the callback limit, so teardown is not claimed fixed. The finite callback-ID limit also remains. The application mitigation is local and undeployed; it does not establish a completed live proof.
+
+Final local run: **93/93 tests passed, zero skipped**, and **37 JavaScript modules and inline scripts** passed syntax checks. Independent review found no blocking issue and passed seventeen focused tests plus a deferred-proof selection check. The deployed image, extension package, protocol budgets and infrastructure are unchanged.

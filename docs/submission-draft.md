@@ -48,7 +48,7 @@ There is no unilateral timeout refund after payment lock. A timely payment can b
 
 Authenticated bank payment evidence has not been accepted. Proof generation and payment normalization remain unfinished, so the live host continues to block new payment locks. The latest diagnostic history belongs in the proof handoff; it does not change that product gate.
 
-An approved testnet deployment, authorized real-wallet trade, reachable delivery, reviewer access and submission remain outstanding. The preserved 90-second silent video and seven-slide PDF have been checked. Their presentation copy is being reconciled with the latest owner direction; revised exports need their own checks and hashes. See the [media handoff](release/submission-package.md). No deployed contract, real payout, transaction link or customer traction is claimed.
+An approved testnet deployment, authorized real-wallet trade, reachable delivery, reviewer access and submission remain outstanding. The revised 90-second silent video and seven-page PDF have passed media review; their hashes and scope are recorded in the [media handoff](release/submission-package.md). The six-file ZIP passed CRC and manifest-hash verification. No deployed contract, real payout, transaction link or customer traction is claimed.
 
 ## Progress and next pilot
 
@@ -58,4 +58,6 @@ The proposed next pilot is one consented EUR trade through accepted bank evidenc
 
 ## Materials to attach
 
-Use the exact reviewed source candidate, silent video, separate optional dub notes, pitch deck and verified transaction links only if an authorized deployment actually exists. Confirm portal fields, media limits, eligibility and private-repository reviewer access before uploading. These answers have not been submitted or sent to reviewers.
+The product presentation revision is `762598ebb4c1ab4b03b64e47e57b753bc02b086b`. Revised app captures preceded that commit and record `39834ef` plus working presentation changes. The media keeps the earlier local-WASM record, recorded component checks and historical mocked recovery screenshot distinct from new captures; the older `9eb7f02` package remains preserved.
+
+Use the exact reviewed source candidate, revised silent video, separate optional dub notes, pitch deck and verified transaction links only if an authorized deployment actually exists. Confirm portal fields, media limits, eligibility and private-repository reviewer access before uploading. These answers have not been submitted or sent to reviewers.

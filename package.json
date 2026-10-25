@@ -3,12 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "A Revolut payment-proof prototype for a Stellar P2P on-ramp.",
+  "description": "Pactlane: a payment-proof and Stellar escrow hackathon prototype.",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "scripts": {
-    "test": "node --test tlsn/*.test.mjs tests/release/*.test.mjs",
+    "dev:app": "node scripts/serve-app.mjs",
+    "test": "node --test tlsn/*.test.mjs app/*.test.mjs tests/release/*.test.mjs",
+    "test:app": "node --test app/*.test.mjs",
+    "test:all": "node scripts/test-all.mjs",
+    "setup:integration": "node scripts/setup-integration.mjs",
+    "rehearse:local": "node scripts/rehearse-local.mjs",
     "test:release": "node --test tests/release/*.test.mjs",
     "build:demo": "node scripts/build-demo.mjs",
     "check": "node scripts/check.mjs",

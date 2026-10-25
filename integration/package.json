@@ -1,0 +1,16 @@
+{
+  "name": "@pactlane/release-integration",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "test": "node --test *.test.mjs"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "17.1.0",
+    "@stellar/freighter-api": "6.0.1"
+  }
+}

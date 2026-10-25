@@ -6,3 +6,10 @@ node_modules/
 package-lock.json
 **/package-lock.json
 archive/reclaim/fixtures/claim.json
+# Frozen byte-identical protocol snapshots; checked by policy/check:protocol.
+contracts/escrow/protocol/protocol.mjs
+contracts/escrow/protocol/vectors.json
+policy/vendor/escrow-protocol.mjs
+policy/test/fixtures/protocol-vectors.json
+contracts/escrow/interface.json
+contracts/escrow/artifacts/

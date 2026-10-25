@@ -35,3 +35,7 @@ The new domain/config/redirect tests and integrated JS suites pass; details and 
 Root should intake the final app snapshot, read this handoff again, inspect the exact manifest/config, deploy the app with its existing authorization, and verify the public result. Proof migration is a separate root-owned step after DNS/cert. The bank-test pause remains.
 
 The duplicate coordinator's exact TLS branch push was previously rejected by automatic approval review for insufficient publication authorization. This lane has not retried that push through another route. The local TLS integration is not authorization to push its source remotely.
+
+## Optional media intake prepared
+
+Root may provide reviewed `demo.mp4` and `demo-script.txt` through explicit `npm run build:demo -- --media-dir …`. No media is included by default; no video UI link was added. The exact two-file whitelist, strict size/regular-file/container/text checks, per-file hashes and private source-path provenance are implemented. MP4 stays outside Git. Playback permission is same-origin and limited to a present exact video response. This can ship after the app and is not a reason to hold the final app snapshot.

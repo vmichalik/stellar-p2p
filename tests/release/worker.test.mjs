@@ -49,6 +49,29 @@ test('unknown hosts and writes fail closed rather than becoming a proxy', async 
   assertSecured(response);
 });
 
+test('same-origin playback is allowed only for the present exact MP4 asset', async () => {
+  for (const [path, status, enabled] of [
+    ['/demo.mp4', 200, true],
+    ['/demo.mp4', 404, false],
+    ['/other.mp4', 200, false],
+  ]) {
+    const response = await worker.fetch(new Request('https://pactlane.io' + path), {
+      ASSETS: {
+        fetch: async () =>
+          new Response('synthetic media fixture', {
+            status,
+            headers: { 'Content-Type': 'video/mp4' },
+          }),
+      },
+    });
+    assert.equal(
+      response.headers.get('Content-Security-Policy').includes("media-src 'self'"),
+      enabled,
+    );
+    assert.match(response.headers.get('Content-Security-Policy'), /connect-src 'none'/);
+  }
+});
+
 test('deployment disables alternate public URLs and contains only static asset binding', async () => {
   // This comment-free JSONC file permits the formatter's trailing commas.
   const cfg = JSON.parse(

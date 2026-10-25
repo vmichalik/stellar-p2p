@@ -13,9 +13,14 @@ export const STATIC_HEADERS =
     .map(([name, value]) => `  ${name}: ${value}\n`)
     .join('');
 
-export function secured(response) {
+export function secured(response, { media = false } = {}) {
   const headers = new Headers(response.headers);
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) headers.set(name, value);
+  if (media)
+    headers.set(
+      'Content-Security-Policy',
+      SECURITY_HEADERS['Content-Security-Policy'] + "; media-src 'self'",
+    );
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

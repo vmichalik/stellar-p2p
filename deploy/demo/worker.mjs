@@ -19,6 +19,12 @@ export default {
       return secured(Response.redirect(destination.href, 308));
     }
     // Static assets only. No external fetch, proof session, wallet or policy call.
-    return secured(await env.ASSETS.fetch(request));
+    const response = await env.ASSETS.fetch(request);
+    return secured(response, {
+      media:
+        url.pathname === '/demo.mp4' &&
+        [200, 206].includes(response.status) &&
+        response.headers.get('Content-Type')?.startsWith('video/mp4'),
+    });
   },
 };

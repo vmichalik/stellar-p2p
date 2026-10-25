@@ -19,6 +19,7 @@ export const DEMO_FILES = [
   'assets/favicon.svg',
 ];
 const GENERATED = ['manifest.json', '_headers', 'robots.txt', 'sitemap.xml'];
+const MEDIA_FILES = ['demo.mp4', 'demo-script.txt'];
 export const DEMO_HEADERS = STATIC_HEADERS;
 
 async function filesUnder(root) {
@@ -42,8 +43,9 @@ export async function buildDemo({
   source = join(ROOT, 'app'),
   output = join(ROOT, 'dist/demo'),
   revision = 'unrecorded',
+  mediaDirectory = null,
 } = {}) {
-  const expected = new Set([...DEMO_FILES, ...GENERATED]);
+  const expected = new Set([...DEMO_FILES, ...GENERATED, ...(mediaDirectory ? MEDIA_FILES : [])]);
   for (const file of await filesUnder(output)) {
     if (!expected.has(file.split('\\').join('/'))) {
       throw new Error('Demo output contains an unexpected file; use a new empty output directory.');
@@ -87,12 +89,28 @@ export async function buildDemo({
         throw new Error('Demo module dependency is outside the explicit allowlist.');
     }
   }
+  if (mediaDirectory) {
+    // Deliberate operator intake only; never discover/copy a media directory.
+    for (const name of MEDIA_FILES) {
+      const path = join(resolve(mediaDirectory), name);
+      const info = await lstat(path);
+      const maximum = name === 'demo.mp4' ? 25 * 1024 * 1024 : 256 * 1024;
+      if (!info.isFile() || info.isSymbolicLink() || info.size === 0 || info.size >= maximum)
+        throw new Error('Media must be regular files below the explicit size limits.');
+      const data = await readFile(path);
+      if (name === 'demo.mp4' && data.subarray(4, 8).toString() !== 'ftyp')
+        throw new Error('Expected an MP4 container for the reviewed demo.');
+      if (name === 'demo-script.txt') new TextDecoder('utf-8', { fatal: true }).decode(data);
+      inputs.push({ name, data });
+    }
+  }
   const manifest = {
     schemaVersion: 1,
     mode: 'synthetic-demo',
     revision,
     livePaymentVerification: false,
     liveSettlement: false,
+    mediaIncluded: Boolean(mediaDirectory),
     intendedOrigins: { app: SITE.appOrigin, proof: SITE.proofOrigin },
     proofCustomDomainReady: SITE.proofDomainVerified,
     operationalProofOrigin: SITE.proofDomainVerified
@@ -110,7 +128,12 @@ export async function buildDemo({
     await writeFile(path, data);
   }
   await writeFile(join(output, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-  await writeFile(join(output, '_headers'), DEMO_HEADERS);
+  await writeFile(
+    join(output, '_headers'),
+    mediaDirectory
+      ? DEMO_HEADERS.replace("connect-src 'none';", "connect-src 'none'; media-src 'self';")
+      : DEMO_HEADERS,
+  );
   await writeFile(
     join(output, 'robots.txt'),
     `User-agent: *\nAllow: /\nSitemap: ${SITE.appOrigin}/sitemap.xml\n`,
@@ -133,7 +156,28 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       ? git.stdout.trim() + (status.stdout.trim() ? '+app-dirty' : '')
       : 'unrecorded';
   try {
-    const manifest = await buildDemo({ revision });
+    const options = process.argv.slice(2);
+    if (options.length && (options.length !== 2 || options[0] !== '--media-dir' || !options[1]))
+      throw new Error('Use only --media-dir with an explicitly selected reviewed directory.');
+    const manifest = await buildDemo({ revision, mediaDirectory: options[1] ?? null });
+    if (options[1]) {
+      const privateOutput = join(ROOT, '.private/release');
+      await mkdir(privateOutput, { recursive: true, mode: 0o700 });
+      await writeFile(
+        join(privateOutput, 'media-intake.json'),
+        JSON.stringify(
+          {
+            sourceDirectory: resolve(options[1]),
+            selectedByOperator: true,
+            sourceRevision: revision,
+            files: manifest.files.filter((file) => MEDIA_FILES.includes(file.path)),
+          },
+          null,
+          2,
+        ) + '\n',
+        { mode: 0o600 },
+      );
+    }
     console.log(
       `Built ${manifest.files.length} synthetic-demo files in ${relative(ROOT, join(ROOT, 'dist/demo'))}. Nothing was deployed.`,
     );

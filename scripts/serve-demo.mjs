@@ -27,6 +27,7 @@ const types = {
   '.txt': 'text/plain; charset=utf-8',
   '.json': 'application/json',
   '.xml': 'application/xml',
+  '.mp4': 'video/mp4',
 };
 createServer(async (request, response) => {
   try {
@@ -41,7 +42,10 @@ createServer(async (request, response) => {
       return;
     }
     const bytes = await readFile(resolve(root, '.' + file));
-    response.writeHead(200, { ...SECURITY_HEADERS, 'Content-Type': types[extname(file)] });
+    const headers = { ...SECURITY_HEADERS, 'Content-Type': types[extname(file)] };
+    if (file === '/demo.mp4' && manifest.mediaIncluded)
+      headers['Content-Security-Policy'] += "; media-src 'self'";
+    response.writeHead(200, headers);
     response.end(request.method === 'HEAD' ? undefined : bytes);
   } catch {
     response.writeHead(404, SECURITY_HEADERS).end('Not found');

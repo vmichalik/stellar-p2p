@@ -7,6 +7,7 @@
 *.har
 *.crx
 *.zip
+*.mp4
 
 # Downloaded tools and generated files
 .toolchain/

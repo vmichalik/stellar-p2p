@@ -28,3 +28,15 @@ The existing CLI passed `wrangler deploy --dry-run`. The coordinator should insp
 The intended proof origin is `https://proof.pactlane.io`. Its DNS/certificate transition is not established. `SITE.proofDomainVerified` stays false; the help link retains `https://stellar-p2p-proof-vijay.fly.dev/extension-check/`. The static app never calls either proof service.
 
 See [domain handoff](../../docs/release/DOMAIN-HANDOFF.md) for the root-owned migration sequence and final app-intake blocker. Do not publish the old app snapshot while its two pending recovery fixes remain unintegrated.
+
+## Optional reviewed video
+
+Media is absent by default. After the coordinator reviews the silent render, it can place exactly `demo.mp4` and `demo-script.txt` in a deliberately selected directory and run:
+
+```sh
+npm run build:demo -- --media-dir /absolute/path/to/reviewed-media
+```
+
+Only those two filenames are read; other directory contents are never copied. MP4 must be a regular file under 25 MiB with the expected container header; script must be valid UTF-8 under 256 KiB. These are packaging checks, not video/audio review. Public manifest records hashes and byte sizes; the absolute source path stays only in ignored `.private/release/media-intake.json`. MP4 is ignored by Git.
+
+The exact video response permits `media-src 'self'`; `connect-src 'none'` remains. The absent/default build has no media permission or video UI link. Optional media may be delivered in a second deployment and must not delay the app. A media-free rebuild refuses stale optional files in its output rather than silently retaining them; use a fresh reviewed output or repeat the explicit media intake.

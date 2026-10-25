@@ -1,49 +1,61 @@
 # Pactlane submission draft
 
-Prepared for the private hackathon submission. These are reusable answer blocks, not a claim that the portal's exact questions or media limits have been checked. Review materials are due **26 October 2026 at 12:00 Lisbon time**, per the [official schedule](https://www.hackmeridian.com/schedule). Submission, reviewer access and publication are still pending.
+Prepared for the private hackathon submission. These are reusable answer blocks; the authenticated portal’s exact questions, limits and reviewer instructions remain unchecked. The recorded official deadline is **26 October 2026 at 12:00 Lisbon time**. See the [schedule](https://www.hackmeridian.com/schedule). Publication, reviewer access and submission remain pending.
 
 ## One sentence
 
-Pactlane is a peer-to-peer Stellar on-ramp prototype: a buyer pays a seller in Revolut, and a verified payment claim can release the seller's escrowed tokens once.
+Pactlane is a peer-to-peer on-ramp prototype for buying Stellar assets with Revolut from a human supplier at an upfront price.
 
-## Problem and first user
+## Why a buyer and supplier would use it
 
-Someone who already uses Revolut should be able to buy Stellar assets from a willing counterparty without either person handing over control first. A screenshot is weak evidence, and a refund timer can be unsafe once a bank payment has been sent. Pactlane focuses on one EUR payment rail and one whole offer, with a payment lock before instructions and an explicit recovery path if verification fails.
+A buyer who already uses Revolut and a Stellar wallet wants a direct way to acquire assets, clear terms before paying and a defined way to check the payment. A human supplier chooses how many tokens to offer and a price that can cover their costs and a margin. Pactlane explores that exchange route with one EUR rail and one whole offer.
 
-The intended first users are people who already hold a Stellar wallet and want small EUR trades with a counterparty they can reach. This is a proposed pilot group; no customer interviews, adoption, liquidity or pilot commitments are claimed.
+The intended proof discloses selected payment fields to the operator, rather than the buyer’s full transaction history. The operator still sees the disclosed fields, Revolut sees the transfer, and Stellar settlement remains public. A synthetic consent screen shows the intended review; accepted bank evidence remains unfinished.
+
+The €20 / 22 USDC example is illustrative pricing. It is not a current market quote, guaranteed saving or demonstrated supplier profit. The proposed first users are counterparties who can reach each other for a small trade. No customer interviews, adoption, liquidity or pilot commitments are claimed.
+
+## How the trade works
+
+The supplier funds a fixed whole offer. The buyer reserves it and confirms the payment lock before receiving instructions. An accepted payment claim would let the escrow release once. If proof is unavailable after the lock, funds stay held; a later valid proof or an agreed two-party resolution can complete the trade.
+
+The first part of the demo shows this intended journey with sample data. The live host currently blocks new payment locks because accepted payment evidence is unavailable.
 
 ## What we built
 
-A buyer/seller interface, Soroban escrow, operator-run payment-policy service, durable replay registry and canonical signed claim format. The contract checks the configured policy signature, binds the order and deployment, consumes a stable payment identity and releases at most once.
+A buyer/supplier interface, escrow using Stellar Smart Contracts, an operator-run payment-policy service, durable replay protection and a canonical signed claim. The contract checks the configured policy signature, binds the order and deployment, consumes a stable payment identity and releases at most once.
 
-The local live-service implementation connects Freighter, authenticated browser sessions, coherent chain reads, transaction journaling and reconciled receipts. Mutual recovery uses an exact seller Soroban authorization followed by the buyer's final transaction signature. Both parties review the split; seller approval alone is not settlement. Amounts stay exact integer units throughout.
+The actual browser and host connect Freighter, authenticated sessions, coherent chain reads, transaction journaling and reconciled receipts. Recovery uses the seller’s exact smart-contract authorization followed by the buyer’s final transaction signature. Seller approval alone cannot submit the recovery. Amounts remain exact integer units.
 
-The existing local rehearsal executes the compiled escrow WASM with the policy signer and synthetic payment evidence. Separate browser/HTTP checks use fixture signatures and mocked chain services. These are implemented and locally checked components, not a deployed payment-to-chain trade.
+## What has been verified
+
+The recorded local rehearsal executed the compiled escrow WASM with the policy signer, synthetic payment evidence and a synthetic token. It checked the signature and rejected replay at both policy and contract boundaries. This is historical local execution, not a new testnet run.
+
+Separate browser and HTTP checks exercised the actual host, recovery broker and authorization collector with fixture signatures and mocked wallets and chain services. The media labels the synthetic product journey, local-WASM record and mocked recovery separately. No accepted authenticated payment or live bank-to-chain trade is established.
 
 ## Why Stellar
 
-Soroban provides the programmable escrow and atomic one-use release. Freighter provides wallet approvals; the pinned Stellar SDK supplies transaction, authorization and XDR handling. Those are concrete integrations in the code. TLSNotary is the intended source of authenticated bank-response evidence, while a configured operator interprets the disclosed fields and signs the contract's canonical claim.
+Stellar Smart Contracts provide programmable escrow and atomic one-use release. Freighter supplies wallet approvals; the Stellar SDK handles transactions, authorization and XDR. TLSNotary is the intended source of authenticated bank-response evidence. A configured operator interprets disclosed payment fields and signs the claim checked by the contract.
 
-Proposed path: Genesis / Stellar Composed, subject to organizer eligibility judgment. The [FAQ](https://www.hackmeridian.com/faq) permits early prototypes in Genesis and describes Composed as combining at least two ecosystem tools or projects. This draft does not claim eligibility has been confirmed.
+Genesis / Stellar Composed is the proposed path, subject to organizer confirmation of eligibility and preparatory work. See the [FAQ](https://www.hackmeridian.com/faq). No track eligibility is claimed as settled.
 
 ## Trust and recovery
 
-Revolut supplies the payment record. The verifier authenticates its source; the operator checks payment meaning and signs the claim. The escrow verifies that signature rather than a raw bank transcript. The operator receives selected disclosed fields, and Stellar settlement is public.
+The contract trusts the configured payment-policy signer; it does not verify a raw bank transcript. The intended proof authenticates a source response, while the operator determines whether its payment fields satisfy the order.
 
-After payment is locked, unavailable proof holds the tokens. A timely payment can be verified later, or both parties can authorize a release, refund or split. There is no unilateral post-lock timeout refund. An uncooperative party can leave a trade unresolved. Manual recovery also requires complete payment-identity reconciliation before the policy resumes signing.
+There is no unilateral timeout refund after payment lock. A timely payment can be verified later, or both parties can authorize a release, refund or split. An uncooperative counterparty can leave funds held. Manual recovery requires complete payment-identity reconciliation before policy signing resumes.
 
 ## What remains unfinished
 
-A real authenticated payment has not been accepted. The latest proof disconnect matched a Fly trial-machine shutdown; the later paid-host uptime observation did not establish payment proof. Bank tests remain paused, and live normalization rejects unknown payment semantics. The live host therefore blocks new payment locks.
+Authenticated bank payment evidence has not been accepted. Proof generation and payment normalization remain unfinished, so the live host continues to block new payment locks. The latest diagnostic history belongs in the proof handoff; it does not change that product gate.
 
-An approved testnet deployment, real wallet/trade validation, reachable hosted handoff, reviewer access and portal submission remain outstanding. A local 90-second silent video and seven-slide PDF deck are prepared and checked; their final acceptance still depends on owner review and the portal's media limits. See the [media handoff](release/submission-package.md). Screenshots and receipt examples from local browser rehearsals are labeled mocked. No deployed contract, real payout, transaction link or customer traction is invented for this submission.
+An approved testnet deployment, authorized real-wallet trade, reachable delivery, reviewer access and submission remain outstanding. The preserved 90-second silent video and seven-slide PDF have been checked. Their presentation copy is being reconciled with the latest owner direction; revised exports need their own checks and hashes. See the [media handoff](release/submission-package.md). No deployed contract, real payout, transaction link or customer traction is claimed.
 
 ## Progress and next pilot
 
-Preparation preceded the event; the repository preserves that history. Event progress should be described using the actual commit timeline: integrated app/policy/escrow, imported TLS evidence, authenticated host/browser wiring, durable transaction recovery and two-party authorization. Do not describe all prior work as having been created during the event.
+Preparation preceded the event, and the repository preserves that history. Describe progress using the actual commits: app/policy/escrow integration, TLS handoff, authenticated browser/host services, durable transaction recovery and two-party authorization. Do not claim every component was created during the event.
 
-The next pilot is one consented, measured trade through the accepted payment normalizer and an authorized Stellar testnet deployment. Record completion time, failure stage, replay rejection and both token balances. A separate order should demonstrate mutual recovery. Only after that evidence should the project expand to more users or another payment rail.
+The proposed next pilot is one consented EUR trade through accepted bank evidence and an authorized Stellar testnet deployment. Measure completion time, the failure stage, replay handling and both token balances. Use a separate order for mutual recovery. Expand only after the first complete trade is established.
 
 ## Materials to attach
 
-Use the reviewed private repository revision, the silent video for Vijay's dub, the pitch deck, and verified contract/transaction links if an authorized deployment actually exists. Confirm the portal's duration, file and slide limits and named reviewer-access requirements before upload. This draft has not been submitted or sent to anyone.
+Use the exact reviewed source candidate, silent video, separate optional dub notes, pitch deck and verified transaction links only if an authorized deployment actually exists. Confirm portal fields, media limits, eligibility and private-repository reviewer access before uploading. These answers have not been submitted or sent to reviewers.

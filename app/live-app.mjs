@@ -72,11 +72,16 @@ const connect = (state, role) =>
   });
 
 function howItWorks() {
-  return `<aside class="panel live-info-panel"><h2>A clear path to settlement</h2><p>Each step follows the confirmed status of your trade.</p>
+  return `<aside class="panel live-info-panel"><h2>Your bank app. Your wallet.</h2><p>A supplier provides the tokens. Escrow connects their funded offer to your payment.</p>
     <div class="live-step"><span>1</span><div><strong>Reserve a funded offer</strong><p>The seller’s tokens are already in escrow.</p></div></div>
     <div class="live-step"><span>2</span><div><strong>Lock before you pay</strong><p>Payment details appear only after the lock is confirmed.</p></div></div>
     <div class="live-step"><span>3</span><div><strong>Verify, then receive</strong><p>Payment verification authorizes release to your wallet.</p></div></div>
+    <details class="live-disclosure"><summary>What is shared?</summary><p>Payment verification uses selected transfer details. The payment-policy operator receives those fields and authorizes release; the contract checks that authorization.</p><p>Revolut sees the bank payment and Stellar transfers are public. Review the disclosure before sharing payment details.</p></details>
     <p class="small-note">Stellar testnet · test assets only</p></aside>`;
+}
+
+function exchangePurpose() {
+  return `<section class="live-purpose" aria-labelledby="live-purpose-title"><div><p class="eyebrow">WHY PACTLANE</p><h2 id="live-purpose-title">An exchange between people.</h2><p>Buyers bring euros. Suppliers bring tokens. Both see the amounts and the next step before committing.</p></div><div class="live-purpose-points"><div><h3>Receive in your own wallet</h3><p>Pay through the bank app you already use and receive the agreed tokens in a Stellar wallet you control.</p></div><div><h3>The supplier sets the quote</h3><p>Any supplier margin is built into their quote. Compare the exact amounts before reserving; bank, wallet or network charges may still apply.</p></div></div></section>`;
 }
 
 function market(state) {
@@ -84,10 +89,11 @@ function market(state) {
   const offer = view?.offers.find((value) => value.id === state.selectedOfferId);
   const available =
     view?.offers.filter((value) => BigInt(value.offerExpiresAt) > BigInt(state.now)) ?? [];
-  const intro = heading(
-    tokenLabel(state) === 'Test token' ? 'Buy test tokens' : `Buy ${esc(tokenLabel(state))}`,
-    'Choose a whole offer. Pay in EUR with Revolut.',
-  );
+  const intro =
+    heading(
+      tokenLabel(state) === 'Test token' ? 'Buy test tokens' : `Buy ${esc(tokenLabel(state))}`,
+      'Choose a funded supplier. Pay in EUR with Revolut. Receive tokens in your own wallet.',
+    ) + exchangePurpose();
   if (!view?.configured)
     return (
       intro +

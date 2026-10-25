@@ -1,8 +1,8 @@
 # Submission media handoff
 
-Prepared locally on 25 October 2026 from product revision `9eb7f02ac829f4893399f12a59f0bf5e4b9584e8`. The later submission documentation change does not alter application, policy, contract or proof code. These materials have not been uploaded or submitted, and no reviewer access is established.
+The preserved package below was prepared locally on 25 October 2026 from product revision `9eb7f02ac829f4893399f12a59f0bf5e4b9584e8`. Candidate `39834efd2ab9e1740a5363f4eec5d13f9a380250` added submission documentation without changing product code. A later presentation/copy reconciliation is in progress. These existing hashes and checks do not describe revised exports. Nothing has been uploaded or submitted, and no reviewer access is established.
 
-## Prepared artifacts
+## Preserved review artifacts
 
 | Artifact                         | Verified properties                                                                                  | SHA-256                                                            |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
@@ -11,6 +11,12 @@ Prepared locally on 25 October 2026 from product revision `9eb7f02ac829f4893399f
 | `pactlane-submission-review.zip` | MP4, PDF, separate dub notes, reusable submission answers, README and file manifest; 4,826,987 bytes | `2126102da7a1553e14bed9c3598a9d44a2d18d2d401b0d037415f2cbc7a42112` |
 
 The local review package directory is named `pactlane-submission-20261025` on the Mac mini. It also contains editable video composition and deck HTML, captured product screens, a nine-scene contact sheet and detailed check reports. The source bundle is separate. No hosted media URL is established, and a Mac-mini local path is not a verified handoff to another device. The ZIP intentionally excludes private authoring reports and machine-specific paths.
+
+## Copy reconciliation
+
+Lead with the buyer’s existing bank app and the human supplier’s upfront quote. Suppliers set a price that can cover their costs and a margin; the sample offer is illustrative, not a current market quote or a promise of savings or earnings. Describe selected payment disclosure as the intended proof design, with operator visibility and public Stellar settlement retained. Use **Stellar Smart Contracts** in presentation copy.
+
+Revised plain-text answers and separate dub notes are prepared in `pactlane-submission-reconciled-20261025`. The original package remains intact. Its media stays honest as a dated, labeled demonstration after presentation-only UI changes, but it does not show later screens or automatically adopt new wording. Any revised MP4, PDF or ZIP needs its own content review, hashes and manifest; preserve the original capture revision separately from the final source candidate.
 
 ## What the materials show
 
@@ -27,6 +33,6 @@ The video was exported with deterministic paused-GSAP seeking in sandboxed Chrom
 3. Authorize publication of the exact reviewed source snapshot to the private repository, then verify the required reviewers can access that revision and the media. Do not infer permission to make the repository public.
 4. Complete the authorized submission and retain its acceptance receipt before **26 October 2026 at 12:00 Europe/Lisbon (UTC)**. See the [official schedule](https://www.hackmeridian.com/schedule) and [build guide](https://www.hackmeridian.com/build).
 
-Reusable project answers remain in [the submission draft](../submission-draft.md), with the prepared package carrying a standalone copy updated for local media readiness. Until portal constraints and access are verified, say prepared rather than submitted.
+Reusable project answers remain in [the submission draft](../submission-draft.md). The preserved ZIP carries its earlier standalone copy; the reconciled text is a separate draft until repackaged and checked. Until portal constraints and access are verified, say prepared rather than submitted.
 
-Accepted bank evidence and an authorized testnet trade remain separate technical milestones. Bank tests stay paused; the live host continues blocking new payment locks. Media preparation does not change those gates or authorize a bank retry, deployment or wallet signature.
+Accepted bank evidence and an authorized testnet trade remain separate technical milestones. The live host continues blocking new payment locks. Current proof diagnostics and any separately authorized experiments belong in the proof handoff; media preparation neither clears those gates nor authorizes another bank attempt, deployment or wallet signature.

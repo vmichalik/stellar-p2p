@@ -237,3 +237,62 @@
 .live-app .live-recovery-domain strong {
   max-width: 65%;
 }
+.live-purpose {
+  margin: 0 0 28px;
+  padding: 24px 28px;
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 32px;
+  border: 1px solid var(--line, #e3e5df);
+  border-radius: 20px;
+  background: var(--surface, #fffdf8);
+}
+.live-purpose h2 {
+  margin: 6px 0 10px;
+  font-size: 24px;
+  letter-spacing: -0.7px;
+}
+.live-purpose p,
+.live-disclosure p {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted, #637062);
+}
+.live-purpose-points {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.live-purpose h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.live-disclosure {
+  margin: 24px 0 16px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line, #e3e5df);
+}
+.live-disclosure summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+.live-disclosure summary:focus-visible {
+  outline: 2px solid #cc4f2c;
+  outline-offset: 4px;
+}
+@media (max-width: 1000px) {
+  .live-purpose {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+@media (max-width: 520px) {
+  .live-purpose {
+    padding: 20px;
+  }
+  .live-purpose-points {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}

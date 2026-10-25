@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#f7f5ee" />
     <meta
       name="description"
-      content="Pactlane — peer-to-peer USDC exchange on Stellar. Interactive app prototype with sample data."
+      content="Explore paying a peer from an existing bank account to receive USDC in a Stellar wallet. Synthetic demo: no real funds or bank verification."
     />
-    <title>Pactlane · Buy USDC</title>
+    <title>Pactlane · From your bank app to your Stellar wallet</title>
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%23ed7047'/%3E%3Cpath d='M12 29V11h9a6 6 0 010 12h-9m5-12v18' fill='none' stroke='%232d382e' stroke-width='3'/%3E%3C/svg%3E"
@@ -16,9 +16,10 @@
     <link rel="stylesheet" href="./styles.css" />
     <script type="module" src="./app.mjs"></script>
   </head>
-  <body>
+  <body class="demo-app">
     <a class="skip-link" href="#main">Skip to content</a>
     <div id="pactlane"></div>
+    <div id="flow-announcement" class="sr-only" role="status" aria-live="polite"></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <dialog id="modal" aria-labelledby="modal-title"></dialog>
     <noscript>Pactlane’s interactive demo needs JavaScript.</noscript>

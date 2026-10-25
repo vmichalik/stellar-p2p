@@ -1,5 +1,19 @@
 # Pactlane app handoff
 
+## Presentation reconciliation: 25 October 2026
+
+The continuing coordinator prepared an isolated local candidate on `codex/pactlane-presentation-reconciliation`, based on `39834efd2ab9e1740a5363f4eec5d13f9a380250`. The later UI branch commits `572f2b9`, `32e1c2c` and `5bd17fd` could not be read from the protected Documents checkout, so this is **not a cherry-pick or an assertion of byte equivalence** to that branch.
+
+Instead, the coordinator verified the manifest hashes of the already-preserved synthetic demo artifact at revision `1c7f03865be9f0f89c17364c4456bd2e042e8be9`. Its model and demo adapter are byte-identical to this candidate. Only its reviewed presentation source, CSS and exact-number helper were restored, followed by scoped narrative, navigation and guide improvements. The original candidate and media are preserved.
+
+The demo now explains Ana's wallet-asset motivation and Ben's liquidity/quoted margin, labels the EUR 20 / 22 USDC example as illustrative, distinguishes proceeds from profit and states what the bank, operator and public chain can see. It adds floating mobile navigation, a Why Pactlane route, a desktop guide, a copyable checklist with a selectable fallback and a disclosure return path that resets consent. Returning to an already-open dialog resets scrolling and focuses its close button. The demo build explicitly includes `presentation.mjs`.
+
+The live renderer receives a matching explanation and disclosure section while retaining its own exact-number formatter, authenticated wallet/session handling, operation journal and two-party recovery. New payment locks remain disabled when payment verification is unavailable. No policy, contract, model, adapter or protocol logic changed in this reconciliation; the policy branch's separate presentation mapper remains unimported pending source access and review.
+
+Verification: 59 focused app/host-client/live-view/model/presentation/build tests passed with zero skips or failures. The synthetic browser flow completed funding, reservation, confirmed lock, disclosure, verification and receipt with no external requests or page errors. An independent 320/390/768/1440 px review found one retained-dialog-scroll issue; the correction passed ten focused checks including close-button visibility, keyboard exit, restored focus and reset consent. The live marketplace and disclosure had no horizontal overflow at the same widths. The existing mocked browser/HTTP recovery rehearsal preserved exact split amounts and seller-then-buyer authorization, with no page errors. Its unauthenticated session probes produced expected HTTP 401 console entries; they are not hidden as an entirely clean console result.
+
+These checks are local synthetic or mocked evidence. No real bank payment, wallet signing or chain transaction was performed. The earlier component-specific handoff below remains historical; use the live-service and current release documents for newer implementation state.
+
 Objective: a complete buyer/seller demo matching the current escrow lifecycle, with explicit payment lock and mutual recovery. Execution host: Vijay’s Mac mini, 25 October 2026. Worktree: `/Users/vijay/Documents/workspace-personal-projects/pactlane-ui`. Branch: `codex/pactlane-ui`. Base: `807412686da2cdad494ee284675dbefc35110257`. The scoped component commit is this branch’s HEAD and is supplied in the thread completion. Use `git rev-parse HEAD` and `git status --short` before integration. No push, deployment, live wallet or bank action was performed.
 
 Read alongside the coordinator’s `/Users/vijay/Documents/workspace-personal-projects/stellar-p2p/docs/coordination.md` and the current `/Users/vijay/Documents/workspace-personal-projects/pactlane-escrow/contracts/escrow/README.md`, `interface.json` and `protocol/` files. Those workstreams own canonical contract/policy encoding. This component does not copy or redefine it.

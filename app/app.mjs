@@ -1,11 +1,14 @@
-import {
-  TOKEN_SCALE,
-  OPEN_STATES,
-  quote,
-  sellerQuote,
-  canShowPaymentInstructions,
-} from './model.mjs';
+import { OPEN_STATES, quote, sellerQuote, canShowPaymentInstructions } from './model.mjs';
 import { createDemoAdapter } from './demo-adapter.mjs';
+import {
+  formatTokens,
+  formatEuros,
+  formatRate,
+  tradePresentation,
+  activityLabel,
+  recoveryOptions,
+  formatDeadline,
+} from './presentation.mjs';
 
 const paths = {
   buy: '<path d="M18 6 6 18M6 7v11h11"/>',
@@ -33,13 +36,8 @@ const esc = (value) =>
     (character) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character],
   );
-const euros = (minor) =>
-  `€${(minor / 100).toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const tokens = (atoms) =>
-  (atoms / TOKEN_SCALE).toLocaleString('en-IE', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+const euros = formatEuros;
+const tokens = formatTokens;
 const time = (timestamp) =>
   new Date(timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 let localStorage;
@@ -66,6 +64,9 @@ let progress = 'Preparing payment check';
 let toastTimeout;
 let busy = false;
 let lastTrigger;
+let lastTriggerKey;
+let lastAnnouncement = '';
+let guideReturn = null;
 
 function toast(message) {
   toastElement.textContent = message;
@@ -91,10 +92,34 @@ const statusLabels = {
   resolved: 'Resolved by agreement',
 };
 
+function whyPactlane() {
+  return `<div class="page-heading"><div><p class="eyebrow">WHY PACTLANE</p><h1>A peer, an existing account,<br>and your own wallet.</h1><p>For people who want assets on Stellar without opening another exchange account just to get started.</p></div></div>
+    <section class="why-intro panel"><p class="story-quote">“I want to use my bank app, pay a person, and receive USDC in my wallet.”</p><p>Ana wants USDC to use in Stellar apps or send from her wallet. Ben already holds USDC and is willing to sell. Pactlane aims to make their exchange easier to follow: funded escrow, clear payment instructions, a payment check and an explicit release.</p></section>
+    <div class="why-grid"><section class="panel"><span class="avatar peach">A</span><h2>Ana brings the payment</h2><p>She pays from an account she already uses. The aim is fewer new accounts and fewer places to upload identity documents, not anonymous banking or a promise to bypass identity checks.</p></section><section class="panel"><span class="avatar green">B</span><h2>Ben brings the liquidity</h2><p>He supplies the USDC, sets his quote and keeps the spread after costs. The quote compensates a person supplying liquidity. It does not remove bank, network or provider fees.</p></section><section class="panel"><span class="status-symbol neutral">${icon('shield')}</span><h2>Know who sees what</h2><p>Your bank sees its payment. Stellar transactions are public. Pactlane’s verifier sees the disclosed payment evidence and is trusted to authorize release. Selective disclosure is a goal; it is not a guarantee of privacy.</p></section></div>
+    <section class="panel why-example"><h2>One illustrative exchange</h2><div class="receipt-pair"><span>€20<small>Ana pays Ben</small></span><span>${icon('arrow')}</span><span>22 USDC<small>Released to Ana</small></span></div><p>This is sample pricing, not a market exchange rate. Ben’s €20 proceeds are not €20 profit: his USDC acquisition cost and fees matter.</p><p><strong>This walkthrough is synthetic.</strong> No real bank verification, wallet signature or settlement occurs. After a payment lock, a live trade would keep funds held until valid payment evidence authorizes release or both wallets agree on recovery.</p><div class="story-actions"><button class="button primary" data-action="sell">Meet Ben · start the demo ${icon('arrow')}</button><button class="button secondary" data-action="guide">Read the desktop guide</button></div></section>`;
+}
+
+const setupChecklist = `Pactlane demo checklist
+1. Use sample data only. Do not send a real bank payment.
+2. Start as Ben: create the fixed demo offer and approve its simulated deposit.
+3. Switch to Ana: connect the demo wallet and reserve the whole offer.
+4. Confirm the payment lock before reviewing payment instructions.
+5. Review the selected payment details and consent to the simulated check.
+6. Receive the simulated USDC release and inspect the receipt.
+If verification fails, do not pay again. Retry the check or review mutual recovery.
+Live payment verification is not cleared by this demo.`;
+
+function openGuide() {
+  openModal(
+    `<p class="eyebrow">BEFORE YOU START</p><h2 id="modal-title">Desktop setup guide</h2><p>This demo needs only a browser. No extension, bank login, wallet connection or real payment is required.</p><ol class="setup-steps"><li><strong>Try both participants.</strong> Fund Ben’s offer first, then switch to Ana to reserve it.</li><li><strong>Keep the order visible.</strong> Review the recipient, amount and deadline after the payment lock confirms. Do not pay before that.</li><li><strong>Review what is shared.</strong> A live verifier would check selected transfer details: recipient, amount, status, payment ID and completion time. It is a trusted operator; the chain does not verify bank statements itself.</li><li><strong>Know the recovery path.</strong> If a check is unavailable, do not pay again. After locking, funds stay held until release is authorized or both wallets agree on the same recovery allocation.</li></ol><details class="trust-details"><summary>Preparing for a live pilot</summary><p>Live payment verification remains unverified. A live pilot needs a separately approved desktop wallet and proof-extension setup, supported bank data and funded on-chain escrow. Mobile review alone does not establish that the full proof flow works.</p><p>Your bank’s identity requirements still apply. The bank sees its payment; Stellar activity is public; the verifier receives the disclosed evidence.</p></details><label class="settings-label" for="setup-checklist">Copyable demo checklist</label><textarea class="setup-checklist" id="setup-checklist" rows="7" readonly>${esc(setupChecklist)}</textarea><button class="button secondary" data-action="copy-checklist">${icon('copy')} Copy checklist</button><p id="checklist-status" class="small-note" role="status" aria-live="polite"></p><button class="button primary" data-action="guide-return">${guideReturn === 'proof' ? 'Back to payment review' : 'Back to the demo'}</button>`,
+  );
+}
+
 function marketplace() {
   const active = state.orders.find((order) => OPEN_STATES.includes(order.status));
-  return `<div class="page-heading"><div><p class="eyebrow">PEER-TO-PEER EXCHANGE</p><h1>Buy USDC</h1><p>Pay with Revolut. Receive USDC in your Stellar wallet.</p></div><span class="market-note">${icon('shield')} Seller funds held in escrow</span></div>
-    ${active ? `<div class="resume-banner"><div>${icon('clock')}<span>Your trade with ${esc(active.seller)} is waiting.</span></div><button class="text-button" data-action="open-trade" data-id="${esc(active.id)}">Continue trade ${icon('arrow')}</button></div>` : state.seller.status !== 'funded' ? `<div class="resume-banner"><div>${icon('up')}<span>Have USDC to exchange?</span></div><button class="text-button" data-action="sell">Create an offer ${icon('arrow')}</button></div>` : ''}
+  return `<div class="page-heading"><div><p class="eyebrow">PEER-TO-PEER EXCHANGE</p><h1>Your bank app.<br>Your Stellar wallet.</h1><p>Ana wants USDC to use on Stellar. Ben supplies it. Pay a peer from an account you already use.</p></div><span class="market-note">${icon('shield')} Seller funds held in escrow</span></div>
+    ${active ? `<div class="resume-banner"><div>${icon('clock')}<span>Your trade with ${esc(active.seller)} is waiting.</span></div><button class="text-button" data-action="open-trade" data-id="${esc(active.id)}">Continue trade ${icon('arrow')}</button></div>` : state.seller.status !== 'funded' ? `<div class="resume-banner"><div>${icon('up')}<span>${state.seller.status === 'new' && !state.orders.length ? 'Start the demo by funding Ben’s offer.' : 'Have USDC to exchange?'}</span></div><button class="text-button" data-action="sell">${state.seller.status === 'new' && !state.orders.length ? 'Start as seller' : 'Create an offer'} ${icon('arrow')}</button></div>` : ''}
+    <div class="story-intro"><p><strong>Meet Ana and Ben.</strong> Ana buys USDC; Ben funds the offer and receives her bank payment. This walkthrough uses Revolut and two fictional wallets.</p><button class="text-button" data-action="why">Why Pactlane ${icon('arrow')}</button></div>
     <div class="market-layout"><section class="offers-column" aria-labelledby="offers-title">
       <div class="filter-bar"><div class="filter"><span>You pay with</span><strong><span class="currency-disc">€</span> EUR</strong></div><div class="filter"><span>Payment method</span><strong><span class="revolut-mark">R</span> Revolut</strong></div></div>
       <div class="section-title"><h2 id="offers-title">Available offers <span>${state.offers.filter((offer) => offer.availableAtoms > 0).length}</span></h2><span>Fixed whole offer</span></div>
@@ -104,18 +129,18 @@ function marketplace() {
             offer,
           ) => `<button class="offer ${offer.id === selectedOffer ? 'selected' : ''}" data-action="select-offer" data-id="${offer.id}" aria-pressed="${offer.id === selectedOffer}" ${offer.availableAtoms <= 0 ? 'disabled' : ''}>
         <span class="offer-top"><span class="person"><span class="avatar ${offer.color}">${offer.initials}</span><span><strong>${offer.name}</strong><span>Revolut · EUR</span></span></span>${pill(offer.availableAtoms > 0 ? 'Funded' : offer.id === 'ben' && state.seller.status !== 'funded' ? 'Not funded' : 'Unavailable', offer.availableAtoms > 0 ? 'green' : 'neutral')}</span>
-        <span class="offer-rate"><strong>${(offer.rateAtomsPerEuro / TOKEN_SCALE).toFixed(2)} <span>USDC / EUR</span></strong><span class="select-circle">${offer.id === selectedOffer ? icon('check') : ''}</span></span>
+        <span class="offer-rate"><strong>${tokens(offer.rateAtomsPerEuro)} <span>USDC / EUR</span></strong><span class="select-circle">${offer.id === selectedOffer ? icon('check') : ''}</span></span>
         <span class="offer-bottom"><span>${tokens(offer.availableAtoms)} USDC available</span><span>Exact payment ${euros(offer.maxMinor)}</span></span>
       </button>`,
         )
         .join('')}</div>
-      <div class="how-it-works"><div>${icon('lock')}<span>Reserve a funded offer</span></div><div>${icon('shield')}<span>Verify your payment</span></div><div>${icon('wallet')}<span>Receive in your wallet</span></div></div>
+      <section class="handoff-guide"><h2>A payment with a clear next step.</h2><button class="text-button guide-link" data-action="guide">Before you start · desktop guide ${icon('arrow')}</button><ol><li>Choose a funded offer</li><li>Confirm the payment lock</li><li>Pay in Revolut</li><li>Verify the payment</li><li>Receive the USDC release</li></ol><details class="trust-details"><summary>How release is authorized</summary><p>Pactlane’s verifier checks payment evidence and authorizes release. The Stellar contract checks that authorization.</p><p>Stellar transfers are public. Revolut sees its payment. Review the selected payment details before sharing them.</p></details></section>
     </section><aside class="quote-panel panel" aria-labelledby="quote-title"><div class="quote-heading"><h2 id="quote-title">Your exchange</h2><span class="paired-mark" aria-hidden="true">↙↗</span></div>
       <form id="quote-form" novalidate><label class="money-field" for="pay-amount"><span>You pay</span><span class="money-input"><input id="pay-amount" name="amount" readonly value="${esc(amount)}" inputmode="decimal" autocomplete="off" aria-describedby="quote-error" placeholder="0.00"><span class="currency-label"><span class="currency-disc">€</span> EUR</span></span></label>
       <div class="exchange-divider">${icon('buy')}</div><div class="money-field receive-field"><span>You receive</span><span class="money-input"><output id="receive-amount" for="pay-amount">0.00</output><span class="currency-label"><span class="usdc-disc">$</span> USDC</span></span></div>
-      <div id="quote-error" class="field-error" aria-live="polite"></div><div class="quote-details">${row('Seller', `<span id="quote-seller"></span>`)}${row('Receive on', 'Stellar testnet')}${row('Pactlane fee', '€0.00')}</div>
-      <button type="submit" class="button primary" id="reserve-button">Reserve USDC ${icon('arrow')}</button></form>
-      <p class="quote-footnote">${icon('lock')} Your rate is fixed when you reserve.</p>
+      <div id="quote-error" class="field-error" aria-live="polite"></div><div class="quote-terms"><span>With <strong id="quote-seller">Ben</strong> · Revolut</span><span>${formatRate(state.offers[0].rateAtomsPerEuro)}</span></div>
+      <button type="submit" class="button primary" id="reserve-button">Reserve USDC ${icon('arrow')}</button><p id="quote-note" class="quote-footnote" role="status">Reserve this whole offer at its exact amount.</p></form>
+      <details class="quote-breakdown"><summary>Exchange details</summary>${row('Offer size', 'Whole offer')}${row('Receive on', 'Stellar demo')}${row('Demo platform fee', '€0.00')}</details><p class="small-note pricing-note">Illustrative quote: €20 buys 22 USDC. This is sample pricing, not a market rate. Bank, network and provider costs may apply in a live trade.</p>
     </aside></div>`;
 }
 
@@ -126,6 +151,14 @@ function sellerPage() {
   const reservedAtoms = trades
     .filter((order) => OPEN_STATES.includes(order.status))
     .reduce((total, order) => total + order.tokenAtoms, 0);
+  const latestTrade = trades.find((order) => OPEN_STATES.includes(order.status)) ?? trades[0];
+  const sellerFlow = latestTrade ? tradePresentation(latestTrade, 'seller') : null;
+  const pendingRecovery = trades.find(
+    (order) =>
+      order.resolution &&
+      OPEN_STATES.includes(order.status) &&
+      !['verifying', 'settling'].includes(order.status),
+  );
   const funded = seller.status === 'funded';
   const preparing = seller.status === 'new';
   const status = funded
@@ -139,18 +172,11 @@ function sellerPage() {
       : preparing
         ? 'New offer'
         : 'Ready to fund';
-  return `<div class="page-heading"><div><p class="eyebrow">BEN’S SELLER WORKSPACE</p><h1>Sell USDC</h1><p>Set your offer. Fund escrow. Get paid in Revolut.</p></div>${pill(status, funded ? 'green' : 'orange')}</div>
-    <div class="trade-layout seller-layout"><section class="panel seller-offer-panel">
-    ${preparing ? `<h2>Create your offer</h2><p class="seller-intro">Your USDC becomes available to buyers once you fund the offer.</p><form id="seller-form" novalidate><label class="money-field" for="seller-amount"><span>You sell</span><span class="money-input"><input id="seller-amount" inputmode="decimal" value="${esc(sellAmount)}" autocomplete="off" aria-describedby="seller-error"><span class="currency-label"><span class="usdc-disc">$</span> USDC</span></span></label><p class="seller-wallet-note">Demo wallet balance: ${tokens(seller.balanceAtoms)} USDC</p><label class="settings-label" for="seller-tag">Your Revolut tag</label><input class="text-input" id="seller-tag" value="${esc(sellerTag)}" autocomplete="off" spellcheck="false"><div class="quote-details">${row('Your rate', '1 EUR = 1.10 USDC')}${row('Payment currency', 'EUR')}${row('Buyer pays exactly', '<span id="seller-receive">€20.00</span>')}</div><p class="field-error" id="seller-error" aria-live="polite"></p><button class="button primary" type="submit">Create offer ${icon('arrow')}</button></form>` : `<span class="status-symbol ${seller.status === 'funding' ? 'processing' : ''}">${seller.status === 'funding' ? '<span class="spinner"></span>' : icon(funded ? 'check' : 'lock')}</span><h2>${funded ? (reservedAtoms ? 'Ana has reserved your USDC' : (seller.settledAtoms || seller.returnedAtoms) && !offer.availableAtoms ? 'Your offer is closed' : 'Your offer is live') : seller.status === 'funding' ? 'Funding your escrow' : 'Your offer is ready to fund'}</h2><p class="seller-intro">${funded ? (reservedAtoms ? 'Your USDC stays in escrow while Ana completes payment verification.' : seller.settledAtoms || seller.returnedAtoms ? 'This whole offer has ended. Review its outcome in the trade activity below.' : 'Buyers can now reserve your funded USDC.') : seller.status === 'funding' ? 'Confirming your simulated deposit. Your offer will appear in the marketplace next.' : 'Approve a demo deposit from Ben’s wallet to make this offer available.'}</p><div class="summary-amount"><span>${funded ? 'USDC deposited' : 'Deposit to escrow'}</span><strong>${tokens(seller.offerAtoms)} <span>USDC</span></strong></div>${funded ? row('Offer reference', esc(seller.orderId)) : ''}${row('Your Revolut tag', esc(seller.tag))}${row('Your rate', '1 EUR = 1.10 USDC')}${row('Available for buyers', tokens(offer.availableAtoms) + ' USDC')}${row('Reserved by Ana', tokens(reservedAtoms) + ' USDC')}${funded ? row('Released to Ana', tokens(seller.settledAtoms) + ' USDC') + row('Returned to Ben', tokens(seller.returnedAtoms) + ' USDC') : ''}${funded ? `<button class="button primary" data-action="buyer-view">${reservedAtoms || !offer.availableAtoms ? 'View Ana’s trade' : 'Open buyer view'} ${icon('arrow')}</button>` : seller.status === 'created' ? `<button class="button primary" data-action="review-deposit">Fund ${tokens(seller.offerAtoms)} USDC ${icon('wallet')}</button>` : '<p class="small-note">Demo simulation · no real transaction</p>'}`}
-    </section><aside class="panel seller-summary"><div class="section-title"><h2>Your balances</h2><span class="avatar mini peach">B</span></div><div class="summary-amount"><span>Ben’s demo wallet</span><strong>${tokens(seller.balanceAtoms)} <span>USDC</span></strong></div>${row('Held in escrow', tokens(seller.depositedAtoms - seller.settledAtoms - seller.returnedAtoms) + ' USDC')}${row('Verified EUR received', euros(seller.receivedFiatMinor))}${row('Payment method', 'Revolut')}${row('Network', 'Stellar testnet')}<div class="escrow-note">${icon('shield')}<p>Escrow releases after verified payment or an agreement approved by both wallets.</p></div><p class="small-note seller-demo-note">Demo balances and deposits are simulated.</p></aside></div>
-    <section class="seller-activity"><div class="section-title"><h2>Offer activity</h2><span>Ben’s trades</span></div>${
-      trades.find((order) => order.resolution && OPEN_STATES.includes(order.status))
-        ? resolutionPanel(
-            trades.find((order) => order.resolution && OPEN_STATES.includes(order.status)),
-            'seller',
-          )
-        : ''
-    }${trades.length ? `<div class="trade-list">${trades.map((order) => `<button class="trade-list-item panel" data-action="seller-trade" data-id="${esc(order.id)}"><span class="trade-list-icon">${icon('receipt')}</span><span class="trade-list-description"><strong>${tokens(order.tokenAtoms)} USDC · Ana</strong><span>${euros(order.fiatMinor)} · ${esc(order.id)}</span></span>${pill(statusLabels[order.status], order.status === 'completed' ? 'green' : 'orange')}${icon('arrow')}</button>`).join('')}</div>` : `<div class="seller-empty">${icon('receipt')}<p>${funded ? 'Your offer is waiting for its first buyer.' : 'Buyer reservations will appear here once your offer is funded.'}</p></div>`}</section>`;
+  return `<div class="page-heading"><div><p class="eyebrow">BEN’S SELLER WORKSPACE</p><h1>Sell USDC</h1><p>Supply the USDC. Set a quote. Receive the buyer’s payment.</p></div>${pill(latestTrade ? { reserved: 'Awaiting payment lock', locking: 'Lock pending', paying: 'Payment locked', verifying: 'Checking payment', verification_failed: 'Verification incomplete', verified: 'Ready to release', settling: 'Release pending', completed: 'Complete', resolved: 'Resolved', refunded: 'Refunded' }[latestTrade.status] : status, funded ? 'green' : 'orange')}</div>
+    ${latestTrade ? tradeStatus(latestTrade, 'seller') : ''}<div class="trade-layout seller-layout">${pendingRecovery ? resolutionPanel(pendingRecovery, 'seller') : ''}<section class="panel seller-offer-panel" ${pendingRecovery ? 'hidden' : ''}>
+    ${preparing ? `<h2>Create your offer</h2><p class="seller-intro">Ben supplies the liquidity. In the product, sellers set their quote and keep the spread after costs. This demo uses a fixed illustrative rate.</p><form id="seller-form" novalidate><label class="money-field" for="seller-amount"><span>You sell</span><span class="money-input"><input id="seller-amount" inputmode="decimal" value="${esc(sellAmount)}" autocomplete="off" aria-describedby="seller-error seller-amount-hint"><span class="currency-label"><span class="usdc-disc">$</span> USDC</span></span></label><p class="seller-wallet-note" id="seller-amount-hint">Demo wallet balance: ${tokens(seller.balanceAtoms)} USDC</p><label class="settings-label" for="seller-tag">Your Revolut tag</label><input class="text-input" id="seller-tag" value="${esc(sellerTag)}" autocomplete="off" spellcheck="false" aria-describedby="seller-tag-hint seller-tag-error"><p class="input-hint" id="seller-tag-hint">Use a demo Revolut tag, for example @ben.</p><p class="field-error" id="seller-tag-error" aria-live="polite"></p><div class="quote-details">${row('Illustrative demo rate', formatRate(offer.rateAtomsPerEuro))}${row('Payment currency', 'EUR')}${row('Buyer pays exactly', '<span id="seller-receive">€20.00</span>')}</div><p class="field-error" id="seller-error" aria-live="polite"></p><button class="button primary" type="submit">Create offer ${icon('arrow')}</button></form>` : `<span class="status-symbol ${seller.status === 'funding' ? 'processing' : ''}">${seller.status === 'funding' ? '<span class="spinner"></span>' : icon(funded ? 'check' : 'lock')}</span><h2>${sellerFlow ? sellerFlow.title : funded ? 'Your offer is live' : seller.status === 'funding' ? 'Funding your escrow' : 'Your offer is ready to fund'}</h2><p class="seller-intro">${sellerFlow ? sellerFlow.detail : funded ? 'Buyers can now reserve your funded USDC.' : seller.status === 'funding' ? 'Confirming your demo deposit. Your offer will appear after confirmation.' : 'Review and approve a demo deposit from Ben’s wallet.'}</p><div class="summary-amount"><span>${funded ? 'USDC deposited' : 'Deposit to escrow'}</span><strong>${tokens(seller.offerAtoms)} <span>USDC</span></strong></div>${funded ? row('Offer reference', esc(seller.orderId)) : ''}${row('Your Revolut tag', esc(seller.tag))}${row('Illustrative demo rate', formatRate(offer.rateAtomsPerEuro))}${row('Available for buyers', tokens(offer.availableAtoms) + ' USDC')}${row('Reserved by Ana', tokens(reservedAtoms) + ' USDC')}${funded ? row('Released to Ana', tokens(seller.settledAtoms) + ' USDC') + row('Returned to Ben', tokens(seller.returnedAtoms) + ' USDC') : ''}${funded ? `<button class="button primary" data-action="buyer-view">${reservedAtoms || !offer.availableAtoms ? 'View Ana’s trade' : 'Open buyer view'} ${icon('arrow')}</button>` : seller.status === 'created' ? `<button class="button primary" data-action="review-deposit">Fund ${tokens(seller.offerAtoms)} USDC ${icon('wallet')}</button>` : '<p class="small-note">Demo simulation · no real transaction</p>'}`}
+    </section><aside class="panel seller-summary"><div class="section-title"><h2>Your balances</h2><span class="avatar mini peach">B</span></div><div class="summary-amount"><span>Ben’s demo wallet</span><strong>${tokens(seller.balanceAtoms)} <span>USDC</span></strong></div>${row('Held in escrow', tokens(seller.depositedAtoms - seller.settledAtoms - seller.returnedAtoms) + ' USDC')}${row('Simulated EUR proceeds', euros(seller.receivedFiatMinor))}${row('Payment method', 'Revolut')}${row('Network', 'Stellar demo')}<div class="escrow-note">${icon('shield')}<p>Escrow releases after verified payment or an agreement approved by both wallets.</p></div><p class="small-note seller-demo-note">Demo balances and deposits are simulated. EUR proceeds are not profit: subtract the cost of USDC and any bank, network or provider fees.</p></aside></div>
+    <section class="seller-activity"><div class="section-title"><h2>Offer activity</h2><span>Ben’s trades</span></div>${trades.length ? `<div class="trade-list">${trades.map((order) => `<button class="trade-list-item panel" data-action="seller-trade" data-id="${esc(order.id)}"><span class="trade-list-icon">${icon('receipt')}</span><span class="trade-list-description"><strong>${tokens(order.tokenAtoms)} USDC · Ana</strong><span>${euros(order.fiatMinor)} · ${esc(order.id)}</span></span>${pill(activityLabel(order, 'seller', order.status === 'verified' ? 'Ready to release' : order.status === 'settling' ? 'Release pending' : statusLabels[order.status]), order.status === 'completed' ? 'green' : 'orange')}${icon('arrow')}</button>`).join('')}</div>` : `<div class="seller-empty">${icon('receipt')}<p>${funded ? 'Your offer is waiting for its first buyer.' : 'Buyer reservations will appear here once your offer is funded.'}</p></div>`}</section>`;
 }
 
 function updateSellerQuote() {
@@ -169,6 +195,11 @@ function summary(order) {
   return `<aside class="panel trade-summary"><div class="section-title"><h2>Your exchange</h2><span class="paired-mark small" aria-hidden="true">↙↗</span></div><div class="summary-amount"><span>You receive</span><strong>${tokens(order.tokenAtoms)} <span>USDC</span></strong></div>${row('You pay', euros(order.fiatMinor) + ' EUR')}${row('Seller', esc(order.seller))}${row('Payment method', 'Revolut')}${row('Receive in', esc(state.wallet?.label))}${row('Trade reference', `<span class="mono">${esc(order.id)}</span>`)}<div class="escrow-note">${icon('lock')}<p>${['completed', 'resolved', 'refunded'].includes(order.status) ? 'This trade has ended.' : 'The USDC stays reserved while you verify your payment.'}</p></div></aside>`;
 }
 
+function tradeStatus(order, viewer = 'buyer') {
+  const info = tradePresentation(order, viewer);
+  return `<section class="trade-status ${info.tone}" aria-label="Trade status"><div class="trade-status-copy">${icon(info.tone === 'attention' ? 'info' : info.heldAtoms ? 'lock' : 'check')}<div><strong data-flow-title>${esc(info.title)}</strong><p>${esc(info.detail)}</p><span class="next-actor">Next: ${esc(info.nextActor)}</span></div></div><div class="funds-status"><span>In escrow</span><strong data-held-funds>${tokens(info.heldAtoms)} <span>USDC</span></strong><span>${esc(info.fundsLabel)}</span></div></section>`;
+}
+
 function steps(order) {
   const index =
     {
@@ -181,23 +212,27 @@ function steps(order) {
       settling: 4,
       completed: 5,
     }[order.status] ?? 0;
-  return `<ol class="steps" aria-label="Trade progress">${['Reserved', 'Payment lock', 'Payment', 'Verification', 'Received'].map((label, i) => `<li class="${i < index ? 'done' : i === index ? 'current' : ''}" ${i === index ? 'aria-current="step"' : ''}><span>${i < index ? icon('check') : i + 1}</span><strong>${label}</strong></li>`).join('')}</ol>`;
+  const labels = ['Reserved', 'Payment lock', 'Payment', 'Verification', 'Received'];
+  return `<div class="step-summary"><span>Step ${Math.min(index + 1, 5)} of 5</span><strong>${labels[Math.min(index, 4)]}</strong></div><ol class="steps" aria-label="Trade progress">${labels.map((label, i) => `<li class="${i < index ? 'done' : i === index ? 'current' : ''}" ${i === index ? 'aria-current="step"' : ''}><span>${i < index ? icon('check') : i + 1}</span><strong>${label}</strong></li>`).join('')}</ol>`;
 }
 function lockPanel(order) {
   const expired = Date.now() >= order.expiresAt;
   const locking = order.status === 'locking';
-  return `<section class="panel status-panel"><span class="status-symbol ${locking ? 'processing' : 'neutral'}">${locking ? '<span class="spinner"></span>' : icon('lock')}</span><h2>${locking ? 'Locking your payment window' : expired ? 'Reservation expired' : 'Secure your payment window'}</h2><p>${locking ? 'Waiting for the demo escrow lock to confirm. Payment instructions will appear after confirmation.' : expired ? 'This reservation was never locked for payment. Do not send any money for it.' : 'Lock the reserved escrow before sending any money. Once it confirms, we’ll show your Revolut payment instructions.'}</p>${order.lockFailure ? '<div class="important-note"><strong>Payment lock not confirmed.</strong><span>Do not send a payment. You can retry while the reservation is active.</span></div>' : ''}${locking ? '<p class="small-note">Demo simulation · no real transaction</p>' : expired ? '<button class="button primary" data-action="refund-expired">Return expired reservation to seller</button>' : `<button class="button primary" data-action="lock-payment">${order.lockFailure ? 'Retry payment lock' : 'Lock payment window'} ${icon('lock')}</button><p class="quote-footnote" data-countdown>${remaining(order)}</p><button class="text-button" data-action="request-resolution" data-id="${esc(order.id)}">Agree to end this trade</button>`}</section>`;
+  return `<section class="panel status-panel"><span class="status-symbol ${locking ? 'processing' : 'neutral'}">${locking ? '<span class="spinner"></span>' : icon('lock')}</span><h2>${locking ? 'Confirming escrow lock…' : expired ? 'Reservation expired' : 'Confirm the escrow lock'}</h2><p>${locking ? 'Waiting for the demo escrow lock to confirm. Payment instructions will appear after confirmation.' : expired ? 'This reservation was never locked for payment. Do not send any money for it.' : 'Confirm the lock to reveal your Revolut payment details.'}</p>${!locking && !expired ? '<button class="text-button guide-link" data-action="guide">Read the desktop guide</button><div class="lock-consent"><strong>Before you lock</strong><p>After locking, USDC stays held until payment is verified or both wallets approve recovery. Expiry alone does not return it.</p></div>' : ''}${order.lockFailure ? '<div class="important-note"><strong>Payment lock not confirmed.</strong><span>Do not send a payment. You can retry while the reservation is active.</span></div>' : ''}${locking ? '<p class="small-note">Demo simulation · no real transaction</p>' : expired ? '<button class="button primary" data-action="refund-expired">Return expired reservation to seller</button>' : `<button class="button primary" data-action="lock-payment">${order.lockFailure ? 'Retry escrow lock' : 'Confirm escrow lock'} ${icon('lock')}</button><p class="deadline-note">Confirm before <time datetime="${new Date(order.expiresAt).toISOString()}">${formatDeadline(order.expiresAt)}</time>. Confirming the lock does not extend this deadline.</p><p class="quote-footnote" data-countdown>${remaining(order)}</p><button class="text-button" data-action="request-resolution" data-id="${esc(order.id)}">Agree to end this trade</button>`}</section>`;
 }
 function paymentPanel(order) {
   if (!canShowPaymentInstructions(order))
-    return `<section class="panel status-panel"><span class="status-symbol amber">${icon('clock')}</span><h2>Payment window ended</h2><p>Don’t send a new payment. If you paid before the deadline, you can still verify that transfer.</p><button class="button primary" data-action="paid">I already paid · verify payment ${icon('shield')}</button><button class="button secondary" data-action="request-resolution" data-id="${esc(order.id)}">Agree on a resolution</button><p class="small-note">Your USDC stays held. A resolution needs both wallets’ approval.</p></section>`;
-  return `<section class="panel payment-panel"><div class="section-title"><h2>Pay ${esc(order.seller)} in Revolut</h2><span class="countdown" data-countdown>${remaining(order)}</span></div><p>Your payment lock is confirmed. Send the exact amount using your Revolut app.</p><div class="payment-amount">${euros(order.fiatMinor)} <span>EUR</span></div><div class="recipient-card"><span class="avatar peach">${esc(order.seller[0])}</span><span><strong>${esc(order.seller)}</strong><span>${esc(order.tag)}</span></span><button class="icon-button" data-action="copy-tag" aria-label="Copy Revolut tag">${icon('copy')}</button></div><div class="payment-note">Return here once your transfer is complete. Verification can finish later if the payment itself was made before the deadline.</div><button class="button primary" data-action="paid">${order.paymentReported ? 'Continue payment verification' : 'I’ve paid · verify payment'} ${icon('arrow')}</button><button class="text-button cancel-link" data-action="request-resolution" data-id="${esc(order.id)}">Agree on a resolution</button></section>`;
+    return `<section class="panel status-panel"><span class="status-symbol amber">${icon('clock')}</span><h2>Payment window ended</h2><p>Don’t send a new payment. You can still verify a transfer made after the lock confirmed and before ${formatDeadline(order.expiresAt)}.</p><button class="button primary" data-action="paid">I already paid · verify payment ${icon('shield')}</button><button class="button secondary" data-action="request-resolution" data-id="${esc(order.id)}">Agree on a resolution</button><p class="small-note">USDC stays held until payment is verified or both wallets approve recovery.</p></section>`;
+  if (order.paymentReported)
+    return `<section class="panel status-panel"><span class="status-symbol neutral">${icon('shield')}</span><h2>Verify the payment you sent</h2><p>You’ve marked the Revolut payment as sent. Continue verification without making another payment.</p><div class="important-note"><strong>Don’t pay again.</strong><span>Your USDC remains held while verification is incomplete.</span></div><button class="button primary" data-action="review-proof">Verify this payment ${icon('arrow')}</button><button class="button secondary" data-action="request-resolution" data-id="${esc(order.id)}">Agree on a resolution</button></section>`;
+  return `<section class="panel payment-panel"><div class="section-title"><h2>Pay ${esc(order.seller)} in Revolut</h2><span class="countdown" data-countdown>${remaining(order)}</span></div><p class="lock-confirmed-label">Escrow lock confirmed</p><div class="payment-amount">${euros(order.fiatMinor)} <span>EUR</span></div><div class="recipient-card"><span class="avatar peach">${esc(order.seller[0])}</span><span><strong>${esc(order.seller)}</strong><span>${esc(order.tag)}</span></span><button class="icon-button" data-action="copy-tag" aria-label="Copy Revolut tag">${icon('copy')}</button></div><p class="pay-deadline">Pay before <time datetime="${new Date(order.expiresAt).toISOString()}">${formatDeadline(order.expiresAt)}</time>.</p><button class="button primary" data-action="paid">${order.paymentReported ? 'Continue payment verification' : 'I’ve paid · verify payment'} ${icon('arrow')}</button><p class="payment-note">A transfer made after the lock and before this deadline can be verified later.</p><button class="text-button cancel-link" data-action="request-resolution" data-id="${esc(order.id)}">Agree on a resolution</button></section>`;
 }
 function resolutionPanel(order, party = 'buyer') {
   const proposal = order.resolution;
   const approved = proposal[party + 'Approved'];
   const both = proposal.buyerApproved && proposal.sellerApproved;
-  return `<section class="panel resolution-panel"><span class="status-symbol neutral">${icon('shield')}</span><h2>Resolve this trade together</h2><p>Both wallets must approve the same allocation. Your USDC stays held until the agreement is confirmed.</p><div class="disclosure">${row('Ana receives', tokens(proposal.buyerAtoms) + ' USDC')}${row('Ben receives back', tokens(order.tokenAtoms - proposal.buyerAtoms) + ' USDC')}${row('Ana’s approval', proposal.buyerApproved ? 'Approved' : 'Waiting')}${row('Ben’s approval', proposal.sellerApproved ? 'Approved' : 'Waiting')}</div>${!approved ? `<button class="button primary" data-action="review-resolution" data-id="${esc(order.id)}" data-party="${party}">Review ${party === 'buyer' ? 'Ana’s' : 'Ben’s'} approval</button>` : '<p class="small-note">Your demo wallet approved this allocation.</p>'}${both ? `<button class="button primary" data-action="confirm-resolution" data-id="${esc(order.id)}">Confirm agreed resolution</button>` : ''}<button class="button secondary" data-action="${party === 'buyer' ? 'sell' : 'buyer-view'}">${party === 'buyer' ? 'Open Ben’s view' : 'Open Ana’s trade'}</button>${party === 'buyer' && order.paymentReported ? '<button class="text-button" data-action="review-proof">Retry payment verification</button>' : ''}</section>`;
+  const options = recoveryOptions(order);
+  return `<section class="panel resolution-panel"><span class="status-symbol neutral">${icon('shield')}</span><h2>Resolve this trade together</h2><p>Funds stay held until a valid payment check settles the trade or both wallets confirm the same allocation. A proposal or one approval does not move funds.</p><div class="disclosure">${row('Ana receives', tokens(proposal.buyerAtoms) + ' USDC')}${row('Ben receives back', tokens(order.tokenAtoms - proposal.buyerAtoms) + ' USDC')}${row('Ana’s approval', proposal.buyerApproved ? 'Approved' : 'Waiting')}${row('Ben’s approval', proposal.sellerApproved ? 'Approved' : 'Waiting')}</div>${!approved ? `<button class="button primary" data-action="review-resolution" data-id="${esc(order.id)}" data-party="${party}">Review and approve as ${party === 'buyer' ? 'Ana' : 'Ben'}</button>` : '<p class="small-note">Your demo wallet approved this allocation.</p>'}${both ? `<button class="button primary" data-action="confirm-resolution" data-id="${esc(order.id)}">Confirm agreed resolution</button>` : ''}<button class="button secondary" data-action="${party === 'buyer' ? 'sell' : 'buyer-view'}">${party === 'buyer' ? 'Open Ben’s view' : 'Open Ana’s trade'}</button>${party === 'buyer' && options.verifyExistingPayment ? `<button class="text-button" data-action="${order.paymentReported ? 'review-proof' : 'paid'}">Verify an existing payment</button>` : ''}${options.refundExpiredReservation ? `<button class="button secondary" data-action="refund-expired" data-id="${esc(order.id)}">Return expired reservation to seller</button>` : ''}</section>`;
 }
 function terminalOutcome(order) {
   const buyerAtoms = order.status === 'resolved' ? order.resolution.buyerAtoms : 0;
@@ -206,13 +241,13 @@ function terminalOutcome(order) {
 
 function verificationPanel(order) {
   if (order.status === 'verification_failed')
-    return `<section class="panel status-panel"><span class="status-symbol amber">${icon('info')}</span><h2>Verification incomplete</h2><p>${order.failure === 'mismatch' ? 'The selected payment details don’t match this trade. Check the amount and recipient, then choose the correct transfer.' : 'We couldn’t finish the payment check. Your reservation is still here, so you can try again.'}</p><div class="important-note"><strong>Don’t pay again.</strong><span>Your bank payment may have gone through. No USDC has been released.</span></div><button class="button primary" data-action="review-proof">Try verification again ${icon('refresh')}</button><button class="button secondary" data-action="request-resolution" data-id="${esc(order.id)}">Agree on a resolution</button></section>`;
+    return `<section class="panel status-panel"><span class="status-symbol amber">${icon('info')}</span><h2>Payment verification incomplete</h2><p>${order.failure === 'mismatch' ? 'USDC remains held. The selected payment does not match this trade. Check the transfer, retry verification, or agree a recovery with the seller.' : 'USDC remains held. Retry verification or agree a recovery with the seller.'}</p><div class="important-note"><strong>Don’t pay again.</strong><span>Your bank payment may have gone through. No USDC has been released.</span></div><button class="button primary" data-action="review-proof">Try verification again ${icon('refresh')}</button><button class="button secondary" data-action="request-resolution" data-id="${esc(order.id)}">Agree on a resolution</button></section>`;
   const inProgress = order.status === 'verifying' || order.status === 'settling';
   return `<section class="panel status-panel"><span class="status-symbol ${inProgress ? 'processing' : ''}">${inProgress ? '<span class="spinner"></span>' : icon('check')}</span><h2>${order.status === 'verifying' ? 'Checking your payment' : order.status === 'settling' ? 'Receiving your USDC' : 'Your payment matches'}</h2><p>${order.status === 'verifying' ? 'Your selected payment details are being checked against the reserved trade.' : order.status === 'settling' ? 'Finishing your demo exchange. Your receipt will appear here.' : 'The amount, recipient and payment status match. You can now finish your exchange.'}</p>${order.status === 'verifying' ? `<div class="progress-line" role="status"><span class="pulse-dot"></span><span id="proof-progress">${esc(progress)}</span></div>` : `<div class="check-list"><div>${icon('check')} Amount and recipient match</div><div>${icon('check')} Completed outgoing payment</div><div>${icon('check')} Payment is unused for settlement</div></div>`}${order.status === 'verified' ? `<button class="button primary" data-action="settle">Receive ${tokens(order.tokenAtoms)} USDC ${icon('arrow')}</button>` : '<p class="small-note">Demo simulation · no bank or chain request</p>'}</section>`;
 }
 
 function receipt(order) {
-  return `<div class="receipt-layout"><section class="panel receipt-panel"><span class="status-symbol">${icon('check')}</span><p class="received-label">You received</p><h2 class="receipt-amount">${tokens(order.tokenAtoms)} <span>USDC</span></h2><p>Your demo exchange with ${esc(order.seller)} is complete.</p><div class="receipt-separator"><span></span><span></span></div>${row('You paid', euros(order.fiatMinor) + ' EUR')}${row('Payment method', 'Revolut')}${row('Received in', esc(state.wallet?.label))}${row('Completed', time(order.completedAt))}<div class="receipt-actions"><button class="button primary" data-action="receipt-details">Settlement details ${icon('up')}</button><button class="button secondary" data-action="buy">Back to offers</button></div></section><section class="activity-panel"><h2>Trade activity</h2><ol class="activity-list">${order.activity.map((item) => `<li><span class="activity-check">${icon('check')}</span><div><strong>${esc(item.title)}</strong><span>${time(item.at)}</span></div></li>`).join('')}</ol><div class="receipt-pair"><span>${euros(order.fiatMinor)}<small>Revolut · EUR</small></span><span>${icon('arrow')}</span><span>${tokens(order.tokenAtoms)}<small>Stellar · USDC</small></span></div><p class="small-note">Demo receipt · sample data. No bank payment or on-chain transaction occurred.</p></section></div>`;
+  return `<div class="receipt-layout"><section class="panel receipt-panel"><span class="status-symbol">${icon('check')}</span><p class="received-label">You received</p><h2 class="receipt-amount">${tokens(order.tokenAtoms)} <span>USDC</span></h2><p>Your demo exchange with ${esc(order.seller)} is complete.</p><div class="receipt-separator"><span></span><span></span></div>${row('You paid', euros(order.fiatMinor) + ' EUR')}${row('Payment method', 'Revolut')}${row('Received in', esc(state.wallet?.label))}${row('Completed', time(order.completedAt))}<div class="receipt-actions"><button class="button primary" data-action="receipt-details">Settlement details ${icon('up')}</button><button class="button secondary" data-action="buy">Back to offers</button></div></section><section class="activity-panel"><h2>Trade activity</h2><ol class="activity-list">${order.activity.map((item) => `<li><span class="activity-check">${icon('check')}</span><div><strong>${esc(item.title)}</strong><span>${time(item.at)}</span></div></li>`).join('')}</ol><div class="receipt-pair"><span>${euros(order.fiatMinor)}<small>Revolut · EUR</small></span><span>${icon('arrow')}</span><span>${tokens(order.tokenAtoms)}<small>Stellar · USDC</small></span></div><p class="small-note">Demo receipt · No real funds moved.</p></section></div>`;
 }
 
 function tradePage() {
@@ -232,57 +267,75 @@ function tradePage() {
           : order.status === 'paying'
             ? paymentPanel(order)
             : verificationPanel(order);
-    content = `${steps(order)}<div class="trade-layout">${panel}${summary(order)}</div>`;
+    content = `${tradeStatus(order)}${steps(order)}<div class="trade-layout">${panel}${summary(order)}</div>`;
   }
-  return `<button class="back-link" data-action="trades">← My trades</button><div class="page-heading"><div><p class="eyebrow">${esc(order.id)}</p><h1>${complete ? 'Trade complete' : terminal ? 'Trade closed' : `Buy ${tokens(order.tokenAtoms)} USDC`}</h1><p>${complete ? 'Your USDC is in your demo wallet.' : terminal ? 'Your final allocation is recorded below.' : `Your trade with ${esc(order.seller)}. One step at a time.`}</p></div>${pill(statusLabels[order.status], complete || terminal || order.status === 'verified' ? 'green' : 'orange')}</div>${content}`;
+  return `<button class="back-link" data-action="trades">← My trades</button><div class="page-heading trade-heading"><div><p class="eyebrow">${esc(order.id)}</p><h1>${complete ? 'Trade complete' : terminal ? 'Trade closed' : `Buy ${tokens(order.tokenAtoms)} USDC`}</h1><p>${complete ? 'Your USDC is in your demo wallet.' : terminal ? 'Your final allocation is recorded below.' : `${esc(order.seller)} · Revolut · EUR to USDC`}</p></div>${pill(activityLabel(order, 'buyer', statusLabels[order.status]), complete || terminal || order.status === 'verified' ? 'green' : 'orange')}</div>${content}`;
 }
 
 function tradesPage() {
-  return `<div class="page-heading"><div><p class="eyebrow">YOUR EXCHANGES</p><h1>My trades</h1><p>Pick up where you left off, or open a receipt.</p></div><button class="button secondary compact" data-action="buy">New exchange ${icon('up')}</button></div>${state.orders.length ? `<div class="trade-list">${state.orders.map((order) => `<button class="trade-list-item panel" data-action="open-trade" data-id="${esc(order.id)}"><span class="trade-list-icon">${icon(order.status === 'completed' ? 'check' : 'receipt')}</span><span class="trade-list-description"><strong>${tokens(order.tokenAtoms)} USDC</strong><span>${euros(order.fiatMinor)} to ${esc(order.seller)} · ${time(order.reservedAt)}</span></span>${pill(statusLabels[order.status], order.status === 'completed' ? 'green' : 'orange')}${icon('arrow')}</button>`).join('')}</div>` : `<div class="panel empty-state"><span class="status-symbol neutral">${icon('receipt')}</span><h2>Your first exchange starts here</h2><p>Once you reserve an offer, you can follow it here from payment to receipt.</p><button class="button primary" data-action="buy">Explore offers ${icon('arrow')}</button></div>`}`;
+  return `<div class="page-heading"><div><p class="eyebrow">YOUR EXCHANGES</p><h1>My trades</h1><p>Pick up where you left off, or open a receipt.</p></div><button class="button secondary compact" data-action="buy">New exchange ${icon('up')}</button></div>${state.orders.length ? `<div class="trade-list">${state.orders.map((order) => `<button class="trade-list-item panel" data-action="open-trade" data-id="${esc(order.id)}"><span class="trade-list-icon">${icon(order.status === 'completed' ? 'check' : 'receipt')}</span><span class="trade-list-description"><strong>${tokens(order.tokenAtoms)} USDC</strong><span>${euros(order.fiatMinor)} to ${esc(order.seller)} · ${time(order.reservedAt)}</span></span>${pill(activityLabel(order, 'buyer', statusLabels[order.status]), order.status === 'completed' ? 'green' : 'orange')}${icon('arrow')}</button>`).join('')}</div>` : `<div class="panel empty-state"><span class="status-symbol neutral">${icon('receipt')}</span><h2>Your first exchange starts here</h2><p>Once you reserve an offer, you can follow it here from payment to receipt.</p><button class="button primary" data-action="buy">Explore offers ${icon('arrow')}</button></div>`}`;
 }
 
 function render() {
+  const previousFocus = root.contains(document.activeElement)
+    ? focusKey(document.activeElement)
+    : null;
   state = adapter.snapshot();
   if (!state.offers.some((offer) => offer.id === selectedOffer && offer.availableAtoms > 0))
     selectedOffer = state.offers.find((offer) => offer.availableAtoms > 0)?.id ?? selectedOffer;
   const sellerView = route === 'sell';
   const activeWallet = sellerView ? state.seller.wallet : state.wallet;
   const personName = sellerView ? 'Ben' : 'Ana';
-  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="wordmark" href="#" data-action="buy" aria-label="Pactlane home"><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span>pactlane<span class="brand-dot">.</span></a><p class="nav-label">YOUR WORKSPACE</p><nav aria-label="Main navigation"><button class="nav-item ${route === 'buy' ? 'active' : ''}" data-action="buy" ${route === 'buy' ? 'aria-current="page"' : ''}>${icon('buy')} Buy USDC</button><button class="nav-item ${sellerView ? 'active' : ''}" data-action="sell" ${sellerView ? 'aria-current="page"' : ''}>${icon('up')} Sell USDC</button><button class="nav-item ${['trade', 'trades'].includes(route) ? 'active' : ''}" data-action="trades" ${['trade', 'trades'].includes(route) ? 'aria-current="page"' : ''}>${icon('receipt')} My trades ${state.orders.length ? `<span class="nav-count">${state.orders.length}</span>` : ''}</button></nav><div class="sidebar-bottom"><div class="network-badge"><span class="network-dot"></span> Stellar testnet</div><span class="sidebar-caption">Peer-to-peer. On Stellar.</span></div></aside><div class="workspace"><header class="app-header"><span class="header-location">${sellerView ? 'Seller workspace' : route === 'buy' ? 'Marketplace' : 'Your activity'}</span><div class="header-actions"><span class="demo-badge">Demo <span>· Sample data</span></span><button class="icon-button" data-action="settings" aria-label="Demo settings">${icon('settings')}</button><button class="wallet-button" data-action="wallet">${activeWallet ? `<span class="avatar mini peach">${personName[0]}</span><span>${personName}’s wallet</span><span class="network-dot"></span>` : `${icon('wallet')}<span>Connect wallet</span>`}</button></div></header><main id="main" tabindex="-1">${sellerView ? sellerPage() : route === 'buy' ? marketplace() : route === 'trades' ? tradesPage() : tradePage()}</main><footer class="app-footer"><span>Built for a fair exchange.</span><span>Demo mode · Simulated payments and settlement</span></footer></div></div>`;
-  document.title = `Pactlane · ${sellerView ? 'Sell USDC' : route === 'buy' ? 'Buy USDC' : 'My trades'}`;
+  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="wordmark" href="#" data-action="buy" aria-label="Pactlane home"><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span>pactlane<span class="brand-dot">.</span></a><p class="nav-label">YOUR WORKSPACE</p><nav aria-label="Main navigation"><button class="nav-item ${route === 'buy' ? 'active' : ''}" data-action="buy" ${route === 'buy' ? 'aria-current="page"' : ''}>${icon('buy')} Buy USDC</button><button class="nav-item ${sellerView ? 'active' : ''}" data-action="sell" ${sellerView ? 'aria-current="page"' : ''}>${icon('up')} Sell USDC</button><button class="nav-item ${['trade', 'trades'].includes(route) ? 'active' : ''}" data-action="trades" ${['trade', 'trades'].includes(route) ? 'aria-current="page"' : ''}>${icon('receipt')} My trades ${state.orders.length ? `<span class="nav-count">${state.orders.length}</span>` : ''}</button><button class="nav-item ${route === 'why' ? 'active' : ''}" data-action="why" ${route === 'why' ? 'aria-current="page"' : ''}>${icon('info')} Why Pactlane</button></nav><div class="sidebar-bottom"><div class="network-badge"><span class="network-dot"></span> Stellar demo</div><span class="sidebar-caption">Peer-to-peer. On Stellar.</span></div></aside><div class="workspace"><header class="app-header"><span class="demo-badge"><strong>Simulated walkthrough</strong><span>No live payment or settlement</span></span><div class="header-actions"><button class="icon-button" data-action="guide" aria-label="Desktop setup guide">${icon('info')}</button><button class="icon-button" data-action="settings" aria-label="Demo settings">${icon('settings')}</button><button class="wallet-button" data-action="wallet" aria-label="${activeWallet ? personName + '’s demo wallet' : 'Connect demo wallet'}">${activeWallet ? `<span class="avatar mini peach">${personName[0]}</span><span class="wallet-full-label">${personName}’s wallet</span><span class="wallet-short-label">${personName}</span><span class="network-dot"></span>` : `${icon('wallet')}<span class="wallet-full-label">Connect wallet</span><span class="wallet-short-label">Wallet</span>`}</button></div></header><main id="main" tabindex="-1">${sellerView ? sellerPage() : route === 'buy' ? marketplace() : route === 'trades' ? tradesPage() : route === 'why' ? whyPactlane() : tradePage()}</main><footer class="app-footer"><span>pactlane.io · Demo preview</span><span>Sample data · No real funds move</span></footer></div></div>`;
+  document.title = `Pactlane · ${sellerView ? 'Sell USDC' : route === 'buy' ? 'Buy USDC' : route === 'why' ? 'Why Pactlane' : 'My trades'}`;
   if (route === 'buy') {
     amount = (state.offers.find((offer) => offer.id === selectedOffer).maxMinor / 100).toFixed(2);
     document.querySelector('#pay-amount').value = amount;
     updateQuote();
   }
   if (sellerView) updateSellerQuote();
+  if (previousFocus && !modal.open) restoreFocus(previousFocus);
+  const announcement = root.querySelector('[data-flow-title]')?.textContent;
+  if (announcement && announcement !== lastAnnouncement) {
+    document.querySelector('#flow-announcement').textContent = announcement;
+    lastAnnouncement = announcement;
+  } else if (!announcement && lastAnnouncement) {
+    document.querySelector('#flow-announcement').textContent = '';
+    lastAnnouncement = '';
+  }
 }
 
 function updateQuote() {
   const offer = state.offers.find((item) => item.id === selectedOffer);
   document.querySelector('#quote-seller').textContent = offer?.name ?? 'Choose an offer';
-  const error = document.querySelector('#quote-error');
-  const input = document.querySelector('#pay-amount');
   const button = document.querySelector('#reserve-button');
+  const note = document.querySelector('#quote-note');
+  const output = document.querySelector('#receive-amount');
   const active = state.orders.some((order) => OPEN_STATES.includes(order.status));
+  document.querySelector('#quote-error').textContent = '';
+  document.querySelector('#pay-amount').setAttribute('aria-invalid', 'false');
+  if (state.seller.status !== 'funded') {
+    output.textContent = tokens(state.seller.offerAtoms);
+    button.disabled = true;
+    button.textContent = 'Waiting for seller funding';
+    note.textContent = 'Ben must fund this offer before you can reserve it.';
+    return;
+  }
   try {
     const result = quote(offer, amount);
-    document.querySelector('#receive-amount').textContent = tokens(result.tokenAtoms);
-    error.textContent = '';
-    input.setAttribute('aria-invalid', 'false');
+    output.textContent = tokens(result.tokenAtoms);
     button.disabled = active;
     button.innerHTML = active
-      ? 'Finish your current trade first'
+      ? 'Continue your current trade above'
       : `Reserve ${tokens(result.tokenAtoms)} USDC ${icon('arrow')}`;
-  } catch (failure) {
-    document.querySelector('#receive-amount').textContent = '—';
-    error.textContent =
-      state.seller.status !== 'funded'
-        ? 'This offer is waiting for seller funding.'
-        : failure.message;
-    input.setAttribute('aria-invalid', 'true');
+    note.textContent = 'Reserve this whole offer at its exact amount.';
+  } catch (error) {
+    output.textContent = tokens(state.seller.offerAtoms);
     button.disabled = true;
-    if (active) button.textContent = 'Finish your current trade first';
+    button.textContent = active ? 'Trade already reserved' : 'This offer is closed';
+    note.textContent = active
+      ? 'Your USDC is already reserved. Continue the current trade above.'
+      : 'Open My trades to review the completed exchange.';
   }
 }
 
@@ -299,16 +352,44 @@ function navigate(next, id) {
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
-function openModal(content) {
-  lastTrigger = document.activeElement;
-  modal.innerHTML = `<button class="icon-button modal-close" data-action="close-modal" aria-label="Close dialog">${icon('close')}</button>${content}`;
-  modal.showModal();
+function focusKey(element) {
+  const target = element?.closest?.('button, a, input, select');
+  return target
+    ? { id: target.id, action: target.dataset.action, record: target.dataset.id }
+    : null;
 }
-
+function restoreFocus(key) {
+  const target = key?.id
+    ? document.getElementById(key.id)
+    : key?.action
+      ? [...root.querySelectorAll('[data-action]')].find(
+          (element) =>
+            element.dataset.action === key.action &&
+            element.dataset.id === key.record &&
+            !element.disabled,
+        )
+      : null;
+  (target || document.querySelector('#main'))?.focus({ preventScroll: true });
+}
+function openModal(content) {
+  if (!modal.open) {
+    lastTrigger = document.activeElement;
+    lastTriggerKey = focusKey(lastTrigger);
+  }
+  modal.innerHTML = `<button class="icon-button modal-close" data-action="close-modal" aria-label="Close dialog">${icon('close')}</button>${content}`;
+  if (!modal.open) modal.showModal();
+  modal.scrollTop = 0;
+  modal.querySelector('.modal-close').focus({ preventScroll: true });
+}
 function closeModal() {
   modal.close();
-  if (lastTrigger?.isConnected) lastTrigger.focus();
+  if (lastTrigger?.isConnected) lastTrigger.focus({ preventScroll: true });
+  else restoreFocus(lastTriggerKey);
 }
+modal.addEventListener('cancel', (event) => {
+  event.preventDefault();
+  closeModal();
+});
 
 function walletModal(afterConnect = 'stay') {
   const sellerView = route === 'sell';
@@ -317,11 +398,11 @@ function walletModal(afterConnect = 'stay') {
   const balance = sellerView ? state.seller.balanceAtoms : state.balanceAtoms;
   if (wallet) {
     openModal(
-      `<span class="status-symbol neutral">${icon('wallet')}</span><h2 id="modal-title">${name}’s demo wallet</h2><p>A place to try the full Pactlane flow.</p><div class="wallet-balance"><span>Demo balance</span><strong>${tokens(balance)} USDC</strong></div><p class="small-note">This is a simulated wallet on a testnet interface. No wallet extension is connected.</p><button class="button primary" data-action="close-modal">Done</button>`,
+      `<span class="status-symbol neutral">${icon('wallet')}</span><h2 id="modal-title">${name}’s demo wallet</h2><p>A place to try the full Pactlane flow.</p><div class="wallet-balance"><span>Demo balance</span><strong>${tokens(balance)} USDC</strong></div><p class="small-note">This is a simulated wallet. No wallet extension or chain is connected.</p><button class="button primary" data-action="close-modal">Done</button>`,
     );
   } else {
     openModal(
-      `<span class="status-symbol neutral">${icon('wallet')}</span><h2 id="modal-title">Meet your demo wallet</h2><p>Try ${sellerView ? 'selling USDC' : 'your first exchange'} as ${name}. We’ll keep your sample trades in this browser.</p><div class="wallet-demo-card"><span class="avatar peach">${name[0]}</span><div><strong>${name}’s wallet</strong><span>Stellar testnet · Demo account</span></div></div><p class="small-note">No extension, real funds or bank login needed.</p><button class="button primary" data-action="connect" data-party="${sellerView ? 'seller' : 'buyer'}" data-after="${afterConnect}">Use ${name}’s demo wallet ${icon('arrow')}</button>`,
+      `<span class="status-symbol neutral">${icon('wallet')}</span><h2 id="modal-title">Meet your demo wallet</h2><p>Try ${sellerView ? 'selling USDC' : 'your first exchange'} as ${name}. We’ll keep your sample trades in this browser.</p><div class="wallet-demo-card"><span class="avatar peach">${name[0]}</span><div><strong>${name}’s wallet</strong><span>Stellar demo · Demo account</span></div></div><p class="small-note">No extension, real funds or bank login needed.</p><button class="button primary" data-action="connect" data-party="${sellerView ? 'seller' : 'buyer'}" data-after="${afterConnect}">Use ${name}’s demo wallet ${icon('arrow')}</button>`,
     );
   }
 }
@@ -343,14 +424,37 @@ function reserve() {
 function proofModal() {
   const order = currentOrder();
   openModal(
-    `<span class="status-symbol neutral">${icon('shield')}</span><p class="eyebrow">PAYMENT VERIFICATION</p><h2 id="modal-title">Review your payment check</h2><p>In the connected app, TLSNotary will ask you to approve the selected details from your completed Revolut transfer.</p><div class="disclosure">${row('Recipient', `${esc(order.seller)} · ${esc(order.tag)}`)}${row('Amount', euros(order.fiatMinor) + ' EUR')}${row('Transfer', 'Completed · Outgoing')}${row('Also checked', 'Payment ID and completion time')}</div><p class="small-note">Your bank password and login credentials aren’t part of the shared details. This demo uses sample payment data.</p><label class="consent"><input type="checkbox" id="proof-consent"> <span>I’ve reviewed the selected payment details.</span></label><button class="button primary" id="start-proof" data-action="verify" disabled>Start demo verification ${icon('arrow')}</button>`,
+    `<span class="status-symbol neutral">${icon('shield')}</span><p class="eyebrow">PAYMENT VERIFICATION</p><h2 id="modal-title">Review your payment check</h2><p>Review the completed transfer details selected for the payment check. The verifier uses these fields to decide whether release is authorized; the Stellar contract checks its signed authorization.</p><div class="disclosure">${row('Recipient', `${esc(order.seller)} · ${esc(order.tag)}`)}${row('Amount', euros(order.fiatMinor) + ' EUR')}${row('Transfer', 'Completed · Outgoing')}${row('Also checked', 'Payment ID and completion time')}</div><p class="small-note">Sample payment details only. No bank login or live proof is used in this walkthrough.</p><button class="text-button guide-link" data-action="guide" data-return="proof">What am I sharing? ${icon('arrow')}</button><label class="consent"><input type="checkbox" id="proof-consent"> <span>I’ve reviewed the selected payment details.</span></label><button class="button primary" id="start-proof" data-action="verify" disabled>Start demo verification ${icon('arrow')}</button>`,
   );
 }
 
 async function handleAction(button) {
   const action = button.dataset.action;
-  if (['buy', 'sell', 'trades'].includes(action)) {
+  if (['buy', 'sell', 'trades', 'why'].includes(action)) {
     navigate(action);
+    return;
+  }
+  if (action === 'guide') {
+    guideReturn = button.dataset.return === 'proof' ? 'proof' : null;
+    openGuide();
+    return;
+  }
+  if (action === 'guide-return') {
+    if (guideReturn === 'proof') proofModal();
+    else closeModal();
+    return;
+  }
+  if (action === 'copy-checklist') {
+    const checklist = document.querySelector('#setup-checklist');
+    try {
+      await navigator.clipboard.writeText(checklist.value);
+      document.querySelector('#checklist-status').textContent = 'Checklist copied.';
+    } catch {
+      checklist.focus();
+      checklist.select();
+      document.querySelector('#checklist-status').textContent =
+        'Copy is unavailable here. The checklist is selected so you can copy it manually.';
+    }
     return;
   }
   if (action === 'select-offer') {
@@ -389,7 +493,7 @@ async function handleAction(button) {
   }
   if (action === 'review-deposit') {
     openModal(
-      `<span class="status-symbol neutral">${icon('wallet')}</span><h2 id="modal-title">Review your deposit</h2><p>Move demo USDC from Ben’s wallet into escrow for this offer.</p><div class="disclosure">${row('Deposit', tokens(state.seller.offerAtoms) + ' USDC')}${row('From', 'Ben’s demo wallet')}${row('To', 'Pactlane demo escrow')}${row('Network shown', 'Stellar testnet')}</div><p class="small-note">This simulates wallet approval and funding. No real transaction will be signed or submitted.</p><button class="button primary" data-action="fund-seller">Approve demo deposit</button>`,
+      `<span class="status-symbol neutral">${icon('wallet')}</span><h2 id="modal-title">Review your deposit</h2><p>Move demo USDC from Ben’s wallet into escrow for this offer.</p><div class="disclosure">${row('Deposit', tokens(state.seller.offerAtoms) + ' USDC')}${row('From', 'Ben’s demo wallet')}${row('To', 'Pactlane demo escrow')}${row('Network shown', 'Stellar demo')}</div><p class="small-note">Demo deposit · No real funds move.</p><button class="button primary" data-action="fund-seller">Approve demo deposit</button>`,
     );
     return;
   }
@@ -467,6 +571,7 @@ async function handleAction(button) {
     return;
   }
   if (action === 'refund-expired') {
+    orderId = button.dataset.id || orderId;
     adapter.refundExpired(orderId);
     render();
     return;
@@ -553,7 +658,7 @@ async function handleAction(button) {
   if (action === 'receipt-details') {
     const order = currentOrder();
     openModal(
-      `<span class="status-symbol">${icon('check')}</span><h2 id="modal-title">Demo settlement</h2><p>Your sample exchange is complete.</p><div class="disclosure">${row('Reference', esc(order.id))}${row('Received', tokens(order.tokenAtoms) + ' USDC')}${row('Network shown', 'Stellar testnet')}${row('Transaction', 'Simulated · no transaction hash')}</div><p class="small-note">A connected app will show the confirmed Stellar transaction here. This demo has no explorer link.</p><button class="button primary" data-action="close-modal">Back to receipt</button>`,
+      `<span class="status-symbol">${icon('check')}</span><h2 id="modal-title">Demo settlement</h2><p>Your sample exchange is complete.</p><div class="disclosure">${row('Reference', esc(order.id))}${row('Received', tokens(order.tokenAtoms) + ' USDC')}${row('Network shown', 'Stellar demo')}${row('Transaction', 'Simulated · no transaction hash')}</div><p class="small-note">A connected app will show the confirmed Stellar transaction here. This demo has no explorer link.</p><button class="button primary" data-action="close-modal">Back to receipt</button>`,
     );
     return;
   }
@@ -610,15 +715,39 @@ document.addEventListener('input', (event) => {
     sellAmount = event.target.value;
     updateSellerQuote();
   }
-  if (event.target.id === 'seller-tag') sellerTag = event.target.value;
+  if (event.target.id === 'seller-tag') {
+    sellerTag = event.target.value;
+    document.querySelector('#seller-tag-error').textContent = '';
+    event.target.setAttribute('aria-invalid', 'false');
+  }
   if (event.target.id === 'proof-consent')
     document.querySelector('#start-proof').disabled = !event.target.checked;
 });
+function validateSellerForm({ focus = false } = {}) {
+  const amountInput = document.querySelector('#seller-amount');
+  const tagInput = document.querySelector('#seller-tag');
+  let amountError = '';
+  try {
+    sellerQuote(sellAmount);
+  } catch (error) {
+    amountError = error.message;
+  }
+  const tagError = /^@[a-zA-Z0-9._]{3,30}$/.test(sellerTag)
+    ? ''
+    : 'Enter a Revolut tag such as @ben.';
+  document.querySelector('#seller-error').textContent = amountError;
+  document.querySelector('#seller-tag-error').textContent = tagError;
+  amountInput.setAttribute('aria-invalid', String(Boolean(amountError)));
+  tagInput.setAttribute('aria-invalid', String(Boolean(tagError)));
+  if (focus && (amountError || tagError)) (amountError ? amountInput : tagInput).focus();
+  return !amountError && !tagError;
+}
+
 document.addEventListener('submit', (event) => {
   if (event.target.id === 'seller-form') {
     event.preventDefault();
     try {
-      sellerQuote(sellAmount);
+      if (!validateSellerForm({ focus: true })) return;
       if (!state.seller.wallet) walletModal('seller-create');
       else {
         adapter.createSellerOffer(sellAmount, sellerTag);

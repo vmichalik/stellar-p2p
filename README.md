@@ -4,7 +4,9 @@ Buy USDC on Stellar with a payment from the bank app you already use.
 
 I’m building a small version of [ZKP2P](https://www.zkp2p.xyz/) for Stellar. A seller locks USDC in escrow, a buyer pays them in Revolut, and a payment-policy signature lets the escrow release once. The first version focuses on one EUR payment rail and one whole offer.
 
-**Current stage: integrated local prototype.** The buyer/seller demo, payment-policy package and Soroban escrow are implemented. A local rehearsal connects the app’s order model to the real policy signer and compiled escrow WASM, using synthetic payment evidence. A real authenticated payment has not been accepted, and this branch has no testnet deployment or live settlement.
+**Current stage: integrated local prototype.** The buyer/seller demo, payment-policy package and escrow using Stellar Smart Contracts are implemented. A local rehearsal connects the app’s order model to the real policy signer and compiled escrow WASM, using synthetic payment evidence. A real authenticated payment has not been accepted, and this branch has no testnet deployment or live settlement.
+
+The local presentation candidate adds a buyer/supplier explanation, explicit illustrative pricing, exact-amount summaries, mobile navigation and a desktop/disclosure guide. See the [presentation reconciliation](docs/ui/handoff.md#presentation-reconciliation-25-october-2026) for provenance and the checks run on both browser entry points.
 
 ## Try the demo
 

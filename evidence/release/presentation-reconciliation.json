@@ -1,0 +1,58 @@
+{
+  "scope": "Local presentation reconciliation only; no deployment, bank request or chain submission",
+  "baseRevision": "39834efd2ab9e1740a5363f4eec5d13f9a380250",
+  "artifactRevision": "1c7f03865be9f0f89c17364c4456bd2e042e8be9",
+  "artifactFilesVerified": [
+    {
+      "path": "styles.css",
+      "sha256": "acabc229ff4a9497d9226d77cf49ea520049400be0c89ddb1e727652a9baac8a",
+      "bytes": 51258
+    },
+    {
+      "path": "app.mjs",
+      "sha256": "d7387599fce2657b016aa5671f945e84221731c28336dc0a08f67f8de2a9ba42",
+      "bytes": 53702
+    },
+    {
+      "path": "model.mjs",
+      "sha256": "6bab9aeed89e15686ea1ae281a2d46751bb43b82ee2f421c8447dda81e8a89ce",
+      "bytes": 13610
+    },
+    {
+      "path": "demo-adapter.mjs",
+      "sha256": "a594e7b29e1570a9fccebe1ecd4b6f8f224a71e9cae5959c4ac129a3d8bf41aa",
+      "bytes": 3668
+    },
+    {
+      "path": "presentation.mjs",
+      "sha256": "1ecfe5cbc0c61686780eb1d50c9389df0610c30805e245bc3b1ab97d39bd4d15",
+      "bytes": 7303
+    }
+  ],
+  "notACherryPickOf": "5bd17fde42340d898435eaecd873ba25366c32ee",
+  "protectedImplementationUnchanged": [
+    "app/model.mjs",
+    "app/demo-adapter.mjs",
+    "app/host-client.mjs",
+    "app/live-view-adapter.mjs",
+    "integration",
+    "policy",
+    "contracts",
+    "tlsn"
+  ],
+  "checks": {
+    "focusedAppAndBuildTests": {
+      "passed": 59,
+      "failed": 0,
+      "skipped": 0
+    },
+    "syntaxModulesAndInlineScripts": 94,
+    "syntheticBrowserCaptures": 23,
+    "demoViewportWidths": [320, 390, 768, 1440],
+    "liveMarketplaceViewportWidths": [320, 390, 768, 1440],
+    "dialogRegressionFocusedChecks": 10,
+    "mockedRecovery": "seller exact authorization then buyer final signature; exact 100000001/119999999 atom reconciliation; zero page errors",
+    "expectedConsoleEntries": "Unauthenticated live session probes returned HTTP 401"
+  },
+  "remaining": "Protected Documents branch sources, including the policy presentation mapper, remain unavailable; existing candidate policy/contract/payment gates are unchanged."
+}

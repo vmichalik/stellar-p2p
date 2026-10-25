@@ -13,6 +13,7 @@ export const DEMO_FILES = [
   'app.mjs',
   'model.mjs',
   'demo-adapter.mjs',
+  'presentation.mjs',
   'assets/fonts/manrope.woff2',
   'assets/fonts/OFL.txt',
   'assets/social-preview.png',

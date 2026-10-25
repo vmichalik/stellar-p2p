@@ -6,7 +6,7 @@ export const SITE = Object.freeze({
   proofDomainVerified: false,
   title: 'Pactlane · Trade euros for USDC on Stellar',
   description:
-    'A clearer handoff from Revolut payment to USDC release. Explore the interactive demo with sample payments and simulated settlement.',
+    'Pay someone through Revolut and receive USDC in a Stellar wallet. Explore the peer-to-peer prototype with sample payments and simulated settlement.',
   themeColor: '#f7f5ee',
 });
 

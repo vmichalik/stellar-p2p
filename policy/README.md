@@ -4,6 +4,8 @@ Local, server-side policy for Pactlane's fixed whole-offer EUR/Revolut escrow on
 
 The contract owns the protocol. `vendor/escrow-protocol.mjs` and `test/fixtures/protocol-vectors.json` are unchanged snapshots of its encoder and frozen public vectors, with SHA-256 hashes in `vendor/manifest.json`. Run the synchronization check against the integrated contract tree before release. Update these files by copying a reviewed contract revision; do not maintain a divergent encoder.
 
+For sanitized app states and action tokens, use the browser-safe `./presentation` entry point described in [APP-STATES.md](APP-STATES.md). It distinguishes proof/payment problems, replay, mutual recovery and uncertain submitted transactions without granting execution authority or returning raw input.
+
 ## Run
 
 Use Node 22.13 or later with `node:sqlite` available. This work was checked on Node 26.7.0 on the Mac mini.

@@ -1,0 +1,251 @@
+{
+  "brand": "Pactlane",
+  "status": "local reviewed creative assets; not published",
+  "exports": [
+    {
+      "id": "og-default",
+      "width": 1200,
+      "height": 630,
+      "alt": "Pactlane. Your bank app. Your Stellar wallet. Orange and green paired frames represent a peer-to-peer exchange.",
+      "checks": {
+        "visibleArt": {
+          "top": 90.53907496012759,
+          "left": 658.6682615629984,
+          "right": 1171.3317384370016,
+          "bottom": 537.11004784689
+        },
+        "artToFooterGap": 17.889952153110016,
+        "width": 1200,
+        "height": 630,
+        "manropeLoaded": true,
+        "clipped": [],
+        "headingToBodyGap": 27,
+        "bodyToFooterGap": 41.65625,
+        "sourceArtLoaded": true,
+        "title": "Your bank app.\nYour Stellar\nwallet."
+      },
+      "files": [
+        {
+          "file": "og-default.png",
+          "bytes": 256278,
+          "sha256": "ea638b28167620273ae2310550d6af144df939849d8bda2f677b52fcb3b20cd1"
+        },
+        {
+          "file": "og-default.jpg",
+          "bytes": 99655,
+          "sha256": "32116a99787dcdb2ccfdaf52054ae25aabd400576e81d2ed60c67b96979735d2"
+        }
+      ]
+    },
+    {
+      "id": "og-dark",
+      "width": 1200,
+      "height": 630,
+      "alt": "Pactlane on a forest-green background. Make a pact. Move forward. Your bank app, a human supplier and a wallet you control.",
+      "checks": {
+        "visibleArt": {
+          "top": 95.68740031897926,
+          "left": 687.6539074960127,
+          "right": 1178.3460925039872,
+          "bottom": 523.1196172248804
+        },
+        "artToFooterGap": 31.880382775119642,
+        "width": 1200,
+        "height": 630,
+        "manropeLoaded": true,
+        "clipped": [],
+        "headingToBodyGap": 30,
+        "bodyToFooterGap": 84.59375,
+        "sourceArtLoaded": true,
+        "title": "Make a pact.\nMove forward."
+      },
+      "files": [
+        {
+          "file": "og-dark.png",
+          "bytes": 230423,
+          "sha256": "c7303533c84738a55a19f410607fa1d156d9bed25a5db1c3e9ecaf554f96bd42"
+        },
+        {
+          "file": "og-dark.jpg",
+          "bytes": 91404,
+          "sha256": "937e4c6e979be822b290e25130eff0e4592be9b0109e012c46734a77dbbedaa8"
+        }
+      ]
+    },
+    {
+      "id": "social-link-wide",
+      "width": 1200,
+      "height": 600,
+      "alt": "Pactlane link card. Your bank app. Your Stellar wallet. Paired orange and green frames.",
+      "checks": {
+        "visibleArt": {
+          "top": 83.56858054226475,
+          "left": 680.6116427432216,
+          "right": 1170.3883572567784,
+          "bottom": 510.2033492822967
+        },
+        "artToFooterGap": 21.7966507177033,
+        "width": 1200,
+        "height": 600,
+        "manropeLoaded": true,
+        "clipped": [],
+        "headingToBodyGap": 24,
+        "bodyToFooterGap": 44.9375,
+        "sourceArtLoaded": true,
+        "title": "Your bank app.\nYour Stellar\nwallet."
+      },
+      "files": [
+        {
+          "file": "social-link-wide.png",
+          "bytes": 238059,
+          "sha256": "8318f3b5bead8368eee397dec0502e0a6f021c1e04482feaceb5fafc249a68c0"
+        },
+        {
+          "file": "social-link-wide.jpg",
+          "bytes": 94897,
+          "sha256": "a7593d7d0e8e54e330ce90a2c822f6354eaae61d336618eec2c6d99bf9cf1e47"
+        }
+      ]
+    },
+    {
+      "id": "social-landscape",
+      "width": 1600,
+      "height": 900,
+      "alt": "Pactlane landscape card. Your bank app. Your Stellar wallet. A human supplier, an upfront price and a wallet you control.",
+      "checks": {
+        "visibleArt": {
+          "top": 163.70893141945774,
+          "left": 881.9098883572568,
+          "right": 1573.0901116427433,
+          "bottom": 765.7822966507177
+        },
+        "artToFooterGap": 35.21770334928226,
+        "width": 1600,
+        "height": 900,
+        "manropeLoaded": true,
+        "clipped": [],
+        "headingToBodyGap": 36,
+        "bodyToFooterGap": 96.046875,
+        "sourceArtLoaded": true,
+        "title": "Your bank app.\nYour Stellar\nwallet."
+      },
+      "files": [
+        {
+          "file": "social-landscape.png",
+          "bytes": 465080,
+          "sha256": "58755b3dc5f6e384671b2f90e4703fe02aa8f9356ef3b69c2bb962510f8f9019"
+        },
+        {
+          "file": "social-landscape.jpg",
+          "bytes": 157558,
+          "sha256": "8a0b51c0f804bd35c11a29e197c52d99810f10a318285041f828be02e9471154"
+        }
+      ]
+    },
+    {
+      "id": "social-square",
+      "width": 1080,
+      "height": 1080,
+      "alt": "Pactlane square card. From your bank app to your wallet. Orange and green sculpted frames beneath the headline.",
+      "checks": {
+        "visibleArt": {
+          "top": 470.85645933014354,
+          "left": 261.6267942583732,
+          "right": 838.3732057416267,
+          "bottom": 973.2488038277512
+        },
+        "artToFooterGap": 19.751196172248797,
+        "width": 1080,
+        "height": 1080,
+        "manropeLoaded": true,
+        "clipped": [],
+        "headingToBodyGap": 24,
+        "bodyToFooterGap": 523.0625,
+        "sourceArtLoaded": true,
+        "title": "From your bank app\nto your wallet."
+      },
+      "files": [
+        {
+          "file": "social-square.png",
+          "bytes": 307721,
+          "sha256": "2191ed612e5502bc35dec200f64c3771f67da3d0bea3426b1d3f866b223b379b"
+        },
+        {
+          "file": "social-square.jpg",
+          "bytes": 118504,
+          "sha256": "028b0b028e969ee0f96b0ea4cfc447bd07fcc6c7aa994f98518e1b24a458f662"
+        }
+      ]
+    },
+    {
+      "id": "social-portrait",
+      "width": 1080,
+      "height": 1350,
+      "alt": "Pactlane portrait card. Your bank app. A human supplier. Your Stellar wallet. Agree on a price, pay a person, receive in a wallet you control.",
+      "checks": {
+        "visibleArt": {
+          "top": 630.5502392344498,
+          "left": 210.4306220095694,
+          "right": 869.5693779904307,
+          "bottom": 1204.712918660287
+        },
+        "artToFooterGap": 50.28708133971304,
+        "width": 1080,
+        "height": 1350,
+        "manropeLoaded": true,
+        "clipped": [],
+        "headingToBodyGap": 27,
+        "bodyToFooterGap": 669.234375,
+        "sourceArtLoaded": true,
+        "title": "Your bank app.\nA human supplier.\nYour Stellar wallet."
+      },
+      "files": [
+        {
+          "file": "social-portrait.png",
+          "bytes": 409374,
+          "sha256": "d08d03034a436541d64990decfd4a634ddca6f9650b036ee78af73a788038462"
+        },
+        {
+          "file": "social-portrait.jpg",
+          "bytes": 156529,
+          "sha256": "af506054a520c6f4102712285a31939a2f44af2ad3b59273d35fdd73050716b5"
+        }
+      ]
+    },
+    {
+      "id": "social-story",
+      "width": 1080,
+      "height": 1920,
+      "alt": "Pactlane vertical story. Make a pact. Move forward. Your bank app, a human supplier, your Stellar wallet. Orange and green paired frames.",
+      "checks": {
+        "visibleArt": {
+          "top": 960.244019138756,
+          "left": 170.23444976076556,
+          "right": 911.7655502392345,
+          "bottom": 1606.177033492823
+        },
+        "artToFooterGap": 26.822966507176943,
+        "width": 1080,
+        "height": 1920,
+        "manropeLoaded": true,
+        "clipped": [],
+        "headingToBodyGap": 36,
+        "bodyToFooterGap": 803.375,
+        "sourceArtLoaded": true,
+        "title": "Make a pact.\nMove forward."
+      },
+      "files": [
+        {
+          "file": "social-story.png",
+          "bytes": 498211,
+          "sha256": "8081c793935dd2a3b477a4af2a1a8be227a7698a48b0b05c7c68679e6e4b26a1"
+        },
+        {
+          "file": "social-story.jpg",
+          "bytes": 164515,
+          "sha256": "98c91fae8358bb2ef8f5a3ae25e7130987eabdde6c433e9fce8c48a341e7cd92"
+        }
+      ]
+    }
+  ]
+}

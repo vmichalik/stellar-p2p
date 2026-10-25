@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pactlane — social image studio</title>
+    <style>
+      @font-face {
+        font-family: Manrope;
+        src: url('../../app/assets/fonts/manrope.woff2') format('woff2');
+        font-weight: 200 800;
+        font-display: block;
+      }
+      :root {
+        font-family: Manrope, sans-serif;
+        color: #2d382e;
+        background: #f7f5ee;
+        font-synthesis: none;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      h1,
+      p {
+        margin: 0;
+      }
+      .card {
+        --paper: #f7f5ee;
+        --ink: #2d382e;
+        --muted: #697064;
+        --line: #d9ddcf;
+        --accent: #ed7047;
+        position: relative;
+        overflow: hidden;
+        background: var(--paper);
+        color: var(--ink);
+        isolation: isolate;
+      }
+      .card.dark {
+        --paper: #263f31;
+        --ink: #f7f5ee;
+        --muted: #c2cfbb;
+        --line: #526451;
+        --accent: #f49a71;
+      }
+      .brand {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        gap: 17px;
+        left: 60px;
+        top: 46px;
+        font-size: 47px;
+        font-weight: 600;
+        line-height: 1.12;
+        letter-spacing: -2.9px;
+        z-index: 3;
+      }
+      .word {
+        white-space: nowrap;
+      }
+      .dot {
+        color: var(--accent);
+        margin-left: 1px;
+      }
+      .emblem {
+        position: relative;
+        display: inline-block;
+        width: 43px;
+        height: 47px;
+        flex: none;
+      }
+      .emblem i {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 25px;
+        height: 37px;
+        border: 3px solid var(--accent);
+        border-radius: 6px;
+        transform: rotate(-13deg);
+      }
+      .emblem i + i {
+        left: 15px;
+        top: 9px;
+        transform: rotate(10deg);
+        background: var(--paper);
+      }
+      .copy {
+        position: absolute;
+        z-index: 2;
+        left: 60px;
+        top: 176px;
+        max-width: 645px;
+      }
+      h1 {
+        font-size: 79px;
+        line-height: 1.035;
+        letter-spacing: -4.6px;
+        font-weight: 600;
+      }
+      .lede {
+        font-size: 22px;
+        line-height: 1.48;
+        letter-spacing: -0.45px;
+        color: var(--muted);
+        max-width: 540px;
+        margin-top: 27px;
+      }
+      .art {
+        position: absolute;
+        z-index: 1;
+        width: 560px;
+        height: 560px;
+        object-fit: contain;
+        left: 635px;
+        top: 24px;
+      }
+      .footer {
+        position: absolute;
+        left: 60px;
+        right: 60px;
+        bottom: 34px;
+        border-top: 1px solid var(--line);
+        padding-top: 19px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        font-size: 15px;
+        letter-spacing: -0.12px;
+        z-index: 3;
+        color: var(--muted);
+      }
+      .footer .signature {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .mini-arrow {
+        display: inline-block;
+        color: var(--accent);
+        margin-left: 8px;
+        font-size: 20px;
+        line-height: 10px;
+      }
+      .dark .copy {
+        top: 193px;
+        max-width: 650px;
+      }
+      .dark h1 {
+        font-size: 86px;
+        line-height: 1.06;
+        letter-spacing: -5.1px;
+      }
+      .dark .lede {
+        max-width: 540px;
+        margin-top: 30px;
+      }
+      .dark .art {
+        left: 665px;
+        top: 32px;
+        width: 536px;
+        height: 536px;
+      }
+      .dark .art::after {
+        content: none;
+      }
+      .wide .brand {
+        top: 41px;
+      }
+      .wide .copy {
+        top: 162px;
+      }
+      .wide h1 {
+        font-size: 76px;
+      }
+      .wide .lede {
+        margin-top: 24px;
+      }
+      .wide .art {
+        top: 20px;
+        width: 535px;
+        height: 535px;
+        left: 658px;
+      }
+      .wide .footer {
+        bottom: 29px;
+        padding-top: 17px;
+      }
+      .landscape .brand {
+        left: 80px;
+        top: 64px;
+        font-size: 62px;
+        gap: 22px;
+      }
+      .landscape .emblem {
+        transform: scale(1.28);
+        margin-right: 8px;
+      }
+      .landscape .copy {
+        left: 80px;
+        top: 240px;
+        max-width: 865px;
+      }
+      .landscape h1 {
+        font-size: 112px;
+        letter-spacing: -6.5px;
+        line-height: 1.03;
+      }
+      .landscape .lede {
+        font-size: 28px;
+        max-width: 660px;
+        margin-top: 36px;
+      }
+      .landscape .art {
+        left: 850px;
+        top: 74px;
+        width: 755px;
+        height: 755px;
+      }
+      .landscape .footer {
+        left: 80px;
+        right: 80px;
+        bottom: 46px;
+        font-size: 20px;
+        padding-top: 25px;
+      }
+      .square .brand,
+      .portrait .brand,
+      .story .brand {
+        left: 64px;
+        top: 57px;
+        font-size: 55px;
+        gap: 19px;
+      }
+      .square .emblem,
+      .portrait .emblem,
+      .story .emblem {
+        transform: scale(1.15);
+        margin-right: 4px;
+      }
+      .square .copy {
+        left: 64px;
+        top: 196px;
+        max-width: 950px;
+      }
+      .square h1 {
+        font-size: 83px;
+        letter-spacing: -4.9px;
+        line-height: 1.06;
+      }
+      .square .lede {
+        font-size: 25px;
+        margin-top: 24px;
+        max-width: 710px;
+      }
+      .square .art {
+        left: 235px;
+        top: 396px;
+        width: 630px;
+        height: 630px;
+      }
+      .square .footer {
+        left: 64px;
+        right: 64px;
+        bottom: 40px;
+        font-size: 18px;
+        padding-top: 22px;
+      }
+      .portrait .copy {
+        left: 64px;
+        top: 200px;
+        max-width: 950px;
+      }
+      .portrait h1 {
+        font-size: 83px;
+        letter-spacing: -4.9px;
+        line-height: 1.12;
+      }
+      .portrait h1 .highlight {
+        color: #b44420;
+      }
+      .portrait .lede {
+        font-size: 27px;
+        max-width: 780px;
+        margin-top: 27px;
+      }
+      .portrait .art {
+        left: 130px;
+        top: 545px;
+        width: 820px;
+        height: 720px;
+      }
+      .portrait .footer {
+        left: 64px;
+        right: 64px;
+        bottom: 44px;
+        font-size: 19px;
+        padding-top: 24px;
+      }
+      .story .brand {
+        top: 209px;
+        font-size: 62px;
+      }
+      .story .emblem {
+        transform: scale(1.3);
+        margin-right: 11px;
+      }
+      .story .copy {
+        left: 64px;
+        top: 425px;
+        max-width: 950px;
+      }
+      .story h1 {
+        font-size: 108px;
+        letter-spacing: -6.5px;
+        line-height: 1.04;
+      }
+      .story .lede {
+        font-size: 32px;
+        margin-top: 36px;
+        max-width: 810px;
+        line-height: 1.5;
+      }
+      .story .art {
+        left: 91px;
+        top: 864px;
+        width: 900px;
+        height: 810px;
+      }
+      .story .footer {
+        left: 64px;
+        right: 64px;
+        bottom: 225px;
+        font-size: 23px;
+        padding-top: 29px;
+      }
+      .story .footer .meta {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="studio"></main>
+    <script>
+      const cards = [
+        {
+          id: 'og-default',
+          width: 1200,
+          height: 630,
+          variant: 'hero',
+          title: 'Your bank app.<br>Your Stellar<br>wallet.',
+          description: 'Buy Stellar assets from a person,<br>at an upfront price.',
+          footer: 'Peer to peer. On Stellar.',
+          meta: 'An on-ramp, made human.',
+          alt: 'Pactlane. Your bank app. Your Stellar wallet. Orange and green paired frames represent a peer-to-peer exchange.',
+        },
+        {
+          id: 'og-dark',
+          width: 1200,
+          height: 630,
+          variant: 'dark',
+          title: 'Make a pact.<br>Move forward.',
+          description: 'Your bank app. A human supplier.<br>A wallet you control.',
+          footer: 'Peer to peer. On Stellar.',
+          meta: 'A clearer way into Stellar.',
+          alt: 'Pactlane on a forest-green background. Make a pact. Move forward. Your bank app, a human supplier and a wallet you control.',
+        },
+        {
+          id: 'social-link-wide',
+          width: 1200,
+          height: 600,
+          variant: 'wide',
+          title: 'Your bank app.<br>Your Stellar<br>wallet.',
+          description: 'Buy Stellar assets from a person,<br>at an upfront price.',
+          footer: 'Peer to peer. On Stellar.',
+          meta: 'An on-ramp, made human.',
+          alt: 'Pactlane link card. Your bank app. Your Stellar wallet. Paired orange and green frames.',
+        },
+        {
+          id: 'social-landscape',
+          width: 1600,
+          height: 900,
+          variant: 'landscape',
+          title: 'Your bank app.<br>Your Stellar<br>wallet.',
+          description: 'A human supplier. An upfront price.<br>A wallet you control.',
+          footer: 'Peer to peer. On Stellar.',
+          meta: 'An on-ramp, made human.',
+          alt: 'Pactlane landscape card. Your bank app. Your Stellar wallet. A human supplier, an upfront price and a wallet you control.',
+        },
+        {
+          id: 'social-square',
+          width: 1080,
+          height: 1080,
+          variant: 'square',
+          title: 'From your bank app<br>to your wallet.',
+          description:
+            'A human supplier. An upfront price.<br>Peer-to-peer access to Stellar assets.',
+          footer: 'Make a pact. Move forward.',
+          meta: 'On Stellar.',
+          alt: 'Pactlane square card. From your bank app to your wallet. Orange and green sculpted frames beneath the headline.',
+        },
+        {
+          id: 'social-portrait',
+          width: 1080,
+          height: 1350,
+          variant: 'portrait',
+          title:
+            'Your bank app.<br><span class="highlight">A human supplier.</span><br>Your Stellar wallet.',
+          description: 'Agree on a price. Pay a person.<br>Receive in a wallet you control.',
+          footer: 'Make a pact. Move forward.',
+          meta: 'Peer to peer. On Stellar.',
+          alt: 'Pactlane portrait card. Your bank app. A human supplier. Your Stellar wallet. Agree on a price, pay a person, receive in a wallet you control.',
+        },
+        {
+          id: 'social-story',
+          width: 1080,
+          height: 1920,
+          variant: 'story',
+          title: 'Make a pact.<br>Move forward.',
+          description: 'Your bank app.<br>A human supplier.<br>Your Stellar wallet.',
+          footer: 'Peer to peer. On Stellar.',
+          meta: '',
+          alt: 'Pactlane vertical story. Make a pact. Move forward. Your bank app, a human supplier, your Stellar wallet. Orange and green paired frames.',
+        },
+      ];
+      window.PACTLANE_SOCIAL_CARDS = cards;
+      const chosen = new URLSearchParams(location.search).get('card') || 'og-default';
+      const card = cards.find((c) => c.id === chosen);
+      if (!card) throw Error('Unknown card');
+      document.getElementById('studio').innerHTML =
+        `<article class="card ${card.variant}" data-card="${card.id}" style="width:${card.width}px;height:${card.height}px" aria-label="${card.alt}"><div class="brand"><span class="emblem" aria-hidden="true"><i></i><i></i></span><span class="word">pactlane<span class="dot">.</span></span></div><div class="copy"><h1>${card.title}</h1><p class="lede">${card.description}</p></div><img class="art" src="./source/pactlane-pair.png" alt=""/><footer class="footer"><span class="signature">${card.footer}<span class="mini-arrow" aria-hidden="true">↗</span></span><span class="meta">${card.meta}</span></footer></article>`;
+    </script>
+  </body>
+</html>

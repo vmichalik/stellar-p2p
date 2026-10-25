@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Pactlane social image set</title
+  ><style>
+    @font-face {
+      font-family: Manrope;
+      src: url('../../app/assets/fonts/manrope.woff2');
+      font-weight: 200 800;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 48px;
+      background: #e9eae2;
+      color: #2d382e;
+      font-family: Manrope, sans-serif;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      margin-bottom: 32px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 32px;
+      letter-spacing: -1px;
+    }
+    p {
+      margin: 10px 0 0;
+      color: #697064;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+    figure {
+      margin: 0;
+      break-inside: avoid;
+    }
+    .label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #697064;
+    }
+    .label strong {
+      color: #2d382e;
+    }
+    .image {
+      height: 360px;
+      background: #f7f5ee;
+      border: 1px solid #d9ddcf;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .label + div img {
+      display: block;
+    }
+    figure:last-child {
+      grid-column: 1/-1;
+    }
+    .image:has(img[src*='story']) {
+      height: 700px;
+    }
+    footer {
+      margin-top: 40px;
+      color: #697064;
+      font-size: 13px;
+    }
+  </style>
+  <header>
+    <div>
+      <h1>pactlane. / Social image system</h1>
+      <p>Your bank app. A human supplier. Your Stellar wallet.</p>
+    </div>
+    <p>25 October 2026</p>
+  </header>
+  <main class="grid">
+    <figure>
+      <div class="label"><strong>og-default</strong><span>1200 × 630</span></div>
+      <div class="image">
+        <img
+          src="../../app/assets/social/og-default.png"
+          alt="Pactlane. Your bank app. Your Stellar wallet. Orange and green paired frames represent a peer-to-peer exchange."
+        />
+      </div>
+    </figure>
+    <figure>
+      <div class="label"><strong>og-dark</strong><span>1200 × 630</span></div>
+      <div class="image">
+        <img
+          src="../../app/assets/social/og-dark.png"
+          alt="Pactlane on a forest-green background. Make a pact. Move forward. Your bank app, a human supplier and a wallet you control."
+        />
+      </div>
+    </figure>
+    <figure>
+      <div class="label"><strong>social-link-wide</strong><span>1200 × 600</span></div>
+      <div class="image">
+        <img
+          src="../../app/assets/social/social-link-wide.png"
+          alt="Pactlane link card. Your bank app. Your Stellar wallet. Paired orange and green frames."
+        />
+      </div>
+    </figure>
+    <figure>
+      <div class="label"><strong>social-landscape</strong><span>1600 × 900</span></div>
+      <div class="image">
+        <img
+          src="../../app/assets/social/social-landscape.png"
+          alt="Pactlane landscape card. Your bank app. Your Stellar wallet. A human supplier, an upfront price and a wallet you control."
+        />
+      </div>
+    </figure>
+    <figure>
+      <div class="label"><strong>social-square</strong><span>1080 × 1080</span></div>
+      <div class="image">
+        <img
+          src="../../app/assets/social/social-square.png"
+          alt="Pactlane square card. From your bank app to your wallet. Orange and green sculpted frames beneath the headline."
+        />
+      </div>
+    </figure>
+    <figure>
+      <div class="label"><strong>social-portrait</strong><span>1080 × 1350</span></div>
+      <div class="image">
+        <img
+          src="../../app/assets/social/social-portrait.png"
+          alt="Pactlane portrait card. Your bank app. A human supplier. Your Stellar wallet. Agree on a price, pay a person, receive in a wallet you control."
+        />
+      </div>
+    </figure>
+    <figure>
+      <div class="label"><strong>social-story</strong><span>1080 × 1920</span></div>
+      <div class="image">
+        <img
+          src="../../app/assets/social/social-story.png"
+          alt="Pactlane vertical story. Make a pact. Move forward. Your bank app, a human supplier, your Stellar wallet. Orange and green paired frames."
+        />
+      </div>
+    </figure>
+  </main>
+  <footer>Manrope · Warm ivory / terracotta / forest green · Local creative package</footer>
+</html>

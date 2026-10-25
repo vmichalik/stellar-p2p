@@ -1,0 +1,21 @@
+{
+  "baseRevision": "2f6ab71ccdeb1995e44243de2b52758fc2f3bec5",
+  "designs": 7,
+  "exports": 14,
+  "formats": ["png", "jpg"],
+  "allSevenDesignsVisuallyReviewed": true,
+  "contactSheetVisuallyReviewed": true,
+  "noDevelopmentStageLabelsInImagesAltOrMetadata": true,
+  "fontsLoaded": true,
+  "clippedText": 0,
+  "minimumVisibleArtToFooterGap": 17.889952153110016,
+  "largestExportBytes": 498211,
+  "externalRequests": [],
+  "pageErrors": [],
+  "metadataHelperChecks": 8,
+  "color": "RGB PNG; sRGB JPEG",
+  "sourceArtwork": "Built-in image_gen; original transparent PNG preserved",
+  "financialRuntimeChanged": false,
+  "siteDeployed": false,
+  "socialPostsPublished": false
+}

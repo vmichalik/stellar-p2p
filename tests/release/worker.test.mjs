@@ -68,7 +68,7 @@ test('same-origin playback is allowed only for the present exact MP4 asset', asy
       response.headers.get('Content-Security-Policy').includes("media-src 'self'"),
       enabled,
     );
-    assert.match(response.headers.get('Content-Security-Policy'), /connect-src 'none'/);
+    assert.match(response.headers.get('Content-Security-Policy'), /connect-src 'self'/);
   }
 });
 
@@ -98,7 +98,7 @@ test('deployment disables alternate public URLs and contains only static asset b
       custom_domain: true,
     })),
   );
-  assert.match(STATIC_HEADERS, /connect-src 'none'/);
+  assert.match(STATIC_HEADERS, /connect-src 'self'/);
   for (const key of [
     'kv_namespaces',
     'd1_databases',
@@ -109,4 +109,29 @@ test('deployment disables alternate public URLs and contains only static asset b
     'vars',
   ])
     assert.equal(key in cfg, false);
+});
+
+test('demo pages block connections and live pages permit only the same origin', async () => {
+  for (const [query, allowed] of [
+    ['', 'self'],
+    ['?demo=1', 'none'],
+    ['?demo=0', 'self'],
+  ]) {
+    const response = await worker.fetch(new Request('https://pactlane.io/' + query), {
+      ASSETS: { fetch: async () => new Response('<html>fixture</html>') },
+    });
+    assert.ok(response.headers.get('Content-Security-Policy').includes(`connect-src '${allowed}'`));
+  }
+});
+
+test('unconfigured live API fails explicitly and cannot return demo assets', async () => {
+  const response = await worker.fetch(new Request('https://pactlane.io/api/view'), {
+    ASSETS: {
+      fetch() {
+        assert.fail('API must not fall through to static demo assets');
+      },
+    },
+  });
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: 'SERVICE_UNAVAILABLE' });
 });

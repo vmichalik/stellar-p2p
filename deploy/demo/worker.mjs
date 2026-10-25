@@ -18,9 +18,16 @@ export default {
       destination.search = url.search;
       return secured(Response.redirect(destination.href, 308));
     }
-    // Static assets only. No external fetch, proof session, wallet or policy call.
+    // The public frontend has no exchange backend attached yet. Never fall
+    // back to demo data or turn an asset miss into a successful live response.
+    if (url.pathname.startsWith('/api/'))
+      return secured(Response.json({ error: 'SERVICE_UNAVAILABLE' }, { status: 503 }));
+    if (url.pathname === '/wallet-config.json')
+      return secured(Response.json({ enabled: false, projectId: '', appUrl: SITE.appOrigin }));
+    // No external fetch, bank, proof, signing key or policy execution here.
     const response = await env.ASSETS.fetch(request);
     return secured(response, {
+      demo: url.searchParams.get('demo') === '1',
       media:
         url.pathname === '/demo.mp4' &&
         [200, 206].includes(response.status) &&

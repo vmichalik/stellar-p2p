@@ -14,10 +14,10 @@ const check = (value, message) => {
 const manifestBytes = await readFile(resolve(output, 'manifest.json'));
 const manifest = JSON.parse(manifestBytes);
 check(
-  manifest.mode === 'synthetic-demo' &&
+  manifest.mode === 'live-and-demo' &&
     manifest.liveSettlement === false &&
     manifest.livePaymentVerification === false,
-  'Only the synthetic demo may be audited',
+  'Only the reviewed live-and-demo site bundle may be audited',
 );
 const expectedAssets = [...DEMO_FILES, ...(manifest.mediaIncluded ? MEDIA_FILES : [])];
 check(
@@ -60,15 +60,14 @@ const headers = await readFile(resolve(output, '_headers'), 'utf8');
 check(
   headers ===
     (manifest.mediaIncluded
-      ? DEMO_HEADERS.replace("connect-src 'none';", "connect-src 'none'; media-src 'self';")
+      ? DEMO_HEADERS.replace("connect-src 'self';", "connect-src 'self'; media-src 'self';")
       : DEMO_HEADERS),
   'Output security headers differ',
 );
 const html = await readFile(resolve(output, 'index.html'), 'utf8');
 check(
-  html.includes(`rel="canonical" href="${SITE.appOrigin}/"`) &&
-    html.includes('sample payments and simulated settlement'),
-  'Canonical metadata or synthetic status missing',
+  html.includes(`rel="canonical" href="${SITE.appOrigin}/"`) && html.includes('src="./entry.mjs"'),
+  'Canonical metadata or mode entry missing',
 );
 const sourcePaths = [
   'app',
@@ -82,7 +81,7 @@ const revision = git(['rev-parse', 'HEAD']);
 const status = git(['status', '--porcelain', '--', ...sourcePaths]);
 check(revision.status === 0 && status.status === 0, 'Source revision unavailable');
 const report = {
-  kind: 'SYNTHETIC_DEMO_BUNDLE_AUDIT',
+  kind: 'SITE_BUNDLE_AUDIT',
   observedAt: new Date().toISOString(),
   sourceRevision: revision.stdout.trim(),
   sourceDirty: Boolean(status.stdout.trim()),
@@ -102,5 +101,5 @@ if (process.argv.includes('--record')) {
   );
 }
 console.log(
-  `Audited ${files.length} exact files; synthetic only; source ${report.sourceRevision}${report.sourceDirty ? ' (source dirty)' : ''}. No deployment performed.`,
+  `Audited ${files.length} exact files; live frontend with explicit demo mode; source ${report.sourceRevision}${report.sourceDirty ? ' (source dirty)' : ''}. No deployment performed.`,
 );

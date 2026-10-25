@@ -1,3 +1,5 @@
+> Current website continuation (25 October 2026): see [demo mode and funded marketplace](release/DEMO-MODE-HANDOFF.md). This worktree starts from the published social-image source; the older integration snapshot below is historical. Mainnet/proof continuation is in the separate worktree recorded in that handoff.
+
 # What works so far
 
 Checked on the Mac mini on 25 October 2026. This is an integrated local candidate. It is not an authenticated payment-to-testnet success.

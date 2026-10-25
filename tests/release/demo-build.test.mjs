@@ -33,11 +33,13 @@ async function fixture(t) {
   return { source, output };
 }
 
-test('demo build copies only allowlisted app assets and labels every manifest synthetic', async (t) => {
+test('site build copies only allowlisted assets and records actual capabilities', async (t) => {
   const paths = await fixture(t);
   await writeFile(join(paths.source, 'account-private.json'), 'synthetic secret, never copied');
   const result = await buildDemo({ ...paths, revision: 'fixture-revision' });
-  assert.equal(result.mode, 'synthetic-demo');
+  assert.equal(result.mode, 'live-and-demo');
+  assert.equal(result.defaultMode, 'live');
+  assert.equal(result.demoQuery, 'demo=1');
   assert.equal(result.livePaymentVerification, false);
   assert.equal(result.liveSettlement, false);
   assert.equal(result.revision, 'fixture-revision');
@@ -48,7 +50,7 @@ test('demo build copies only allowlisted app assets and labels every manifest sy
   assert.ok(result.files.every((file) => /^[a-f0-9]{64}$/.test(file.sha256)));
   assert.equal((await readdir(paths.output)).includes('account-private.json'), false);
   const headers = await readFile(join(paths.output, '_headers'), 'utf8');
-  assert.match(headers, /connect-src 'none'/);
+  assert.match(headers, /connect-src 'self'/);
   assert.doesNotMatch(headers, /https:|wss:/);
   const index = await readFile(join(paths.output, 'index.html'), 'utf8');
   assert.match(index, /rel="canonical" href="https:\/\/pactlane\.io\/"/);

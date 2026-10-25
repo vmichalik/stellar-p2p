@@ -1,3 +1,5 @@
+> Current website continuation (25 October 2026): see [demo mode and funded marketplace](release/DEMO-MODE-HANDOFF.md). This worktree starts from the published social-image source; the older integration snapshot below is historical. Mainnet/proof continuation is in the separate worktree recorded in that handoff.
+
 # Development handoff
 
 Objective: finish one Revolut-to-Stellar trade from the integrated Pactlane candidate.

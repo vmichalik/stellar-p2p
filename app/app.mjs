@@ -1,3 +1,5 @@
+import { modeToggle, extensionCard, whyPage } from './site-ui.mjs';
+import { fundedDemoOffers } from './marketplace.mjs';
 import { OPEN_STATES, quote, sellerQuote, canShowPaymentInstructions } from './model.mjs';
 import { createDemoAdapter } from './demo-adapter.mjs';
 import {
@@ -92,38 +94,29 @@ const statusLabels = {
   resolved: 'Resolved by agreement',
 };
 
-function whyPactlane() {
-  return `<section class="why-pactlane" aria-labelledby="why-title"><div><p class="eyebrow">WHY PACTLANE</p><h2 id="why-title">Use the account you already have.</h2><p>We’re building a way to use Revolut, avoid another exchange account and passport upload, and let the USDC supplier earn a margin in their price.</p><details class="why-details"><summary>Why I’m building this</summary><p>I already have a bank account. If I need USDC in my wallet, I’d rather pay the person supplying it than open another exchange account and give another company my passport.</p><p>That is the aim. Production onboarding and data retention still need to be resolved. Revolut sees the payment, the counterparty receives payment information, and Stellar transfers are public.</p></details></div><a class="demo-video-link" href="https://pactlane.io/demo.mp4" target="_blank" rel="noopener noreferrer">Watch the 3-minute demo ${icon('up')}<span class="sr-only"> (opens video in a new tab)</span></a></section>`;
-}
-
 function marketplace() {
+  const available = fundedDemoOffers(state);
   const active = state.orders.find((order) => OPEN_STATES.includes(order.status));
-  return `<div class="page-heading"><div><p class="eyebrow">PEER-TO-PEER EXCHANGE</p><h1>Trade euros for USDC on Stellar.</h1><p>Pay someone through Revolut. Receive USDC in your Stellar wallet.</p></div><span class="market-note">${icon('shield')} Seller funds held in escrow</span></div>
-    ${active ? `<div class="resume-banner"><div>${icon('clock')}<span>Your trade with ${esc(active.seller)} is waiting.</span></div><button class="text-button" data-action="open-trade" data-id="${esc(active.id)}">Continue trade ${icon('arrow')}</button></div>` : state.seller.status !== 'funded' ? `<div class="resume-banner"><div>${icon('up')}<span>${state.seller.status === 'new' && !state.orders.length ? 'Try both sides: Ben supplies USDC. Ana pays euros. Start by funding Ben’s offer.' : 'Have USDC to exchange?'}</span></div><button class="text-button" data-action="sell">${state.seller.status === 'new' && !state.orders.length ? 'Start as seller' : 'Create an offer'} ${icon('arrow')}</button></div>` : ''}
-    ${whyPactlane()}
-    <div class="market-layout"><section class="offers-column" aria-labelledby="offers-title">
-      <div class="filter-bar"><div class="filter"><span>You pay with</span><strong><span class="currency-disc">€</span> EUR</strong></div><div class="filter"><span>Payment method</span><strong><span class="revolut-mark">R</span> Revolut</strong></div></div>
-      <div class="section-title"><h2 id="offers-title">Available offers <span>${state.offers.filter((offer) => offer.availableAtoms > 0).length}</span></h2><span>Fixed whole offer</span></div>
-      <div class="offer-list">${state.offers
-        .map(
-          (
-            offer,
-          ) => `<button class="offer ${offer.id === selectedOffer ? 'selected' : ''}" data-action="select-offer" data-id="${offer.id}" aria-pressed="${offer.id === selectedOffer}" ${offer.availableAtoms <= 0 ? 'disabled' : ''}>
-        <span class="offer-top"><span class="person"><span class="avatar ${offer.color}">${offer.initials}</span><span><strong>${offer.name}</strong><span>Revolut · EUR</span></span></span>${pill(offer.availableAtoms > 0 ? 'Funded' : offer.id === 'ben' && state.seller.status !== 'funded' ? 'Not funded' : 'Unavailable', offer.availableAtoms > 0 ? 'green' : 'neutral')}</span>
-        <span class="offer-rate"><strong>${tokens(offer.rateAtomsPerEuro)} <span>USDC / EUR</span></strong><span class="select-circle">${offer.id === selectedOffer ? icon('check') : ''}</span></span>
-        <span class="offer-bottom"><span>${tokens(offer.availableAtoms)} USDC available</span><span>Exact payment ${euros(offer.maxMinor)}</span></span>
-      </button>`,
-        )
-        .join('')}</div>
-      <section class="handoff-guide"><h2>After you pay, know what happens next.</h2><ol><li>Choose a funded offer</li><li>Confirm the payment lock</li><li>Pay in Revolut</li><li>Verify the payment</li><li>Receive the USDC release</li></ol><details class="trust-details"><summary>How release is authorized</summary><p>Pactlane’s verifier checks payment evidence and authorizes release. The Stellar contract checks that authorization.</p><p>Stellar transfers are public. Revolut sees its payment. Review the selected payment details before sharing them.</p></details></section>
-    </section><aside class="quote-panel panel" aria-labelledby="quote-title"><div class="quote-heading"><h2 id="quote-title">Your exchange</h2><span class="paired-mark" aria-hidden="true">↙↗</span></div>
+  const intro = `<div class="page-heading"><div><p class="eyebrow">BUY USDC</p><h1>From Revolut to your Stellar wallet.</h1><p>Choose a funded offer and pay in euros.</p></div></div>`;
+  const resume = active
+    ? `<div class="resume-banner"><span>Your trade with ${esc(active.seller)} is waiting.</span><button class="text-button" data-action="open-trade" data-id="${esc(active.id)}">Continue trade ${icon('arrow')}</button></div>`
+    : '';
+  if (!available.length)
+    return (
+      intro +
+      resume +
+      `<section class="panel market-empty"><span class="status-symbol neutral">${icon('buy')}</span><h2>No offers available</h2><p>Offers appear after the seller funds escrow.</p><button class="button primary" data-action="sell">${state.seller.status === 'new' ? 'Create a demo offer' : 'Open seller workspace'} ${icon('arrow')}</button></section>`
+    );
+  return (
+    intro +
+    resume +
+    `<div class="market-layout"><section class="offers-column" aria-labelledby="offers-title"><div class="filter-bar"><div class="filter"><span>You pay with</span><strong><span class="currency-disc">€</span> EUR</strong></div><div class="filter"><span>Payment method</span><strong><span class="revolut-mark">R</span> Revolut</strong></div></div><div class="section-title"><h2 id="offers-title">Available offers <span>${available.length}</span></h2></div><div class="offer-list">${available.map((offer) => `<button class="offer ${offer.id === selectedOffer ? 'selected' : ''}" data-action="select-offer" data-id="${offer.id}" aria-pressed="${offer.id === selectedOffer}"><span class="offer-top"><span class="person"><span class="avatar ${offer.color}">${offer.initials}</span><span><strong>${offer.name}</strong><span>Revolut · EUR</span></span></span>${pill('Funded')}</span><span class="offer-rate"><strong>${tokens(offer.availableAtoms)} <span>USDC</span></strong><span class="select-circle">${offer.id === selectedOffer ? icon('check') : ''}</span></span><span class="offer-bottom"><span>You pay ${euros(offer.maxMinor)}</span><span>${tokens(offer.rateAtomsPerEuro)} USDC / EUR</span></span></button>`).join('')}</div></section><aside class="quote-panel panel" aria-labelledby="quote-title"><div class="quote-heading"><h2 id="quote-title">Your exchange</h2><span class="paired-mark" aria-hidden="true">↙↗</span></div>
       <form id="quote-form" novalidate><label class="money-field" for="pay-amount"><span id="quote-pay-label">You pay Ben</span><span class="money-input"><input id="pay-amount" name="amount" readonly value="${esc(amount)}" inputmode="decimal" autocomplete="off" aria-describedby="quote-error" placeholder="0.00"><span class="currency-label"><span class="currency-disc">€</span> EUR</span></span></label>
       <div class="exchange-divider">${icon('buy')}</div><div class="money-field receive-field"><span>You receive</span><span class="money-input"><output id="receive-amount" for="pay-amount">0.00</output><span class="currency-label"><span class="usdc-disc">$</span> USDC</span></span></div>
-      <div id="quote-error" class="field-error" aria-live="polite"></div><div class="quote-terms"><span>Payment recipient: <strong id="quote-seller">Ben</strong> · Revolut</span><span>Fixed demo rate · ${formatRate(state.offers[0].rateAtomsPerEuro)}</span></div>
+      <div id="quote-error" class="field-error" aria-live="polite"></div><div class="quote-terms"><span>Payment recipient: <strong id="quote-seller">Ben</strong> · Revolut</span></div>
       <button type="submit" class="button primary" id="reserve-button">Reserve USDC ${icon('arrow')}</button><p id="quote-note" class="quote-footnote" role="status">Reserve this whole offer at its exact amount.</p></form>
-      <div class="desktop-preflight">${icon('desktop')}<div><strong>Live verification needs desktop Chrome</strong><button class="text-button" data-action="desktop-setup">Desktop setup guide ${icon('arrow')}</button></div></div>
-      <details class="quote-breakdown"><summary>Exchange details</summary>${row('Offer size', 'Whole offer')}${row('Receive on', 'Stellar demo')}${row('Demo fee', '€0.00')}<p class="small-note">A seller’s margin can be included in the offered price. This fixed demo rate is illustrative. Live bank, network, proof-service and Pactlane charges are not quoted here.</p></details><p class="destination-note">For an app or recipient that needs USDC on Stellar.</p>
-    </aside></div>`;
+</aside></div>`
+  );
 }
 
 function sellerPage() {
@@ -268,9 +261,9 @@ function render() {
   const sellerView = route === 'sell';
   const activeWallet = sellerView ? state.seller.wallet : state.wallet;
   const personName = sellerView ? 'Ben' : 'Ana';
-  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="wordmark" href="#" data-action="buy" aria-label="Pactlane home"><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span>pactlane<span class="brand-dot">.</span></a><p class="nav-label">YOUR WORKSPACE</p><nav aria-label="Main navigation"><button class="nav-item ${route === 'buy' ? 'active' : ''}" data-action="buy" ${route === 'buy' ? 'aria-current="page"' : ''}>${icon('buy')} Buy USDC</button><button class="nav-item ${sellerView ? 'active' : ''}" data-action="sell" ${sellerView ? 'aria-current="page"' : ''}>${icon('up')} Sell USDC</button><button class="nav-item ${['trade', 'trades'].includes(route) ? 'active' : ''}" data-action="trades" ${['trade', 'trades'].includes(route) ? 'aria-current="page"' : ''}>${icon('receipt')} My trades ${state.orders.length ? `<span class="nav-count">${state.orders.length}</span>` : ''}</button></nav><div class="sidebar-bottom"><div class="network-badge"><span class="network-dot"></span> Stellar demo</div><span class="sidebar-caption">Peer-to-peer. On Stellar.</span></div></aside><div class="workspace"><header class="app-header"><span class="demo-badge"><strong>Simulated walkthrough</strong><span>No live payment or settlement</span></span><div class="header-actions"><button class="icon-button" data-action="settings" aria-label="Demo settings">${icon('settings')}</button><button class="wallet-button" data-action="wallet" aria-label="${activeWallet ? personName + '’s demo wallet' : 'Connect demo wallet'}">${activeWallet ? `<span class="avatar mini peach">${personName[0]}</span><span class="wallet-full-label">${personName}’s wallet</span><span class="wallet-short-label">${personName}</span><span class="network-dot"></span>` : `${icon('wallet')}<span class="wallet-full-label">Connect wallet</span><span class="wallet-short-label">Wallet</span>`}</button></div></header><main id="main" tabindex="-1">${sellerView ? sellerPage() : route === 'buy' ? marketplace() : route === 'trades' ? tradesPage() : tradePage()}</main><footer class="app-footer"><span>pactlane.io · Demo preview</span><span>Sample data · No real funds move</span></footer></div></div>`;
-  document.title = `Pactlane · ${sellerView ? 'Sell USDC' : route === 'buy' ? 'Buy USDC' : 'My trades'}`;
-  if (route === 'buy') {
+  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="wordmark" href="#" data-action="buy" aria-label="Pactlane home"><span class="brand-symbol" aria-hidden="true"><span></span><span></span></span>pactlane<span class="brand-dot">.</span></a><p class="nav-label">YOUR WORKSPACE</p><nav aria-label="Main navigation"><button class="nav-item ${route === 'buy' ? 'active' : ''}" data-action="buy" ${route === 'buy' ? 'aria-current="page"' : ''}>${icon('buy')} Buy USDC</button><button class="nav-item ${sellerView ? 'active' : ''}" data-action="sell" ${sellerView ? 'aria-current="page"' : ''}>${icon('up')} Sell USDC</button><button class="nav-item ${['trade', 'trades'].includes(route) ? 'active' : ''}" data-action="trades" ${['trade', 'trades'].includes(route) ? 'aria-current="page"' : ''}>${icon('receipt')} My trades ${state.orders.length ? `<span class="nav-count">${state.orders.length}</span>` : ''}</button><button class="nav-item ${route === 'why' ? 'active' : ''}" data-action="why" ${route === 'why' ? 'aria-current="page"' : ''}>${icon('info')} Why Pactlane</button></nav>${extensionCard()}<div class="sidebar-bottom"><div class="network-badge"><span class="network-dot"></span> Stellar demo</div><span class="sidebar-caption">Peer-to-peer. On Stellar.</span></div></aside><div class="workspace"><header class="app-header">${modeToggle(true, busy)}<div class="header-actions"><button class="icon-button" data-action="settings" aria-label="Demo settings">${icon('settings')}</button><button class="wallet-button" data-action="wallet" aria-label="${activeWallet ? personName + '’s demo wallet' : 'Connect demo wallet'}">${activeWallet ? `<span class="avatar mini peach">${personName[0]}</span><span class="wallet-full-label">${personName}’s wallet</span><span class="wallet-short-label">${personName}</span><span class="network-dot"></span>` : `${icon('wallet')}<span class="wallet-full-label">Connect wallet</span><span class="wallet-short-label">Wallet</span>`}</button></div></header><main id="main" tabindex="-1">${sellerView ? sellerPage() : route === 'buy' ? marketplace() : route === 'trades' ? tradesPage() : route === 'why' ? whyPage() : tradePage()}</main><footer class="app-footer"><span>Demo mode · Simulated funds</span><span></span></footer></div></div>`;
+  document.title = `Pactlane · ${sellerView ? 'Sell USDC' : route === 'buy' ? 'Buy USDC' : route === 'why' ? 'Why Pactlane' : 'My trades'}`;
+  if (route === 'buy' && document.querySelector('#quote-form')) {
     amount = (state.offers.find((offer) => offer.id === selectedOffer).maxMinor / 100).toFixed(2);
     document.querySelector('#pay-amount').value = amount;
     updateQuote();
@@ -288,6 +281,7 @@ function render() {
 }
 
 function updateQuote() {
+  if (!document.querySelector('#quote-form')) return;
   const offer = state.offers.find((item) => item.id === selectedOffer);
   document.querySelector('#quote-seller').textContent = offer?.name ?? 'Choose an offer';
   document.querySelector('#quote-pay-label').textContent = offer
@@ -411,43 +405,16 @@ function reserve() {
   navigate('trade', order.id);
 }
 
-const TLSNOTARY_STORE =
-  'https://chromewebstore.google.com/detail/tlsnotary/gnoglgpcamodhflknhmafmjdahcejcgg';
-
-function desktopSetupModal(returnToProof = false) {
-  const order = route === 'trade' ? currentOrder() : null;
-  const checklist = [
-    'Pactlane desktop verification checklist — demo preview',
-    'Open https://pactlane.io in desktop Chrome.',
-    'Install the official TLSNotary extension (prototype version: 0.1.0.1501).',
-    TLSNOTARY_STORE,
-    ...(order
-      ? [
-          `Sample trade reference: ${order.id}`,
-          `Sample exchange: ${euros(order.fiatMinor)} EUR → ${tokens(order.tokenAtoms)} USDC`,
-        ]
-      : []),
-    'Live cross-device resume is not connected. Sample trades stay in the original browser; this checklist does not transfer a trade.',
-    'For the planned live flow: reconnect the same buyer wallet, open My trades, and match the trade reference before continuing.',
-    'Intended live flow, not available in this demo: the buyer selects the existing completed Revolut transfer inside TLSNotary, rather than paying again.',
-    'The intended live flow reviews the payment fields and verifier before disclosure, then returns to the same trade for the result and USDC release.',
-    'This walkthrough does not connect to your bank. Do not send real money. Desktop setup should be completed before locking or paying in a future live trade.',
-  ].join('\n');
-  openModal(
-    `<div class="desktop-guide"><p class="eyebrow">PHONE → COMPUTER</p><h2 id="modal-title">Desktop verification guide</h2><p>This walkthrough does not connect to your bank. <strong>Do not send real money.</strong></p><p class="setup-preview-note"><strong>Intended live setup:</strong> prepare desktop Chrome and TLSNotary before locking or paying. Cross-device resume is not connected; sample trades stay in this browser.</p><ol class="setup-steps"><li><strong>Install TLSNotary in Chrome</strong><p>On your computer, review the extension permissions, then return to Pactlane.</p><a class="setup-link" href="${TLSNOTARY_STORE}" target="_blank" rel="noopener noreferrer">Open official TLSNotary listing ${icon('up')}<span class="sr-only"> (opens in a new tab)</span></a><p class="small-note">Prototype version: 0.1.0.1501</p></li><li><strong>Match the same trade</strong><p>The live flow will need the same buyer wallet and trade reference in My trades.${order ? ` Your sample reference is <span class="mono">${esc(order.id)}</span>.` : ''}</p></li><li><strong>Verify the existing payment</strong><p>The intended live flow selects a completed Revolut transfer inside TLSNotary, reviews the fields and verifier, then returns to this trade. No second payment.</p></li></ol><details class="handoff-checklist"><summary>Desktop checklist${order ? ' and sample trade reference' : ''}</summary><label class="sr-only" for="desktop-checklist">Desktop verification checklist</label><textarea id="desktop-checklist" readonly rows="7" spellcheck="false">${esc(checklist)}</textarea></details><div class="desktop-guide-actions"><button class="button secondary" data-action="copy-desktop-checklist">${icon('copy')} Copy desktop checklist</button><p class="small-note" id="handoff-copy-status" role="status"></p><button class="button primary" data-action="${returnToProof ? 'review-proof' : 'close-modal'}">${returnToProof ? 'Back to demo payment check' : 'Continue demo here'} ${icon('arrow')}</button><p class="small-note setup-demo-note">No extension or bank login needed for this demo.</p></div></div>`,
-  );
-}
-
 function proofModal() {
   const order = currentOrder();
   openModal(
-    `<span class="status-symbol neutral">${icon('shield')}</span><p class="eyebrow">PAYMENT VERIFICATION</p><h2 id="modal-title">Review your payment check</h2><p>Review the sample completed transfer selected for this payment check.</p><div class="proof-device-note">${icon('desktop')}<div><strong>Paid on mobile? Verify on desktop.</strong><button class="text-button" data-action="desktop-setup" data-return="proof">TLSNotary setup and device handoff ${icon('arrow')}</button></div></div><div class="disclosure">${row('Recipient', `${esc(order.seller)} · ${esc(order.tag)}`)}${row('Amount', euros(order.fiatMinor) + ' EUR')}${row('Transfer', 'Completed · Outgoing')}${row('Also checked', 'Payment ID and completion time')}</div><p class="small-note">In the live flow, selected payment details, the payment ID, completion time, request path and response metadata go to Pactlane’s verifier. Stellar settlement is public. This demo shares no bank data and needs no bank login.</p><label class="consent"><input type="checkbox" id="proof-consent"> <span>I’ve reviewed the selected payment details.</span></label><button class="button primary" id="start-proof" data-action="verify" disabled>Start demo verification ${icon('arrow')}</button>`,
+    `<span class="status-symbol neutral">${icon('shield')}</span><p class="eyebrow">PAYMENT VERIFICATION</p><h2 id="modal-title">Review your payment check</h2><p>Review the sample completed transfer selected for this payment check.</p><div class="disclosure">${row('Recipient', `${esc(order.seller)} · ${esc(order.tag)}`)}${row('Amount', euros(order.fiatMinor) + ' EUR')}${row('Transfer', 'Completed · Outgoing')}${row('Also checked', 'Payment ID and completion time')}</div><p class="small-note">Demo mode uses a sample payment. No bank login or real payment is needed.</p><label class="consent"><input type="checkbox" id="proof-consent"> <span>I’ve reviewed the selected payment details.</span></label><button class="button primary" id="start-proof" data-action="verify" disabled>Start demo verification ${icon('arrow')}</button>`,
   );
 }
 
 async function handleAction(button) {
   const action = button.dataset.action;
-  if (['buy', 'sell', 'trades'].includes(action)) {
+  if (['buy', 'sell', 'trades', 'why'].includes(action)) {
     navigate(action);
     return;
   }
@@ -462,25 +429,6 @@ async function handleAction(button) {
   }
   if (action === 'open-trade') {
     navigate('trade', button.dataset.id);
-    return;
-  }
-  if (action === 'desktop-setup') {
-    desktopSetupModal(button.dataset.return === 'proof');
-    return;
-  }
-  if (action === 'copy-desktop-checklist') {
-    const field = document.querySelector('#desktop-checklist');
-    const status = document.querySelector('#handoff-copy-status');
-    try {
-      await navigator.clipboard.writeText(field.value);
-      status.textContent = 'Checklist copied. Your sample trade stays in this browser.';
-    } catch {
-      field.closest('details').open = true;
-      field.focus();
-      field.select();
-      status.textContent =
-        'Select and copy the checklist above. Your sample trade stays in this browser.';
-    }
     return;
   }
   if (action === 'wallet') {

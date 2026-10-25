@@ -10,6 +10,20 @@ import { STATIC_HEADERS } from '../deploy/demo/headers.mjs';
 const ROOT = resolve(import.meta.dirname, '..');
 export const DEMO_FILES = [
   'index.html',
+  'entry.mjs',
+  'site-ui.mjs',
+  'site-shell.css',
+  'marketplace.mjs',
+  'live-app.mjs',
+  'live-view-adapter.mjs',
+  'live-styles.css',
+  'host-client.mjs',
+  'network.mjs',
+  'deployment-wallet.mjs',
+  'freighter-connector.mjs',
+  'wallet-dialog.mjs',
+  'vendor/freighter-api.js',
+  'vendor/walletconnect.mjs',
   'styles.css',
   'app.mjs',
   'model.mjs',
@@ -75,8 +89,25 @@ export async function buildDemo({
   const copied = new Set(DEMO_FILES);
   for (const { name, data } of inputs.filter((row) => row.name.endsWith('.mjs'))) {
     const sourceText = data.toString('utf8');
-    if (/\bimport\s*\(/.test(sourceText))
-      throw new Error('Demo imports must be explicit static local modules.');
+    // Pinned vendor bundles include their own bundled module loaders.
+    if (name.startsWith('vendor/')) continue;
+    // Only the mode entry and wallet dialog may load a fixed local module on
+    // demand. Never accept a computed or remote dynamic import.
+    const dynamic = [...sourceText.matchAll(/\bimport\s*\(\s*(['"])([^'"]+)\1\s*\)/g)];
+    const dynamicCount = [...sourceText.matchAll(/\bimport\s*\(/g)].length;
+    if (
+      dynamicCount !== dynamic.length ||
+      dynamic.some(
+        ([, , path]) =>
+          !(name === 'entry.mjs' && ['./app.mjs', './live-app.mjs'].includes(path)) &&
+          !(name === 'wallet-dialog.mjs' && path === '/vendor/walletconnect.mjs'),
+      )
+    )
+      throw new Error('Imports must be explicit local modules.');
+    for (const [, , path] of dynamic) {
+      if (!copied.has(new URL(path, `https://demo.invalid/${name}`).pathname.slice(1)))
+        throw new Error('Mode dependency is outside the explicit allowlist.');
+    }
     for (const match of sourceText.matchAll(
       /^\s*import(?:\s+[\s\S]*?\s+from)?\s*['"]([^'"]+)['"]/gm,
     )) {
@@ -109,7 +140,9 @@ export async function buildDemo({
   }
   const manifest = {
     schemaVersion: 1,
-    mode: 'synthetic-demo',
+    mode: 'live-and-demo',
+    defaultMode: 'live',
+    demoQuery: 'demo=1',
     revision,
     livePaymentVerification: false,
     liveSettlement: false,
@@ -134,7 +167,7 @@ export async function buildDemo({
   await writeFile(
     join(output, '_headers'),
     mediaDirectory
-      ? DEMO_HEADERS.replace("connect-src 'none';", "connect-src 'none'; media-src 'self';")
+      ? DEMO_HEADERS.replace("connect-src 'self';", "connect-src 'self'; media-src 'self';")
       : DEMO_HEADERS,
   );
   await writeFile(
@@ -182,7 +215,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       );
     }
     console.log(
-      `Built ${manifest.files.length} synthetic-demo files in ${relative(ROOT, join(ROOT, 'dist/demo'))}. Nothing was deployed.`,
+      `Built ${manifest.files.length} site files in ${relative(ROOT, join(ROOT, 'dist/demo'))}. Nothing was deployed.`,
     );
   } catch {
     console.error(

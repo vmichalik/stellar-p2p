@@ -5,7 +5,9 @@ import {
   Address,
   Keypair,
   Networks,
+  SorobanDataBuilder,
   TransactionBuilder,
+  authorizeEntry,
   nativeToScVal,
   xdr,
 } from '@stellar/stellar-sdk';
@@ -29,7 +31,8 @@ const buyer = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x66));
 const signer = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x55));
 const contract = Address.contract(Buffer.alloc(32, 5)).toString();
 const token = Address.contract(Buffer.alloc(32, 6)).toString();
-const seller = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x77)).publicKey();
+const sellerKey = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 0x77));
+const seller = sellerKey.publicKey();
 const deployment = {
   networkPassphrase: Networks.TESTNET,
   rpcUrl: 'https://rpc.example.test',
@@ -63,7 +66,7 @@ function StrContract(value) {
 }
 
 function fixture(options = {}) {
-  const calls = { sign: 0, submit: 0, instructions: 0 };
+  const calls = { sign: 0, submit: 0, instructions: 0, sellerAuthorization: 0 };
   let sent;
   const current = {
     buyer: buyer.publicKey(),
@@ -85,9 +88,53 @@ function fixture(options = {}) {
   const server = {
     getNetwork: async () => ({ passphrase: Networks.TESTNET, protocolVersion: 29 }),
     getAccount: async () => new Account(buyer.publicKey(), '10'),
+    getAccountEntry: async (account) =>
+      new xdr.AccountEntry({
+        accountId: Keypair.fromPublicKey(account).xdrPublicKey(),
+        balance: 0n,
+        seqNum: 10n,
+        numSubEntries: 0,
+        inflationDest: null,
+        flags: 0,
+        homeDomain: '',
+        thresholds: Buffer.from([1, 0, 0, 0]),
+        signers: [],
+        ext: xdr.AccountEntryExt.v0(),
+      }),
     getLatestLedger: async () => ({ closeTime: '1000', sequence: 100, protocolVersion: 29 }),
     simulateTransaction: async (tx) => {
       const method = tx.operations[0].func.invokeContract.functionName.toString();
+      if (method === 'resolve') {
+        const rootInvocation = new xdr.SorobanAuthorizedInvocation({
+          function: xdr.SorobanAuthorizedFunction.sorobanAuthorizedFunctionTypeContractFn(
+            tx.operations[0].func.invokeContract,
+          ),
+          subInvocations: [],
+        });
+        return {
+          _parsed: true,
+          transactionData: new SorobanDataBuilder(),
+          minResourceFee: '0',
+          events: [],
+          latestLedger: 100,
+          result: {
+            retval: xdr.ScVal.scvVoid(),
+            auth: [
+              new xdr.SorobanAuthorizationEntry({
+                rootInvocation,
+                credentials: xdr.SorobanCredentials.sorobanCredentialsAddressV2(
+                  new xdr.SorobanAddressCredentials({
+                    address: new Address(seller).toScAddress(),
+                    nonce: 42n,
+                    signatureExpirationLedger: 0,
+                    signature: xdr.ScVal.scvVoid(),
+                  }),
+                ),
+              }),
+            ],
+          },
+        };
+      }
       const values = {
         get_order: current,
         get_config: { token, signer: Buffer.from(signer.rawPublicKey()) },
@@ -112,6 +159,7 @@ function fixture(options = {}) {
         current.locked_at = '950';
       }
       if (method === 'release') current.state = ['Released'];
+      if (method === 'resolve') current.state = ['Resolved'];
       return { status: 'PENDING', hash: Buffer.from(tx.hash()).toString('hex') };
     },
     getTransaction: async () =>
@@ -188,8 +236,28 @@ function fixture(options = {}) {
       readAuthorization: async () =>
         options.synthetic ? { ...approved, syntheticOnly: true } : approved,
     },
+    recovery: options.recovery
+      ? {
+          seller: {
+            selected: async () => seller,
+            network: async () => Networks.TESTNET,
+            signAuthorization: async (request) => {
+              calls.sellerAuthorization++;
+              if (options.sellerRejects) throw new Error('SELLER_REJECTED');
+              return (
+                await authorizeEntry(
+                  xdr.SorobanAuthorizationEntry.fromXDR(request.entryXdr, 'base64'),
+                  sellerKey,
+                  request.expirationLedger,
+                  request.networkPassphrase,
+                )
+              ).toXDR('base64');
+            },
+          },
+        }
+      : undefined,
   });
-  return { service, server, calls, current, journal, journalPath };
+  return { service, server, calls, current, journal, journalPath, sent: () => sent };
 }
 
 test('wallet port uses official address, network and signed envelope fields', async () => {
@@ -299,9 +367,84 @@ test('canonical signed claim prepares release and receipt requires matching toke
   );
 });
 
-test('single-wallet recovery is unavailable until the dual-wallet workflow is implemented', async () => {
+test('recovery without a second wallet authorization port fails closed', async () => {
   await assert.rejects(
     fixture().service.resolve('0', '0'),
     /DUAL_WALLET_AUTHORIZATION_WORKFLOW_REQUIRED/,
   );
+});
+
+test('mutual recovery collects seller auth and buyer envelope once, then reconciles journaled replay', async () => {
+  const f = fixture({ recovery: true });
+  await f.service.connectWallet('buyer');
+  const result = await f.service.resolve('0', '100000000');
+  assert.equal(result.order.state, 'Resolved');
+  assert.equal(f.calls.sellerAuthorization, 1);
+  assert.equal(f.calls.sign, 1);
+  assert.equal(f.calls.submit, 1);
+  assert.equal(f.sent().signatures.length, 1);
+  assert.equal(f.sent().operations[0].auth[0].credentials.type, 'sorobanCredentialsAddressV2');
+  const replay = await f.service.resolve('0', '100000000');
+  assert.deepEqual(replay.transaction, result.transaction);
+  await assert.rejects(f.service.resolve('0', '100000001'), /TRANSACTION_ARGUMENT_MISMATCH/);
+  assert.equal(f.calls.sellerAuthorization, 1);
+  assert.equal(f.calls.sign, 1);
+  assert.equal(f.calls.submit, 1);
+});
+
+test('recovery requires submission permission and a valid split before either wallet signs', async () => {
+  for (const options of [{ submissionEnabled: false }, {}]) {
+    const f = fixture({ recovery: true, ...options });
+    await f.service.connectWallet('buyer');
+    await assert.rejects(
+      f.service.resolve('0', options.submissionEnabled === false ? '0' : '220000001'),
+      /SUBMISSION_NOT_AUTHORIZED|INVALID_RESOLUTION_SPLIT/,
+    );
+    assert.equal(f.calls.sellerAuthorization, 0);
+    assert.equal(f.calls.sign, 0);
+    assert.equal(f.calls.submit, 0);
+  }
+});
+
+test('seller refusal cannot become unilateral refund or a new automatic recovery attempt', async () => {
+  const f = fixture({ recovery: true, sellerRejects: true });
+  await f.service.connectWallet('buyer');
+  await assert.rejects(f.service.resolve('0', '0'), /SELLER_REJECTED/);
+  await assert.rejects(f.service.resolve('0', '0'), /TRANSACTION_PENDING_RECONCILIATION/);
+  assert.equal(f.current.state[0], 'Reserved');
+  assert.equal(f.calls.sellerAuthorization, 1);
+  assert.equal(f.calls.sign, 0);
+  assert.equal(f.calls.submit, 0);
+});
+
+test('concurrent recovery proposals cannot silently share different allocations', async () => {
+  const f = fixture({ recovery: true });
+  await f.service.connectWallet('buyer');
+  const outcomes = await Promise.allSettled([
+    f.service.resolve('0', '100000000'),
+    f.service.resolve('0', '100000001'),
+  ]);
+  assert.equal(outcomes[0].status, 'fulfilled');
+  assert.equal(outcomes[1].status, 'rejected');
+  assert.match(outcomes[1].reason.message, /TRANSACTION_ARGUMENT_MISMATCH/);
+  assert.equal(f.calls.sellerAuthorization, 1);
+  assert.equal(f.calls.sign, 1);
+  assert.equal(f.calls.submit, 1);
+});
+
+test('a fresh adapter reconciles persisted recovery without collecting signatures again', async () => {
+  const first = fixture({ recovery: true });
+  await first.service.connectWallet('buyer');
+  const result = await first.service.resolve('0', '100000000');
+  const second = fixture({ recovery: true, journalPath: first.journalPath });
+  second.current.state = ['Resolved'];
+  second.server.getTransaction = first.server.getTransaction;
+  await second.service.connectWallet('buyer');
+  assert.deepEqual(
+    (await second.service.resolve('0', '100000000')).transaction,
+    result.transaction,
+  );
+  assert.equal(second.calls.sellerAuthorization, 0);
+  assert.equal(second.calls.sign, 0);
+  assert.equal(second.calls.submit, 0);
 });

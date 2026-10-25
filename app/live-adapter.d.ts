@@ -1,4 +1,5 @@
-/** Proposed production boundary. No implementation or live credentials are supplied.
+/** Browser-facing contract for the Node services in integration/.
+ * The current app still uses its synthetic adapter; no live credentials are supplied.
  * Canonical source: contracts/escrow/interface.json in the escrow workstream.
  * Monetary values and u64 values cross JSON as decimal strings, never JS floats.
  */
@@ -11,6 +12,9 @@ export interface Deployment {
   contract: Address;
   token: Address;
   tokenDecimals: number;
+  policySignerPublicKeyHex: string;
+  maxFeeStroops: Integer;
+  escrowWasmSha256: string; // Required by the authoritative chain reader.
 }
 export interface Terms {
   seller: Address;
@@ -63,6 +67,7 @@ export interface LivePactlaneServices {
   reserve(orderId: Integer, buyer: Address): Promise<ConfirmedOrder>;
   // Only a confirmed Paying order with locked_at unlocks payment instructions.
   beginPayment(orderId: Integer): Promise<ConfirmedOrder>;
+  getPaymentInstructions(orderId: Integer): Promise<string>;
   // Progress is display-only. Authorization comes from the trusted policy service.
   launchPaymentProof(orderId: Integer, onProgress: (label: string) => void): Promise<void>;
   getPolicyStatus(orderId: Integer): Promise<PolicyStatus>;

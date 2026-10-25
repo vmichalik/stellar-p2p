@@ -24,6 +24,10 @@ For later validation, prepare the pinned extension and benchmark assets before r
 
 The [combined intake record](../evidence/release/tls-intake-checks.json) identifies source parents, runtime preparation and check scope. Prettier passed for the combined tree.
 
+## Live service continuation
+
+The later [live service continuation](release/live-services.md) passed 232 JavaScript tests with zero skips, eight Python checks and 77 syntax checks (including generated demo copies). It adds recovery authorization, authenticated HTTP transport, consistent chain reads and atomic event reconciliation. These are local mocked-RPC/wallet checks with real SDK signatures and loopback HTTP. The separate public testnet read confirmed RPC response shapes only. See [its evidence](../evidence/release/live-service-checks.json); browser app wiring, deployment and authenticated payment verification remain incomplete.
+
 ## Integration-source results
 
 | Check                                          | Result                                                                                                                                                         |

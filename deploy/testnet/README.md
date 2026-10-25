@@ -21,7 +21,7 @@ Keep synthetic settlement separate from an authenticated payment proof. Testnet 
 
 ## Current blockers
 
-Escrow, policy and app snapshots are integrated. The actual app-model → policy → compiled-WASM local rehearsal passes with synthetic payment evidence. The Node wallet/RPC candidate is tested with mocked wallet/RPC and a real disk journal. Browser transport, live policy/chain readers and dual-wallet recovery collection remain software gaps; see `integration/README.md`.
+Escrow, policy and app snapshots are integrated. The actual app-model → policy → compiled-WASM local rehearsal passes with synthetic payment evidence. The Node wallet/RPC candidate is tested with mocked wallet/RPC and a real disk journal. The Node browser bridge, chain reader/indexer and mutual-recovery collector are implemented locally. Host composition, private policy/offer ports and browser/counterparty wiring remain software gaps; see `integration/README.md`.
 
 A read-only call to `https://soroban-testnet.stellar.org` at 13:03 UTC on 25 October 2026 returned protocol 29 and the expected testnet passphrase; latest ledger was 5,381,965. This matches the artifact's required protocol. It is not deployment or transaction evidence.
 

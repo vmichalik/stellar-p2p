@@ -13,6 +13,7 @@ import {
 } from '@stellar/stellar-sdk';
 import { claimDigest, claimScVal } from '../contracts/escrow/protocol/protocol.mjs';
 import { isDurableTransactionJournal } from './transaction-journal.mjs';
+import { prepareRecoveryTransaction } from './recovery-authorization.mjs';
 
 const check = (condition, code) => {
   if (!condition) throw new Error(code);
@@ -101,6 +102,7 @@ export function createStellarServices({
   journal,
   policy,
   instructions,
+  recovery,
   submissionEnabled = false,
   pollAttempts = 20,
   sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
@@ -220,10 +222,15 @@ export function createStellarServices({
     }
     throw new Error('TRANSACTION_PENDING_RECONCILIATION');
   }
-  async function send(method, args, expectedAccount, key) {
+  async function send(method, args, expectedAccount, key, prepare) {
     check(submissionEnabled, 'TESTNET_SUBMISSION_NOT_AUTHORIZED');
     check(isDurableTransactionJournal(journal), 'DURABLE_TRANSACTION_JOURNAL_REQUIRED');
-    if (inFlight.has(key)) return inFlight.get(key);
+    const argumentKey = args.map((argument) => argument.toXDR('base64')).join(':');
+    const running = inFlight.get(key);
+    if (running) {
+      check(running.argumentKey === argumentKey, 'TRANSACTION_ARGUMENT_MISMATCH');
+      return running.operation;
+    }
     const operation = (async () => {
       check(
         expectedAccount &&
@@ -242,9 +249,11 @@ export function createStellarServices({
       // The host journal must reserve atomically across tabs/processes before
       // any wallet prompt. A preparing/unknown record is never auto-cleared.
       check(await journal.reserve(key), 'TRANSACTION_PENDING_RECONCILIATION');
-      const prepared = await remote.prepareTransaction(
-        await transaction(method, args, expectedAccount),
-      );
+      const raw = await transaction(method, args, expectedAccount);
+      const preparation = prepare
+        ? await prepare(raw)
+        : { transaction: await remote.prepareTransaction(raw) };
+      const prepared = preparation.transaction;
       check(BigInt(prepared.fee) <= integer(cfg.maxFeeStroops), 'TRANSACTION_FEE_LIMIT');
       const signed = TransactionBuilder.fromXDR(
         await wallet.sign(prepared.toXDR(), expectedAccount),
@@ -260,6 +269,7 @@ export function createStellarServices({
         ),
         'WALLET_SIGNATURE_MISSING',
       );
+      if (preparation.validateSigned) await preparation.validateSigned(signed);
       const hash = Buffer.from(signed.hash()).toString('hex');
       // Persist the hash BEFORE submission. Unknown outcomes stay blocked across
       // reloads; no automatic new transaction is created for this action key.
@@ -274,15 +284,21 @@ export function createStellarServices({
       await journal.put(key, { hash, method, state: 'confirmed' });
       return { reply, transaction: confirmed };
     })();
-    inFlight.set(key, operation);
+    inFlight.set(key, { argumentKey, operation });
     try {
       return await operation;
     } finally {
       inFlight.delete(key);
     }
   }
-  async function writeOrder(method, orderId, args, account) {
-    const result = await send(method, args, account, `${cfg.contract}:${method}:${orderId}`);
+  async function writeOrder(method, orderId, args, account, prepare) {
+    const result = await send(
+      method,
+      args,
+      account,
+      `${cfg.contract}:${method}:${orderId}`,
+      prepare,
+    );
     return { order: await order(orderId), transaction: result.transaction };
   }
 
@@ -413,10 +429,42 @@ export function createStellarServices({
       );
       return writeOrder('refund', orderId, [u64(orderId)], accounts.buyer ?? accounts.seller);
     },
-    async resolve() {
-      // Two distinct wallets must authorize the exact invocation. Never replace
-      // that workflow with a single-source transaction or unilateral refund.
-      throw new Error('DUAL_WALLET_AUTHORIZATION_WORKFLOW_REQUIRED');
+    async resolve(orderId, buyerTokens) {
+      check(recovery?.seller, 'DUAL_WALLET_AUTHORIZATION_WORKFLOW_REQUIRED');
+      const current = await order(orderId);
+      check(current.buyer === accounts.buyer, 'BUYER_WALLET_MISMATCH');
+      check(
+        integer(buyerTokens) <= integer(current.terms.token_amount),
+        'INVALID_RESOLUTION_SPLIT',
+      );
+      const prior = isDurableTransactionJournal(journal)
+        ? await journal.get(`${cfg.contract}:resolve:${orderId}`)
+        : null;
+      check(
+        ['Reserved', 'Paying'].includes(current.state) ||
+          (current.state === 'Resolved' && prior?.hash),
+        'RESOLUTION_NOT_AVAILABLE',
+      );
+      // Buyer's final envelope signs the exact call plus seller's signed auth.
+      // The order-wide journal permits reconciliation, never a second allocation.
+      return writeOrder(
+        'resolve',
+        orderId,
+        [u64(orderId), i128(buyerTokens)],
+        accounts.buyer,
+        (transaction) =>
+          prepareRecoveryTransaction({
+            transaction,
+            server: remote,
+            contract: cfg.contract,
+            orderId,
+            buyerTokens,
+            buyer: current.buyer,
+            seller: current.terms.seller,
+            recovery,
+            maxFeeStroops: cfg.maxFeeStroops,
+          }),
+      );
     },
     async reconcileReceipt(orderId, confirmed) {
       check(

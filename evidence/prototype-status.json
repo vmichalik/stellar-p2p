@@ -35,7 +35,7 @@
   "localCompiledWasmIntegrationPassed": true,
   "networkTransactionsSubmitted": false,
   "publicAppUrlEstablished": false,
-  "liveAdapterStatus": "Node candidate tested with mocked wallet/RPC; browser transport and dual-wallet recovery missing",
+  "liveAdapterStatus": "Node wallet/RPC, authenticated HTTP bridge, consistent chain reader/indexer and mutual recovery implemented locally; host composition and browser/counterparty wiring missing",
   "currentOwnerBrowserDevice": "MacBook Pro",
   "latestPublicProofReports": [
     {
@@ -369,5 +369,15 @@
     "status": "local combined candidate; not published or deployed",
     "bankTestsPaused": true,
     "detailedHandoff": "docs/proof-handoff.md"
+  },
+  "liveServiceSoftware": {
+    "browserBridgeImplemented": true,
+    "appUsesLiveServices": false,
+    "chainReaderImplemented": true,
+    "eventReconcilerImplemented": true,
+    "recoveryAuthorizationImplemented": true,
+    "counterpartyBrowserTransportImplemented": false,
+    "livePaymentNormalizationVerified": false,
+    "deployed": false
   }
 }

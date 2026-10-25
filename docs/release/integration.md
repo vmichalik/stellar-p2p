@@ -24,7 +24,7 @@ See [verification](../verification.md) for counts and [the recorded local run](.
 ## Gaps
 
 - Sanitized proof source is imported, but authenticated response semantics remain unresolved; `NOT_CLEARED`. Bank tests remain paused pending owner resumption and normal per-attempt consent/disclosure review.
-- Browser wallet/host transport, authenticated policy routes/readers/indexer and dual-wallet recovery collection remain software work.
+- Node host transport, chain readers/indexer and mutual-recovery authorization are implemented in the [live continuation](live-services.md). Running service composition, private policy/offer routes, browser wallet/view wiring and counterparty signing transport remain software work.
 - Approved token/signer/deployer/fee configuration and network execution remain unestablished.
 - Static demo exists locally; no public app URL or separate-device reachability established.
 - Final silent video/deck, portal limits/timezone, reviewer access and submission remain with owner/coordinator.

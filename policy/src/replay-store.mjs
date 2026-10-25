@@ -24,6 +24,7 @@ export class ReplayStore {
         signature TEXT
       );
       CREATE TABLE IF NOT EXISTS checkpoints (domain TEXT PRIMARY KEY, sequence TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS chain_origins (domain TEXT PRIMARY KEY, deployment_ledger TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS manual_holds (binding TEXT PRIMARY KEY);
     `);
     const mode = syntheticOnly ? 'SYNTHETIC_ONLY' : 'LIVE';
@@ -58,6 +59,10 @@ export class ReplayStore {
     hex32(domain);
     uint(sequence);
     this.#transaction(() => {
+      requirePolicy(
+        !this.#db.prepare('SELECT 1 FROM chain_origins WHERE domain=?').get(domain),
+        'INDEXED_CHECKPOINT_REQUIRED',
+      );
       const previous = this.#db
         .prepare('SELECT sequence FROM checkpoints WHERE domain=?')
         .get(domain);
@@ -66,6 +71,70 @@ export class ReplayStore {
         'CHECKPOINT_REGRESSION',
       );
       this.#db.prepare('INSERT OR REPLACE INTO checkpoints VALUES (?,?)').run(domain, sequence);
+    });
+  }
+  readCheckpoint(domain, deploymentLedger) {
+    hex32(domain);
+    const previous =
+      this.#db.prepare('SELECT sequence FROM checkpoints WHERE domain=?').get(domain)?.sequence ??
+      null;
+    if (deploymentLedger !== undefined) {
+      requirePolicy(uint(deploymentLedger, 32) > 0n, 'INVALID_CHAIN_RANGE');
+      const origin = this.#db
+        .prepare('SELECT deployment_ledger FROM chain_origins WHERE domain=?')
+        .get(domain);
+      requirePolicy(
+        !origin || origin.deployment_ledger === deploymentLedger,
+        'CHAIN_ORIGIN_MISMATCH',
+      );
+      requirePolicy(origin || previous === null, 'UNTRACKED_CHAIN_CHECKPOINT');
+    }
+    return previous;
+  }
+  // Trusted event indexer only. A complete contiguous scan and all of its
+  // recovery holds become durable together. The deployment anchor cannot drift
+  // after restart, and a stale/duplicate scan cannot recreate a cleared hold.
+  reconcileChainBatch({ domain, deploymentLedger, fromLedger, throughLedger, resolutions }) {
+    hex32(domain);
+    const start = uint(deploymentLedger, 32),
+      from = uint(fromLedger, 32),
+      through = uint(throughLedger, 32);
+    requirePolicy(start > 0n && from >= start && through >= from, 'INVALID_CHAIN_RANGE');
+    requirePolicy(Array.isArray(resolutions), 'INVALID_CHAIN_RESOLUTIONS');
+    for (const resolution of resolutions) {
+      hex32(resolution.binding);
+      const ledger = uint(resolution.ledgerSequence, 32);
+      requirePolicy(ledger >= from && ledger <= through, 'INVALID_CHAIN_RESOLUTIONS');
+    }
+    return this.#transaction(() => {
+      const origin = this.#db
+        .prepare('SELECT deployment_ledger FROM chain_origins WHERE domain=?')
+        .get(domain);
+      const previous = this.#db
+        .prepare('SELECT sequence FROM checkpoints WHERE domain=?')
+        .get(domain);
+      requirePolicy(
+        !origin || origin.deployment_ledger === deploymentLedger,
+        'CHAIN_ORIGIN_MISMATCH',
+      );
+      // A checkpoint populated by an old/manual adapter is not evidence that
+      // this indexer covered the deployment history. Never silently adopt it.
+      requirePolicy(origin || !previous, 'UNTRACKED_CHAIN_CHECKPOINT');
+      if (previous && through <= BigInt(previous.sequence)) return previous.sequence;
+      requirePolicy(
+        from === (previous ? BigInt(previous.sequence) + 1n : start),
+        'CHAIN_CHECKPOINT_CHANGED',
+      );
+      this.#db
+        .prepare('INSERT OR IGNORE INTO chain_origins VALUES (?,?)')
+        .run(domain, deploymentLedger);
+      for (const resolution of resolutions) {
+        this.#db.prepare('INSERT OR IGNORE INTO manual_holds VALUES (?)').run(resolution.binding);
+      }
+      this.#db
+        .prepare('INSERT OR REPLACE INTO checkpoints VALUES (?,?)')
+        .run(domain, throughLedger);
+      return throughLedger;
     });
   }
   assertReconciled(domain, sequence) {

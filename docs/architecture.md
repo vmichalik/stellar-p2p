@@ -47,7 +47,7 @@ Synthetic stores and public fixture keys are separated from live bootstrap. `nor
 
 Instructions require a confirmed `Paying` order and independently bound destination. Release requires trusted non-synthetic authorization and a canonical signature. Receipts require the exact contract/order transaction and matching token-transfer events.
 
-Authenticated transport, browser wallet bridge, private readers, deployment configuration and the dual-wallet recovery workflow remain to be implemented. `resolve` fails explicitly rather than submitting unilateral recovery.
+Authenticated HTTP transport, consistent chain reads, atomic event reconciliation and buyer-envelope/seller-Soroban recovery are implemented as Node modules; see [live service continuation](release/live-services.md). Running host composition, private offer/policy ports, browser wallet/view wiring and counterparty signing transport remain. `resolve` requires the configured seller authorization port and never submits unilateral recovery.
 
 ## Recovery and deadlines
 

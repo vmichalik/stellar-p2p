@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-25T14:11:27.745781+00:00",
+  "executionHost": "Mac mini",
+  "worktree": "/private/tmp/pactlane-coordinator-review-20261025",
+  "branch": "codex/pactlane-live-services",
+  "baseRevision": "6f20b8ff03492399e73b46d425e51ab311df6228",
+  "scope": "Node recovery authorization, authenticated browser HTTP bridge, coherent policy chain reader and atomic event reconciliation. Browser app remains synthetic.",
+  "javascript": {
+    "root": 110,
+    "policy": 55,
+    "canonicalProtocol": 11,
+    "integration": 56,
+    "total": 232,
+    "failures": 0,
+    "skipped": 0
+  },
+  "pythonBenchmarkPreparation": {
+    "tests": 8,
+    "failures": 0
+  },
+  "syntaxModulesAndInlineScripts": 77,
+  "syntaxIncludesGeneratedDemoCopies": true,
+  "frozenProtocolSync": true,
+  "formatting": "Prettier passed",
+  "integrationEvidence": {
+    "rpcAndWallets": "mocked",
+    "signatureEncoding": "actual pinned Stellar SDK Ed25519 and SEP-53",
+    "http": "actual loopback servers",
+    "replayStorage": "SQLite disk and restart cases; reader composition also uses in-memory test store",
+    "readerAndReconcilerComposed": true
+  },
+  "readOnlyRpcObservation": {
+    "observedAt": "2026-10-25T14:08:46.116Z",
+    "url": "https://soroban-testnet.stellar.org",
+    "protocolVersion": 29,
+    "latestLedger": 5382747,
+    "matchingLedger": 5382747,
+    "ledgerCloseTime": "1792937322",
+    "publicNativeTokenEntryReturned": true,
+    "liveUntilLedgerSeq": 8468435,
+    "keyMatched": true,
+    "scope": "Public native-token entry and exact ledger timestamp; not a Pactlane deployment or trade-asset approval"
+  },
+  "remainingSoftware": [
+    "running host composition",
+    "private offer and policy service ports",
+    "browser Freighter client and live view adapter",
+    "counterparty recovery authorization transport",
+    "verified TLS payment normalizer",
+    "operator workflow for complete manual-payment reconciliation"
+  ],
+  "bankTestsPaused": true,
+  "livePaymentGate": "NOT_CLEARED",
+  "deployed": false,
+  "transactionsSubmitted": false,
+  "realWalletSigned": false,
+  "appUsesLiveServices": false
+}

@@ -44,6 +44,8 @@ The host provides:
 
 Funding, reserve, payment lock, signed release, unlocked-expiry refund and receipts are implemented. Network/config checks, fee cap, unchanged envelope and account signature precede submission. Receipts require confirmed transaction identity and matching token events. Unknown submission reuses its journaled hash.
 
-**Missing:** authenticated HTTP/browser transport, running live policy/chain readers and indexer, accepted TLSNotary normalization, deployment configuration and the two-wallet Soroban authorization collector. `resolve()` rejects with `DUAL_WALLET_AUTHORIZATION_WORKFLOW_REQUIRED`. Tests mock RPC/wallet, while using real SDK encoding and disk/restart journals.
+**Implemented Node modules:** authenticated browser transport, consistent chain reader, event reconciliation with atomic replay checkpoints, and buyer-envelope plus seller-Soroban recovery authorization. See [live service continuation](../docs/release/live-services.md) for their APIs and boundaries.
+
+**Missing:** composition of these modules into a running host and the browser app, private offer/policy routes, counterparty signing transport, accepted TLSNotary normalization and deployment configuration. `resolve()` requires a configured seller authorization port. Tests mock RPC/wallet while using real SDK signing/encoding, loopback HTTP and disk/restart journals.
 
 These are software/configuration gaps. Deployment authorization alone would not finish them. See [testnet handoff](../deploy/testnet/README.md).

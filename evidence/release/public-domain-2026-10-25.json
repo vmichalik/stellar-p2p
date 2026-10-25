@@ -1,0 +1,368 @@
+{
+  "observedAt": "2026-10-25T14:32:34.804925+00:00",
+  "origin": "https://pactlane.io",
+  "client": "ordinary curl, default user agent; no credentials; no redirects followed",
+  "reportedWorkerVersion": "3ae4a684-a01f-43f7-b092-8d462ac3d87f",
+  "workerVersionSource": "coordinator deployment handoff; not independently exposed by HTTP",
+  "revision": "1c7f03865be9f0f89c17364c4456bd2e042e8be9",
+  "manifestSha256": "1debb1d68cba1e71bc1eac358c5dc79342b1878ea342bc0230a3c91bb6db32cb",
+  "requestCount": 16,
+  "checks": [
+    {
+      "check": "transport:apex",
+      "passed": true,
+      "curlExit": 0,
+      "status": 200,
+      "error": ""
+    },
+    {
+      "check": "headers:apex",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:manifest",
+      "passed": true,
+      "curlExit": 0,
+      "status": 200,
+      "error": ""
+    },
+    {
+      "check": "headers:manifest",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:index.html",
+      "passed": true,
+      "curlExit": 0,
+      "status": 307,
+      "error": ""
+    },
+    {
+      "check": "headers:asset:index.html",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:styles.css",
+      "passed": true,
+      "curlExit": 0,
+      "status": 200,
+      "error": ""
+    },
+    {
+      "check": "headers:asset:styles.css",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:app.mjs",
+      "passed": true,
+      "curlExit": 0,
+      "status": 200,
+      "error": ""
+    },
+    {
+      "check": "headers:asset:app.mjs",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:model.mjs",
+      "passed": true,
+      "curlExit": 0,
+      "status": 200,
+      "error": ""
+    },
+    {
+      "check": "headers:asset:model.mjs",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:demo-adapter.mjs",
+      "passed": true,
+      "curlExit": 0,
+      "status": 200,
+      "error": ""
+    },
+    {
+      "check": "headers:asset:demo-adapter.mjs",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:presentation.mjs",
+      "passed": true,
+      "curlExit": 0,
+      "status": 200,
+      "error": ""
+    },
+    {
+      "check": "headers:asset:presentation.mjs",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:assets/fonts/manrope.woff2",
+      "passed": true,
+      "curlExit": 0,
+      "status": 200,
+      "error": ""
+    },
+    {
+      "check": "headers:asset:assets/fonts/manrope.woff2",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:assets/fonts/OFL.txt",
+      "passed": true,
+      "curlExit": 0,
+      "status": 200,
+      "error": ""
+    },
+    {
+      "check": "headers:asset:assets/fonts/OFL.txt",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:assets/social-preview.png",
+      "passed": true,
+      "curlExit": 0,
+      "status": 200,
+      "error": ""
+    },
+    {
+      "check": "headers:asset:assets/social-preview.png",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:asset:assets/favicon.svg",
+      "passed": true,
+      "curlExit": 0,
+      "status": 200,
+      "error": ""
+    },
+    {
+      "check": "headers:asset:assets/favicon.svg",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:redirect:www.pactlane.io",
+      "passed": true,
+      "curlExit": 0,
+      "status": 308,
+      "error": ""
+    },
+    {
+      "check": "headers:redirect:www.pactlane.io",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:redirect:app.pactlane.io",
+      "passed": true,
+      "curlExit": 0,
+      "status": 308,
+      "error": ""
+    },
+    {
+      "check": "headers:redirect:app.pactlane.io",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:missing-path",
+      "passed": true,
+      "curlExit": 0,
+      "status": 404,
+      "error": ""
+    },
+    {
+      "check": "headers:missing-path",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "transport:read-only",
+      "passed": true,
+      "curlExit": 0,
+      "status": 405,
+      "error": ""
+    },
+    {
+      "check": "headers:read-only",
+      "passed": true,
+      "differences": {}
+    },
+    {
+      "check": "apex",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "check": "canonical",
+      "passed": true
+    },
+    {
+      "check": "manifest",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "check": "manifest-bytes",
+      "passed": true,
+      "publicSha256": "1debb1d68cba1e71bc1eac358c5dc79342b1878ea342bc0230a3c91bb6db32cb"
+    },
+    {
+      "check": "synthetic-boundary",
+      "passed": true
+    },
+    {
+      "check": "index-canonical-redirect",
+      "passed": true,
+      "status": 307,
+      "location": "/"
+    },
+    {
+      "check": "asset:index.html",
+      "passed": true,
+      "status": 200,
+      "expectedBytes": 2435,
+      "actualBytes": 2435,
+      "expectedSha256": "3ea9343f970269d1776f728fe7b5b5437974373efc6e0efd194c7429b5a24763",
+      "actualSha256": "3ea9343f970269d1776f728fe7b5b5437974373efc6e0efd194c7429b5a24763",
+      "servedPath": "/"
+    },
+    {
+      "check": "asset:styles.css",
+      "passed": true,
+      "status": 200,
+      "expectedBytes": 51258,
+      "actualBytes": 51258,
+      "expectedSha256": "acabc229ff4a9497d9226d77cf49ea520049400be0c89ddb1e727652a9baac8a",
+      "actualSha256": "acabc229ff4a9497d9226d77cf49ea520049400be0c89ddb1e727652a9baac8a",
+      "servedPath": "/styles.css"
+    },
+    {
+      "check": "asset:app.mjs",
+      "passed": true,
+      "status": 200,
+      "expectedBytes": 53702,
+      "actualBytes": 53702,
+      "expectedSha256": "d7387599fce2657b016aa5671f945e84221731c28336dc0a08f67f8de2a9ba42",
+      "actualSha256": "d7387599fce2657b016aa5671f945e84221731c28336dc0a08f67f8de2a9ba42",
+      "servedPath": "/app.mjs"
+    },
+    {
+      "check": "asset:model.mjs",
+      "passed": true,
+      "status": 200,
+      "expectedBytes": 13610,
+      "actualBytes": 13610,
+      "expectedSha256": "6bab9aeed89e15686ea1ae281a2d46751bb43b82ee2f421c8447dda81e8a89ce",
+      "actualSha256": "6bab9aeed89e15686ea1ae281a2d46751bb43b82ee2f421c8447dda81e8a89ce",
+      "servedPath": "/model.mjs"
+    },
+    {
+      "check": "asset:demo-adapter.mjs",
+      "passed": true,
+      "status": 200,
+      "expectedBytes": 3668,
+      "actualBytes": 3668,
+      "expectedSha256": "a594e7b29e1570a9fccebe1ecd4b6f8f224a71e9cae5959c4ac129a3d8bf41aa",
+      "actualSha256": "a594e7b29e1570a9fccebe1ecd4b6f8f224a71e9cae5959c4ac129a3d8bf41aa",
+      "servedPath": "/demo-adapter.mjs"
+    },
+    {
+      "check": "asset:presentation.mjs",
+      "passed": true,
+      "status": 200,
+      "expectedBytes": 7303,
+      "actualBytes": 7303,
+      "expectedSha256": "1ecfe5cbc0c61686780eb1d50c9389df0610c30805e245bc3b1ab97d39bd4d15",
+      "actualSha256": "1ecfe5cbc0c61686780eb1d50c9389df0610c30805e245bc3b1ab97d39bd4d15",
+      "servedPath": "/presentation.mjs"
+    },
+    {
+      "check": "asset:assets/fonts/manrope.woff2",
+      "passed": true,
+      "status": 200,
+      "expectedBytes": 24576,
+      "actualBytes": 24576,
+      "expectedSha256": "e310b55a7fd9677f5e3555e6c6c4d064fa1f1d24393f0ddbe217cea12a8c432f",
+      "actualSha256": "e310b55a7fd9677f5e3555e6c6c4d064fa1f1d24393f0ddbe217cea12a8c432f",
+      "servedPath": "/assets/fonts/manrope.woff2"
+    },
+    {
+      "check": "asset:assets/fonts/OFL.txt",
+      "passed": true,
+      "status": 200,
+      "expectedBytes": 4386,
+      "actualBytes": 4386,
+      "expectedSha256": "d6a309fcfb963d329a93baf9df66fa5f3c23a4be2b5f67edf24d6cafecde12ac",
+      "actualSha256": "d6a309fcfb963d329a93baf9df66fa5f3c23a4be2b5f67edf24d6cafecde12ac",
+      "servedPath": "/assets/fonts/OFL.txt"
+    },
+    {
+      "check": "asset:assets/social-preview.png",
+      "passed": true,
+      "status": 200,
+      "expectedBytes": 85170,
+      "actualBytes": 85170,
+      "expectedSha256": "2c9c8922ec256b8248a2ea1a2b5b25425cc1bd18036681f7a0805f17ff05f37d",
+      "actualSha256": "2c9c8922ec256b8248a2ea1a2b5b25425cc1bd18036681f7a0805f17ff05f37d",
+      "servedPath": "/assets/social-preview.png"
+    },
+    {
+      "check": "asset:assets/favicon.svg",
+      "passed": true,
+      "status": 200,
+      "expectedBytes": 334,
+      "actualBytes": 334,
+      "expectedSha256": "a88935722e815d49768c99e9eed87d6ba758e0b19342db7c6456821425f8b6fe",
+      "actualSha256": "a88935722e815d49768c99e9eed87d6ba758e0b19342db7c6456821425f8b6fe",
+      "servedPath": "/assets/favicon.svg"
+    },
+    {
+      "check": "redirect:www.pactlane.io",
+      "passed": true,
+      "status": 308,
+      "location": "https://pactlane.io/test-path?demo=1&ref=a%2Fb"
+    },
+    {
+      "check": "redirect:app.pactlane.io",
+      "passed": true,
+      "status": 308,
+      "location": "https://pactlane.io/test-path?demo=1&ref=a%2Fb"
+    },
+    {
+      "check": "missing-path",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "check": "read-only",
+      "passed": true,
+      "status": 405,
+      "allow": "GET, HEAD"
+    },
+    {
+      "check": "local-manifest-still-frozen",
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "manifestArtifact": "dist/demo/manifest.json",
+  "sanitization": {
+    "removedFields": [
+      "manifestPath"
+    ],
+    "reason": "Host-local path omitted; public audit results unchanged."
+  }
+}

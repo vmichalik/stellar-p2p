@@ -1,0 +1,44 @@
+{
+  "checkedAt": "2026-10-26T09:13:08.166470+00:00",
+  "sourceCommit": "f52aafd",
+  "application": "stellar-p2p-proof-vijay",
+  "machine": "830d12add66258",
+  "image": "sha256:cff4e4fcce3a01b3251ccc41708364580118089f13de4b7c8047629b7bc4df64",
+  "region": "cdg",
+  "volume": {
+    "id": "vol_vz80xl0nk9wy5xjv",
+    "sizeGB": 1,
+    "encrypted": true,
+    "recordCountRestored": 2,
+    "sqliteIntegrity": "ok"
+  },
+  "rollbackMachine": {
+    "id": "85e769b4196298",
+    "state": "stopped",
+    "publicRoutes": false
+  },
+  "website": {
+    "worker": "pactlane-demo",
+    "version": "66f37f12-7c6d-4cf6-ae24-f2586e369531",
+    "trafficPercent": 100,
+    "assetSourceCommit": "8f3ec08",
+    "apiStatus": 200,
+    "configured": false
+  },
+  "setup": {
+    "url": "https://stellar-p2p-proof-vijay.fly.dev/setup",
+    "publicStatus": 200,
+    "unsignedUploadFeeStroops": "197356360",
+    "combinedDeploymentFeeCapStroops": "250000000",
+    "ownerWalletSignatureRequired": true,
+    "transactionSubmitted": false
+  },
+  "browser": {
+    "desktopWidth": 1440,
+    "mobileWidth": 390,
+    "overflow": false,
+    "pageErrors": 0,
+    "demoModeChecked": true
+  },
+  "paymentReleaseGate": "NOT_CLEARED"
+}

@@ -1,0 +1,328 @@
+{
+  "checkedAt": "2026-10-26T10:33:23.140Z",
+  "sourceCommit": "e71563b2780afb4570a9b3c28481e55d81c82d61",
+  "website": {
+    "origin": "https://pactlane.io",
+    "worker": "pactlane-demo",
+    "version": "9827f1d0-8690-471e-847d-ed0e2efb1e3a",
+    "assetsChecked": 46,
+    "allAssetsMatch": true,
+    "assets": [
+      {
+        "path": "index.html",
+        "status": 200,
+        "type": "text/html",
+        "matches": true
+      },
+      {
+        "path": "entry.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "site-ui.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "site-shell.css",
+        "status": 200,
+        "type": "text/css",
+        "matches": true
+      },
+      {
+        "path": "marketplace.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "live-app.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "live-view-adapter.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "live-styles.css",
+        "status": 200,
+        "type": "text/css",
+        "matches": true
+      },
+      {
+        "path": "host-client.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "network.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "deployment-wallet.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "freighter-connector.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "wallet-dialog.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "vendor/freighter-api.js",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "vendor/walletconnect.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "styles.css",
+        "status": 200,
+        "type": "text/css",
+        "matches": true
+      },
+      {
+        "path": "app.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "model.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "demo-adapter.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "presentation.mjs",
+        "status": 200,
+        "type": "text/javascript",
+        "matches": true
+      },
+      {
+        "path": "assets/fonts/manrope.woff2",
+        "status": 200,
+        "type": "font/woff2",
+        "matches": true
+      },
+      {
+        "path": "assets/fonts/OFL.txt",
+        "status": 200,
+        "type": "text/plain",
+        "matches": true
+      },
+      {
+        "path": "assets/social-preview.png",
+        "status": 200,
+        "type": "image/png",
+        "matches": true
+      },
+      {
+        "path": "assets/favicon.svg",
+        "status": 200,
+        "type": "image/svg+xml",
+        "matches": true
+      },
+      {
+        "path": "assets/social/og-default.png",
+        "status": 200,
+        "type": "image/png",
+        "matches": true
+      },
+      {
+        "path": "assets/social/og-default.jpg",
+        "status": 200,
+        "type": "image/jpeg",
+        "matches": true
+      },
+      {
+        "path": "assets/social/og-dark.png",
+        "status": 200,
+        "type": "image/png",
+        "matches": true
+      },
+      {
+        "path": "assets/social/og-dark.jpg",
+        "status": 200,
+        "type": "image/jpeg",
+        "matches": true
+      },
+      {
+        "path": "assets/social/social-link-wide.png",
+        "status": 200,
+        "type": "image/png",
+        "matches": true
+      },
+      {
+        "path": "assets/social/social-link-wide.jpg",
+        "status": 200,
+        "type": "image/jpeg",
+        "matches": true
+      },
+      {
+        "path": "assets/social/social-landscape.png",
+        "status": 200,
+        "type": "image/png",
+        "matches": true
+      },
+      {
+        "path": "assets/social/social-landscape.jpg",
+        "status": 200,
+        "type": "image/jpeg",
+        "matches": true
+      },
+      {
+        "path": "assets/social/social-square.png",
+        "status": 200,
+        "type": "image/png",
+        "matches": true
+      },
+      {
+        "path": "assets/social/social-square.jpg",
+        "status": 200,
+        "type": "image/jpeg",
+        "matches": true
+      },
+      {
+        "path": "assets/social/social-portrait.png",
+        "status": 200,
+        "type": "image/png",
+        "matches": true
+      },
+      {
+        "path": "assets/social/social-portrait.jpg",
+        "status": 200,
+        "type": "image/jpeg",
+        "matches": true
+      },
+      {
+        "path": "assets/social/social-story.png",
+        "status": 200,
+        "type": "image/png",
+        "matches": true
+      },
+      {
+        "path": "assets/social/social-story.jpg",
+        "status": 200,
+        "type": "image/jpeg",
+        "matches": true
+      },
+      {
+        "path": "assets/social/og-default-32116a99787d.jpg",
+        "status": 200,
+        "type": "image/jpeg",
+        "matches": true
+      },
+      {
+        "path": "assets/social/social-link-wide-a7593d7d0e8e.jpg",
+        "status": 200,
+        "type": "image/jpeg",
+        "matches": true
+      },
+      {
+        "path": "demo.mp4",
+        "status": 200,
+        "type": "video/mp4",
+        "matches": true
+      },
+      {
+        "path": "demo-script.txt",
+        "status": 200,
+        "type": "text/plain",
+        "matches": true
+      },
+      {
+        "path": "manifest.json",
+        "status": 200,
+        "type": "application/json",
+        "matches": true
+      },
+      {
+        "path": "llms.txt",
+        "status": 200,
+        "type": "text/plain",
+        "matches": true
+      },
+      {
+        "path": "robots.txt",
+        "status": 200,
+        "type": "text/plain",
+        "matches": true
+      },
+      {
+        "path": "sitemap.xml",
+        "status": 200,
+        "type": "application/xml",
+        "matches": true
+      }
+    ],
+    "indexing": "index, follow",
+    "desktopOverflow": false,
+    "mobileOverflow": false,
+    "demoPresent": true,
+    "pageErrors": []
+  },
+  "service": {
+    "app": "stellar-p2p-proof-vijay",
+    "machine": "830d12add66258",
+    "image": "sha256:3ec8cfd5688660b65be80550d4c41dc0f862bd698b48a4cc4bd7aa5e8df0ce95",
+    "healthy": true,
+    "publicApi": {
+      "status": 200,
+      "configured": true,
+      "capabilities": {
+        "createOffers": false,
+        "maximumOfferUSDC": "1"
+      },
+      "offers": 0,
+      "readiness": {
+        "paymentProof": true,
+        "submission": true,
+        "recovery": true
+      }
+    },
+    "apiCheckedAt": "2026-10-26T10:32:38.309Z"
+  },
+  "preservedSettlement": {
+    "orderId": "0",
+    "state": "Released",
+    "ledger": "65145003",
+    "paymentUsedOnChain": true,
+    "recordCount": 4,
+    "uniqueMatchingPayments": 1,
+    "policyStatus": "SETTLED"
+  },
+  "checks": "offer-creation-checks.json",
+  "realTransactionsSubmittedByRepair": 0,
+  "newAuthenticatedBankTests": 0,
+  "ownerNextAction": "Refresh the site, connect seller wallet ending BMXT, choose Sell USDC and create an offer. Funding needs a separate wallet signature."
+}

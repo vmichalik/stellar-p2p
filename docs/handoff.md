@@ -20,6 +20,12 @@ Previous website/source publication record follows.
 
 # Project handoff
 
+## Current wallet step — 09:29 UTC
+
+The live image is now `sha256:4e63deb155e8799d488bca10069011200c5f165ec9912c778f11f56c256ff7f4`, source `b82c42d`. The first owner-signed upload reached submission but was never included. Its response was not preserved by the initial bootstrap; that diagnostic gap is repaired. After its validity window plus 30 seconds, RPC returned NOT_FOUND, Horizon returned 404, and the source sequence remained unconsumed. The expired attempt is archived in the private journal; no deployment fee was charged. No pending transaction remains from that attempt.
+
+Current Soroban inclusion-fee statistics showed a 200-stroop median/p95; the first draft used 100. The next upload uses 200 (a 0.00001 XLM increase), with the same 25 XLM combined cap and five-minute validity. The cause of the first rejection is not established. The new code preserves signed envelopes and RPC outcomes privately, shows fixed rejection codes, and keeps rejected/unknown attempts fenced. Thirty-three focused tests passed after this correction. The owner is following the refreshed setup instructions; do not submit or sign on their behalf.
+
 ## Objective and source
 
 Make Pactlane easy for users and HackMeridian judges to understand: a clear buyer/supplier story, realistic product demo, readable implementation docs and directly linked evidence.

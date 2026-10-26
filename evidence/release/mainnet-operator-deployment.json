@@ -1,9 +1,9 @@
 {
-  "checkedAt": "2026-10-26T09:13:08.166470+00:00",
-  "sourceCommit": "f52aafd",
+  "checkedAt": "2026-10-26T09:30:48.137599+00:00",
+  "sourceCommit": "b82c42d",
   "application": "stellar-p2p-proof-vijay",
   "machine": "830d12add66258",
-  "image": "sha256:cff4e4fcce3a01b3251ccc41708364580118089f13de4b7c8047629b7bc4df64",
+  "image": "sha256:4e63deb155e8799d488bca10069011200c5f165ec9912c778f11f56c256ff7f4",
   "region": "cdg",
   "volume": {
     "id": "vol_vz80xl0nk9wy5xjv",
@@ -28,10 +28,20 @@
   "setup": {
     "url": "https://stellar-p2p-proof-vijay.fly.dev/setup",
     "publicStatus": 200,
-    "unsignedUploadFeeStroops": "197356360",
+    "unsignedUploadFeeStroops": "197356460",
     "combinedDeploymentFeeCapStroops": "250000000",
     "ownerWalletSignatureRequired": true,
-    "transactionSubmitted": false
+    "transactionSubmitted": true,
+    "firstAttempt": {
+      "hash": "0ef1d976cbbee3fd91bdf7ee42794381ba09c2dadcb071e4166cbc183f8d721f",
+      "outcome": "EXPIRED_WITHOUT_INCLUSION",
+      "rpcStatus": "NOT_FOUND",
+      "horizonStatus": 404,
+      "sourceSequenceConsumed": false,
+      "feeChargedStroops": "0",
+      "submissionResponse": "not preserved by initial implementation; corrected before retry"
+    },
+    "nextAction": "Owner repeats wallet-reviewed upload with observed 200-stroop inclusion fee; cap unchanged"
   },
   "browser": {
     "desktopWidth": 1440,

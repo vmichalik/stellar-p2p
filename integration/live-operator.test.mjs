@@ -41,7 +41,7 @@ test('operator restores accepted identity privately, needs key approval, and ser
     fiatMinor: '89',
     rolesConfirmed: true,
     bankRecipientConfirmedAsSeller: true,
-    destination: '@wh1zbog',
+    destination: '@synthetic',
     deploymentFeeCapStroops: '250000000',
     feeCapApproved: true,
   };

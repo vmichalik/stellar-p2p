@@ -1,4 +1,13 @@
-import { readFileSync, existsSync, mkdirSync, chmodSync, writeFileSync } from 'node:fs';
+import {
+  readFileSync,
+  existsSync,
+  mkdirSync,
+  chmodSync,
+  writeFileSync,
+  openSync,
+  fsyncSync,
+  closeSync,
+} from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
@@ -44,7 +53,8 @@ export async function createLiveOperator({
       owner.fiatMinor === '89' &&
       owner.rolesConfirmed &&
       owner.bankRecipientConfirmedAsSeller &&
-      owner.destination === '@wh1zbog' &&
+      typeof owner.destination === 'string' &&
+      /^@[a-zA-Z0-9._]{3,30}$/.test(owner.destination) &&
       owner.deploymentFeeCapStroops === '250000000' &&
       owner.feeCapApproved,
     'OWNER_APPROVAL_REQUIRED',
@@ -55,7 +65,13 @@ export async function createLiveOperator({
       owner.initializeSigner === true && !existsSync(join(directory, 'deployment-journal.json')),
       'SIGNER_CREATION_NOT_APPROVED',
     );
-    writeFileSync(keyPath, randomBytes(32), { mode: 0o600, flag: 'wx' });
+    const fd = openSync(keyPath, 'wx', 0o600);
+    try {
+      writeFileSync(fd, randomBytes(32));
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
   }
   chmodSync(keyPath, 0o600);
   const key = Keypair.fromRawEd25519Seed(readFileSync(keyPath));

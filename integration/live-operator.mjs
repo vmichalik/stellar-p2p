@@ -12,7 +12,7 @@ import { readFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { join, resolve } from 'node:path';
-import { Keypair, Networks, rpc } from '@stellar/stellar-sdk';
+import { Keypair, Networks, StrKey, rpc } from '@stellar/stellar-sdk';
 import { createEd25519SigningAdapter } from '../policy/src/index.mjs';
 import { normalizedVerifiedPayment } from '../policy/src/tlsn-store.mjs';
 import { createLivePaymentSupport } from './live-payments.mjs';
@@ -58,6 +58,15 @@ export async function createLiveOperator({
       owner.deploymentFeeCapStroops === '250000000' &&
       owner.feeCapApproved,
     'OWNER_APPROVAL_REQUIRED',
+  );
+  const accounts = Array.isArray(owner.accounts)
+    ? owner.accounts
+    : [owner.accounts?.seller, owner.accounts?.buyer];
+  check(
+    accounts.length === 2 &&
+      accounts.every((value) => StrKey.isValidEd25519PublicKey(value)) &&
+      accounts[0] !== accounts[1],
+    'OWNER_WALLETS_REQUIRED',
   );
   const keyPath = join(directory, 'policy-seed');
   if (!existsSync(keyPath)) {
@@ -108,8 +117,8 @@ export async function createLiveOperator({
     savePrivateJson(bindingPath, {
       network: 'mainnet',
       token: TOKEN,
-      seller: owner.accounts[0],
-      buyer: owner.accounts[1],
+      seller: accounts[0],
+      buyer: accounts[1],
       recipientId: anchor.recipientId,
       payerScope: anchor.payerScope,
       evidenceId: ids[0].id,
@@ -121,8 +130,8 @@ export async function createLiveOperator({
   }
   const binding = JSON.parse(readFileSync(bindingPath, 'utf8'));
   check(
-    binding.seller === owner.accounts[0] &&
-      binding.buyer === owner.accounts[1] &&
+    binding.seller === accounts[0] &&
+      binding.buyer === accounts[1] &&
       binding.destination === owner.destination,
     'OWNER_BINDING_CHANGED',
   );

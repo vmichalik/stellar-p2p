@@ -36,7 +36,7 @@ test('operator restores accepted identity privately, needs key approval, and ser
   t.after(() => store.close());
   store.ingest({ authorization: 'Bearer ' + 'ab'.repeat(32), payload: payload() });
   const owner = {
-    accounts: [Keypair.random().publicKey(), Keypair.random().publicKey()],
+    accounts: { seller: Keypair.random().publicKey(), buyer: Keypair.random().publicKey() },
     maximumTestUSDC: '1',
     fiatMinor: '89',
     rolesConfirmed: true,
@@ -68,7 +68,7 @@ test('operator restores accepted identity privately, needs key approval, and ser
   const status = await fetch(url + '/bootstrap/status', { headers: { host } });
   assert.equal(status.status, 200);
   const body = await status.json();
-  assert.equal(body.owner, owner.accounts[0]);
+  assert.equal(body.owner, owner.accounts.seller);
   assert.equal(body.completed.length, 0);
   assert.equal(JSON.stringify(body).includes('payerScope'), false);
   assert.equal((await fetch(url + '/setup', { headers: { host } })).status, 200);

@@ -230,6 +230,7 @@ export async function createLiveOperator({
     ['/setup/styles.css', ['styles.css', 'text/css; charset=utf-8']],
     ['/setup/live-styles.css', ['live-styles.css', 'text/css; charset=utf-8']],
     ['/assets/fonts/manrope.woff2', ['assets/fonts/manrope.woff2', 'font/woff2']],
+    ['/setup/assets/fonts/manrope.woff2', ['assets/fonts/manrope.woff2', 'font/woff2']],
   ]);
   const send = (res, status, body, type) =>
     res.writeHead(status, { ...headers, ...(type ? { 'Content-Type': type } : {}) }).end(body);

@@ -28,7 +28,10 @@ function fixture(t) {
     getNetwork: async () => ({ passphrase: Networks.PUBLIC, protocolVersion: 29 }),
     getAccount: async () => new Account(owner.publicKey(), '100'),
     getLatestLedger: async () => ({ closeTime: now }),
-    getTransaction: async () => outcome,
+    getTransaction: async (hash) => {
+      assert.match(hash, /^[a-f0-9]{64}$/);
+      return outcome;
+    },
     simulateTransaction: async () => ({
       _parsed: true,
       transactionData: new SorobanDataBuilder().setResourceFee(fee),

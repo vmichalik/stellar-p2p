@@ -195,7 +195,7 @@ export function createMainnetBootstrap({
           kind,
           status: 'prepared',
           xdr: prepared.toXDR(),
-          hash: prepared.hash().toString('hex'),
+          hash: Buffer.from(prepared.hash()).toString('hex'),
           fee: prepared.fee,
           expires,
         };
@@ -209,7 +209,7 @@ export function createMainnetBootstrap({
         const tx = TransactionBuilder.fromXDR(signedXdr, Networks.PUBLIC);
         check(
           state.pending?.status === 'prepared' &&
-            tx.hash().toString('hex') === state.pending.hash &&
+            Buffer.from(tx.hash()).toString('hex') === state.pending.hash &&
             tx.source === owner &&
             tx.fee === state.pending.fee &&
             clock() < state.pending.expires,

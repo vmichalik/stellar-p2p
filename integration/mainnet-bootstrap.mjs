@@ -98,6 +98,8 @@ export function createMainnetBootstrap({
           hash: state.pending.hash,
           fee: state.pending.fee,
           status: state.pending.status,
+          ...(state.pending.rpcStatus ? { rpcStatus: state.pending.rpcStatus } : {}),
+          ...(state.pending.rpcError ? { rpcError: state.pending.rpcError } : {}),
         }
       : null,
   });
@@ -224,12 +226,35 @@ export function createMainnetBootstrap({
         // Persist before any RPC submission. A timeout is an unknown outcome, not
         // permission to sign another transaction or spend the fee twice.
         state.pending.status = 'submitted';
+        state.pending.signedXdr = signedXdr;
         save();
         try {
-          await server.sendTransaction(tx);
-        } catch {
-          /* status reconciles exact hash */
+          const response = await server.sendTransaction(tx);
+          state.pending.rpcStatus = ['PENDING', 'DUPLICATE', 'ERROR', 'TRY_AGAIN_LATER'].includes(
+            response?.status,
+          )
+            ? response.status
+            : 'UNKNOWN';
+          if (response?.status === 'ERROR' && response.hash === state.pending.hash) {
+            state.pending.status = 'rejected';
+            const code = response.errorResult?.result?.type;
+            state.pending.rpcError =
+              typeof code === 'string' && /^tx[A-Za-z]{1,60}$/.test(code)
+                ? code
+                : 'SUBMISSION_REJECTED';
+            // Keep the public-chain diagnostic privately for operator review.
+            if (typeof response.errorResult?.toXdr === 'function')
+              state.pending.errorResultXdr = response.errorResult.toXdr('base64');
+          }
+        } catch (error) {
+          state.pending.rpcStatus = 'UNKNOWN';
+          state.pending.rpcError = Number.isInteger(error?.response?.status)
+            ? `HTTP_${error.response.status}`
+            : Number.isInteger(error?.code)
+              ? `RPC_${Math.abs(error.code)}`
+              : 'SUBMISSION_UNCONFIRMED';
         }
+        save();
         await reconcile();
         await activate();
         return view();

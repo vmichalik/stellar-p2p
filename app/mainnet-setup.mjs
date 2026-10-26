@@ -46,10 +46,11 @@ function render() {
     : prepared
       ? `Maximum fee for this step: ${(Number(state.pending.fee) / 1e7).toFixed(7)} XLM. Review the transaction in your wallet.`
       : 'Use the seller wallet ending BMXT on Stellar mainnet.';
-  $('action').disabled =
-    state.pending?.status === 'submitted' || state.pending?.status === 'failed';
+  $('action').disabled = ['submitted', 'failed', 'rejected'].includes(state.pending?.status);
   if (state.pending?.status === 'submitted') {
-    $('status').textContent = 'Waiting for Stellar to confirm this transaction…';
+    $('status').textContent = state.pending.rpcError
+      ? `Submission is unconfirmed (${state.pending.rpcError}). Checking the exact transaction; please leave this page open.`
+      : 'Waiting for Stellar to confirm this transaction…';
     polling ??= setInterval(refresh, 4000);
   } else {
     clearInterval(polling);
@@ -57,6 +58,9 @@ function render() {
   }
   if (state.pending?.status === 'failed')
     $('status').textContent = 'The transaction failed. Leave this page open for review.';
+  if (state.pending?.status === 'rejected')
+    $('status').textContent =
+      `Stellar declined this submission (${state.pending.rpcError}). Leave this page open for review.`;
 }
 async function refresh() {
   try {

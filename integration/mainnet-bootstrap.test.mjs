@@ -139,3 +139,25 @@ test('deployment state cannot be reused with a different policy key', (t) => {
     /CONFIG_CHANGED/,
   );
 });
+
+test('submission rejection is recorded instead of an endless confirmation spinner', async (t) => {
+  const f = fixture(t),
+    service = f.create(),
+    prepared = await service.prepare();
+  const tx = TransactionBuilder.fromXDR(prepared.xdr, Networks.PUBLIC);
+  tx.sign(f.owner);
+  f.server.sendTransaction = async () => ({
+    status: 'ERROR',
+    hash: prepared.pending.hash,
+    errorResult: { result: { type: 'txInsufficientFee' } },
+  });
+  const result = await service.submit(tx.toXDR());
+  assert.equal(result.pending.status, 'rejected');
+  assert.equal(result.pending.rpcError, 'txInsufficientFee');
+  assert.equal(result.pending.signedXdr, undefined);
+  assert.equal(
+    JSON.parse(readFileSync(join(f.directory, 'deployment-journal.json'))).pending.signedXdr,
+    tx.toXDR(),
+  );
+  await assert.rejects(f.create().prepare(), /RECONCILIATION/);
+});

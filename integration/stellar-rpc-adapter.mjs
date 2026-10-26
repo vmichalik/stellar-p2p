@@ -1,3 +1,4 @@
+import { isLivePaymentSupport } from './live-payments.mjs';
 import {
   Address,
   BASE_FEE,
@@ -121,6 +122,7 @@ export function createStellarServices({
   server,
   journal,
   policy,
+  paymentSupport,
   instructions,
   recovery,
   submissionEnabled = false,
@@ -423,8 +425,15 @@ export function createStellarServices({
       );
     },
     async beginPayment(orderId) {
-      check(cfg.network !== 'mainnet', 'PAYMENT_VERIFICATION_UNAVAILABLE');
+      if (cfg.network === 'mainnet')
+        check(isLivePaymentSupport(paymentSupport), 'PAYMENT_VERIFICATION_UNAVAILABLE');
       const current = await order(orderId);
+      if (paymentSupport)
+        await paymentSupport.assertLock({
+          deployment: cfg,
+          order: current,
+          account: accounts.buyer,
+        });
       check(current.buyer === accounts.buyer, 'BUYER_WALLET_MISMATCH');
       const result = await writeOrder(
         'begin_payment',

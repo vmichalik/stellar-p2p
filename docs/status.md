@@ -1,6 +1,6 @@
 # Build and verification
 
-Checked on the Mac mini, 25 October 2026. This page is the current record; dated artifacts retain the scope of their original runs.
+Updated on the Mac mini, 26 October 2026. This page is the current record; dated artifacts retain the scope of their original runs.
 
 | Part                | Observed result                                                                                                   | Evidence                                                                      |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -13,7 +13,7 @@ Checked on the Mac mini, 25 October 2026. This page is the current record; dated
 
 ## Mainnet connection
 
-The approved small-trade target is **1 USDC for EUR 0.89**. The public website’s exchange API is not attached yet, and no mainnet escrow release receipt is recorded here. Finish the durable operator configuration, wallet-to-bank bindings, signer and deployment/funding/lock before the new payment. Payment release remains `NOT_CLEARED` until that trade is verified and settled.
+The approved small-trade target is **1 USDC for EUR 0.89**. The live operator, owner-reviewed wallet-to-bank binding, bounded deployment page and same-origin API connection are implemented and tested. Durable storage is prepared on the existing Fly app; public cutover and owner-signed mainnet deployment are in progress. No mainnet escrow release receipt is recorded here. Payment release remains `NOT_CLEARED` until that trade is verified and settled.
 
 The accepted historical bank transfer and PLTEST rehearsal are separate results. The historical transfer predates the proposed new order and cannot pay for it. [Operator continuation](release/mainnet-test.md).
 

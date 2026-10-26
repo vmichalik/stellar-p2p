@@ -57,6 +57,41 @@ export function createTlsnEvidenceStore({
     );
   }
   const reader = Object.freeze({
+    // Private lookup only. Policy still authenticates and validates the selected record.
+    findPaymentIds({ payerScope, recipientId, amountMinor, currency, after, before }) {
+      requirePolicy(
+        typeof payerScope === 'string' &&
+          typeof recipientId === 'string' &&
+          /^[1-9][0-9]*$/.test(amountMinor) &&
+          currency === 'EUR' &&
+          /^(0|[1-9][0-9]*)$/.test(after) &&
+          /^(0|[1-9][0-9]*)$/.test(before),
+        'INVALID_EVIDENCE_QUERY',
+      );
+      const matches = new Map();
+      for (const row of db
+        .prepare('SELECT * FROM tlsn_payment_records ORDER BY received_at,id')
+        .all()) {
+        requirePolicy(
+          row.schema_version === 1 &&
+            createHash('sha256').update(row.payment).digest('hex') === row.digest,
+          'EVIDENCE_STORE_CORRUPT',
+        );
+        const p = JSON.parse(row.payment);
+        if (
+          p.payerScope === payerScope &&
+          p.recipientId === recipientId &&
+          p.amountMinor === amountMinor &&
+          p.currency === currency &&
+          BigInt(p.completedAt) >= BigInt(after) &&
+          BigInt(p.completedAt) < BigInt(before)
+        ) {
+          // Re-proving the same transfer does not create another eligible payment.
+          if (!matches.has(p.paymentId)) matches.set(p.paymentId, row.id);
+        }
+      }
+      return [...matches.values()];
+    },
     readVerifiedRecord(id) {
       identifier(id);
       const row = db.prepare('SELECT * FROM tlsn_payment_records WHERE id=?').get(id);

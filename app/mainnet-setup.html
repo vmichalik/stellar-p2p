@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Pactlane · Set up escrow</title>
+    <link rel="stylesheet" href="/setup/styles.css" />
+    <link rel="stylesheet" href="/setup/live-styles.css" />
+    <script src="/setup/freighter-api.js" defer></script>
+    <script type="module" src="/setup/mainnet-setup.mjs"></script>
+  </head>
+  <body class="live-app">
+    <main class="wallet-setup">
+      <a class="text-button" href="https://pactlane.io/">Pactlane ↗</a>
+      <p class="eyebrow">STELLAR MAINNET</p>
+      <h1>Set up your escrow.</h1>
+      <p>
+        Two wallet approvals publish the escrow code and create the contract. The combined
+        deployment fee is capped at 25 XLM.
+      </p>
+      <section class="panel">
+        <h2 id="step">Connect your seller wallet</h2>
+        <p id="detail">
+          Select the wallet ending BMXT in Freighter, with Stellar mainnet selected.
+        </p>
+        <button class="button primary" id="action">Connect Freighter</button>
+        <p id="status" role="status" aria-live="polite"></p>
+        <div id="receipts"></div>
+      </section>
+      <p>The first trade will be 1 USDC for €0.89. You’ll fund it after deployment.</p>
+    </main>
+  </body>
+</html>

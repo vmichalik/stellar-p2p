@@ -31,6 +31,7 @@ async function main() {
   let gateway,
     verifier,
     recordRuntime,
+    application,
     stopping = false;
   async function stop(code) {
     if (stopping) return;
@@ -43,6 +44,7 @@ async function main() {
       const forced = setTimeout(() => verifier.kill('SIGKILL'), 5000);
       forced.unref();
     }
+    application?.close();
     await recordRuntime?.close();
     process.exitCode = code;
   }
@@ -81,14 +83,28 @@ async function main() {
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
     if (!ready || stopping) throw new Error('VERIFIER_NOT_READY');
-    gateway = await createBenchmarkGateway({ ...config, fullPaymentRecord: !!recordRuntime });
+    if (process.env.PACTLANE_OPERATOR_DIRECTORY) {
+      if (!recordRuntime) throw Error('DURABLE_EVIDENCE_REQUIRED');
+      const { createLiveOperator } = await import('../../integration/live-operator.mjs');
+      application = await createLiveOperator({
+        directory: process.env.PACTLANE_OPERATOR_DIRECTORY,
+        evidenceDirectory: recordDirectory,
+        evidenceStore: recordRuntime.store,
+        proofHealth: verifierReady,
+      });
+    }
+    gateway = await createBenchmarkGateway({
+      ...config,
+      fullPaymentRecord: !!recordRuntime,
+      application,
+    });
     if (stopping) return;
     await gateway.listen();
     if (stopping) {
       await gateway.close();
       return;
     }
-    console.log('Bank-free public setup gateway ready on port 8080. Payment gate: NOT_CLEARED.');
+    console.log('Pactlane gateway ready on port 8080. Payment gate: NOT_CLEARED.');
   } catch {
     console.error('Public benchmark startup failed; no bank request was made.');
     await stop(1);

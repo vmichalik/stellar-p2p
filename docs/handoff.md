@@ -1,3 +1,23 @@
+# Mainnet continuation — 26 October 2026
+
+Objective: complete one owner-approved mainnet trade: 1 USDC for EUR 0.89. Work runs on the Mac mini; wallet and bank approvals happen on the owner’s MacBook Pro.
+
+Active worktree: `/private/tmp/pactlane-mainnet-live-20261026`, branch `codex/pactlane-mainnet-live`, based on `e39eaa21efd45f4a81ec500ac962728f14691fa7`. This source commit adds the live operator, durable payment policy, bounded wallet deployment and same-origin exchange API. The subsequent publication receipt will identify deployed source and hashes.
+
+The owner approved a combined 25 XLM deployment-fee ceiling, one 1 GB Fly volume and a private server policy key. The seller top-up was observed at 08:40 UTC (154.26 XLM); upload simulation estimated 19.735636 XLM. Both wallets have authorized Circle USDC trustlines and sufficient token balance. No deployment transaction has been submitted by the agent.
+
+Two accepted historical records were backed up and restored to encrypted volume `vol_vz80xl0nk9wy5xjv` in cdg. SQLite integrity and record count passed before and after migration. They establish the owner-reviewed bank identity binding only; the new order still requires a new EUR 0.89 payment after its confirmed lock. Raw records, bank IDs, the destination, private seed and owner inputs remain outside Git.
+
+The replacement machine is `830d12add66258`; the previous machine `85e769b4196298` remains the rollback source until public cutover. Candidate image: `sha256:90bab3a4c26582c656dd35b18a33dd0a27db89766490e9110796c6d1a48f3957`. It reuses the pinned verifier binary and WASM from the prior image. The current extension is unchanged. Deployment state, policy authorizations, replay history and transaction journals use persistent storage.
+
+Checks: 383 JavaScript tests passed in the complete suite, with 36 prepared-artifact checks skipped. A subsequent gateway run with the existing pinned assets passed all 22 cases (18 additional cases); the complete operator startup/origin/key-approval test also passed. Eight preparation checks and canonical protocol synchronization passed. Syntax checks covered 144 modules/inline scripts. The contract artifact was unchanged and not rebuilt. Initial sandbox listener failures were rerun with loopback permission; one stale staged-page mismatch was resolved by using the current page source with the unchanged binary artifacts.
+
+Next: finish private health checks, switch the existing Fly application to the replacement machine, publish the same-origin Worker API connection, and guide the owner through `/setup`. Each deployment transaction requires the seller’s wallet signature and is checked against the exact prepared hash and the remaining fee cap. Unknown outcomes must reconcile before any new transaction. After deployment: fund, reserve, lock, new bank payment, authenticated complete-record proof, policy acceptance, wallet-signed release, and receipt/balance reconciliation. **Release gate: NOT_CLEARED.**
+
+Previous website/source publication record follows.
+
+---
+
 # Project handoff
 
 ## Objective and source

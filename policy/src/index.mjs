@@ -4,6 +4,7 @@ import { normalizeLiveTlsnPayment } from './evidence.mjs';
 import { requirePolicy, hex32 } from './errors.mjs';
 
 const liveSigners = new WeakSet();
+export const isLiveSigningAdapter = (value) => liveSigners.has(value);
 const forbiddenTestKeys = new Set(
   [0x11, 0x2a].map((byte) =>
     Buffer.from(Keypair.fromRawEd25519Seed(Buffer.alloc(32, byte)).rawPublicKey()).toString('hex'),

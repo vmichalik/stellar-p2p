@@ -243,6 +243,13 @@ export async function createBenchmarkGateway(options = {}) {
 
   const server = createServer((incoming, response) => {
     const rawUrl = incoming.url ?? '';
+    if (options.application?.handles(rawUrl)) {
+      void options.application.handler(incoming, response).catch(() => {
+        if (!response.headersSent) send(response, 503, 'Service unavailable');
+        else response.destroy();
+      });
+      return;
+    }
     if (incoming.method !== 'GET') return send(response, 404, 'Not found');
     if (isProofUiRoute(rawUrl)) {
       void readProofUiRoute(rawUrl).then(

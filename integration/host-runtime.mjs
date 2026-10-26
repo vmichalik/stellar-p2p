@@ -25,6 +25,7 @@ import { createChainReader } from './chain-reader.mjs';
 import { createChainReconciler } from './chain-reconciler.mjs';
 import { createStellarServices } from './stellar-rpc-adapter.mjs';
 import { TransactionJournal } from './transaction-journal.mjs';
+import { isLivePaymentSupport } from './live-payments.mjs';
 import { createRecoveryBroker } from './recovery-broker.mjs';
 
 const check = (value, code) => {
@@ -67,8 +68,8 @@ export function unconfiguredView() {
 
 /** Operator-owned composition. No configuration, private offer data, signing key
  * or verification flag is accepted from HTTP. This factory never submits at boot.
- * The live TLS payment normalizer is still unavailable, so new payment locks stay
- * disabled even when independent testnet funding/reservation is authorized.
+ * Payment locking requires the authenticated-record payment composition and its
+ * owner-approved identity bindings; a browser readiness flag cannot enable it.
  */
 export function createHostRuntime({
   deployment,
@@ -79,6 +80,7 @@ export function createHostRuntime({
   sellerDrafts = [],
   offerReader,
   policyFor,
+  paymentSupport,
   server,
   submissionEnabled = false,
   clock = seconds,
@@ -92,6 +94,12 @@ export function createHostRuntime({
       },
       close() {},
     };
+  check(!paymentSupport || isLivePaymentSupport(paymentSupport), 'LIVE_PAYMENT_SUPPORT_REQUIRED');
+  if (paymentSupport) {
+    check(!policyFor && !offerReader, 'PAYMENT_PORT_CONFLICT');
+    policyFor = paymentSupport.policyFor;
+    offerReader = paymentSupport.offerReader;
+  }
   const cfg = validateDeployment(deployment),
     drafts = structuredClone(sellerDrafts);
   check(
@@ -354,7 +362,8 @@ export function createHostRuntime({
       deployment: publicDeployment(cfg),
       recovery,
       async readView({ account = null } = {}) {
-        const reasons = ['PAYMENT_VERIFICATION_UNAVAILABLE'];
+        const paymentReady = paymentSupport ? await paymentSupport.ready(cfg) : false;
+        const reasons = paymentReady ? [] : ['PAYMENT_VERIFICATION_UNAVAILABLE'];
         let values = [],
           balances = null;
         try {
@@ -416,7 +425,7 @@ export function createHostRuntime({
           balances,
           unavailableReasons: reasons,
           readiness: {
-            paymentProof: false,
+            paymentProof: paymentReady && !reasons.includes('CHAIN_UNAVAILABLE'),
             submission:
               submissionAllowed(cfg, submissionEnabled) && !reasons.includes('CHAIN_UNAVAILABLE'),
             recovery:
@@ -459,6 +468,7 @@ export function createHostRuntime({
           server: remote,
           journal,
           policy,
+          paymentSupport,
           instructions: reader.instructionsFor(account),
           recovery: { seller: sellerPort, validForLedgers: 24 },
           submissionEnabled,
@@ -483,16 +493,29 @@ export function createHostRuntime({
             return result;
           },
           async reserve(orderId, buyer) {
+            paymentSupport?.assertBuyer(buyer);
             await preflight();
             const result = await services.reserve(orderId, buyer);
             cache = null;
             return result;
           },
-          async beginPayment() {
-            throw Error('PAYMENT_VERIFICATION_UNAVAILABLE');
+          async beginPayment(orderId) {
+            check(paymentSupport, 'PAYMENT_VERIFICATION_UNAVAILABLE');
+            await preflight();
+            const current = (await reader.readSnapshot({ orderId: id(orderId) })).order;
+            await paymentSupport.assertLock({ deployment: cfg, order: current, account });
+            const result = await services.beginPayment(orderId);
+            cache = null;
+            return result;
           },
-          async getPaymentInstructions() {
-            throw Error('PAYMENT_VERIFICATION_UNAVAILABLE');
+          async getPaymentInstructions(orderId) {
+            check(paymentSupport, 'PAYMENT_VERIFICATION_UNAVAILABLE');
+            await paymentSupport.assertLock({
+              deployment: cfg,
+              order: (await reader.readSnapshot({ orderId: id(orderId) })).order,
+              account,
+            });
+            return services.getPaymentInstructions(orderId);
           },
           async release(orderId, authorization) {
             await preflight();

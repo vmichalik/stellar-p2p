@@ -4,6 +4,58 @@ import { readFile } from 'node:fs/promises';
 import worker from '../../deploy/demo/worker.mjs';
 import { SECURITY_HEADERS, STATIC_HEADERS } from '../../deploy/demo/headers.mjs';
 
+test('exchange proxy has one fixed upstream, preserves session cookies, and rejects cross-origin writes', async (t) => {
+  const previous = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = previous;
+  });
+  let seen;
+  globalThis.fetch = async (url, options) => {
+    seen = { url: String(url), options };
+    return Response.json(
+      { configured: false },
+      {
+        headers: {
+          'Set-Cookie': '__Host-pactlane=test; Secure; Path=/; HttpOnly; SameSite=Strict',
+        },
+      },
+    );
+  };
+  const view = await worker.fetch(
+    new Request('https://pactlane.io/api/view', { headers: { cookie: '__Host-pactlane=test' } }),
+    {},
+  );
+  assert.equal(view.status, 200);
+  assert.equal(seen.url, 'https://stellar-p2p-proof-vijay.fly.dev/api/view');
+  assert.equal(seen.options.headers.get('cookie'), '__Host-pactlane=test');
+  assert.match(view.headers.get('set-cookie'), /__Host-pactlane/);
+  seen = null;
+  assert.equal(
+    (
+      await worker.fetch(
+        new Request('https://pactlane.io/api/command', {
+          method: 'POST',
+          headers: { origin: 'https://attacker.invalid' },
+          body: '{}',
+        }),
+        {},
+      )
+    ).status,
+    403,
+  );
+  assert.equal(seen, null);
+  assert.equal(
+    (
+      await worker.fetch(
+        new Request('https://pactlane.io/api/view?target=https://attacker.invalid'),
+        {},
+      )
+    ).status,
+    403,
+  );
+  assert.equal(seen, null);
+});
+
 const assertSecured = (response) => {
   for (const [name, value] of Object.entries(SECURITY_HEADERS))
     assert.equal(response.headers.get(name), value);
@@ -124,7 +176,14 @@ test('demo pages block connections and live pages permit only the same origin', 
   }
 });
 
-test('unconfigured live API fails explicitly and cannot return demo assets', async () => {
+test('unavailable live API fails explicitly and cannot return demo assets', async (t) => {
+  const previous = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = previous;
+  });
+  globalThis.fetch = async () => {
+    throw Error('synthetic unavailable');
+  };
   const response = await worker.fetch(new Request('https://pactlane.io/api/view'), {
     ASSETS: {
       fetch() {

@@ -2,13 +2,13 @@
 
 Use the [interactive demo](https://pactlane.io/?demo=1) for the current product experience. It follows seller funding, buyer reservation, payment verification and settlement. The visible Demo mode switch identifies the sample flow.
 
-The [90-second film](https://pactlane.io/demo.mp4) and [optional narration](https://pactlane.io/demo-script.txt) use the current interface and evidence. Editable composition and captures are in [design/demo](../../design/demo/README.md). The film keeps one Demo mode label for sample scenes, with a separate verified-results card.
+The [90-second film](https://pactlane.io/demo.mp4) and [optional narration](https://pactlane.io/demo-script.txt) use the current interface and evidence. Editable composition and captures are in [design/demo](../../design/demo/README.md). The film follows a product walkthrough with a separate mainnet receipt card.
 
 [Current export and publication hashes](../../evidence/release/judge-review-publication.json).
 
 ## Morning capture
 
-Follow the [shot list](../demo/shot-list.md) and [revised script](../demo/revised-demo-script.md). Use the current interface for the main journey, then show the accepted bank record and confirmed testnet receipt with their actual scope. Replace the settlement sequence with a mainnet transaction only when its matching receipt is available.
+Follow the [shot list](../demo/shot-list.md) and [revised script](../demo/revised-demo-script.md). The evidence card now shows the completed EUR 0.89 / 1 USDC mainnet trade. Its [receipt](mainnet-result.md) links every transaction. The product walkthrough follows the sample trade shown in the app.
 
 Keep the same buyer, supplier, quote and amounts throughout. Crop private bank details before sharing screenshots. The demo needs one clear beginning, one payment and one receipt; avoid terminal logs and development-status overlays.
 

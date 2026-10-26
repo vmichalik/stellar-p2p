@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-26T10:12:00Z",
+  "appAndReleaseTests": {
+    "passed": 104,
+    "failed": 0,
+    "skipped": 0
+  },
+  "syntax": {
+    "passed": 160
+  },
+  "relativeMarkdownLinks": "pass",
+  "sensitiveValueScan": "pass",
+  "film": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "frames": 2700,
+    "durationSeconds": 90,
+    "audio": false,
+    "fullDecode": "pass",
+    "browserSnapshots": 18,
+    "pageErrors": 0,
+    "externalRequests": 0,
+    "clippedText": 0,
+    "randomAccessSeekDeterministic": true,
+    "hyperframesCheck": {
+      "ok": true,
+      "lintErrors": 0,
+      "structuralWarnings": 12,
+      "runtimeErrors": 0,
+      "layoutErrors": 0,
+      "contrastErrors": 0
+    }
+  },
+  "paymentReleaseGate": "CLEARED",
+  "tradeEvidence": "mainnet-trade-2026-10-26.json"
+}

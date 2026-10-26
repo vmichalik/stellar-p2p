@@ -1,66 +1,43 @@
-# Mainnet continuation — 26 October 2026
+# Pactlane handoff, 26 October 2026
 
-Objective: complete one owner-approved mainnet trade: 1 USDC for EUR 0.89. Work runs on the Mac mini; wallet and bank approvals happen on the owner’s MacBook Pro.
+## Result
 
-Active worktree: `/private/tmp/pactlane-mainnet-live-20261026`, branch `codex/pactlane-mainnet-live`, based on `e39eaa21efd45f4a81ec500ac962728f14691fa7`. This source commit adds the live operator, durable payment policy, bounded wallet deployment and same-origin exchange API. Deployed application source is `f52aafd`; [the publication receipt](../evidence/release/mainnet-operator-deployment.json) records the image and Worker version.
+The owner-approved mainnet trade is complete: **EUR 0.89 paid through Revolut, verified with TLSNotary, and 1 Circle USDC delivered to the buyer**. Order 0 is `Released`. The release succeeded at 09:52:33 UTC in ledger 65144514.
 
-The owner approved a combined 25 XLM deployment-fee ceiling, one 1 GB Fly volume and a private server policy key. The seller top-up was observed at 08:40 UTC (154.26 XLM); upload simulation estimated 19.735636 XLM. Both wallets have authorized Circle USDC trustlines and sufficient token balance. No deployment transaction has been submitted by the agent.
+[Mainnet receipt](release/mainnet-result.md) · [Sanitized evidence](../evidence/release/mainnet-trade-2026-10-26.json) · [Release transaction](https://stellar.expert/explorer/public/tx/ec4220af4056b185d242977385484066789824a2a274f57b3439e1e4dd1b9864).
 
-Two accepted historical records were backed up and restored to encrypted volume `vol_vz80xl0nk9wy5xjv` in cdg. SQLite integrity and record count passed before and after migration. They establish the owner-reviewed bank identity binding only; the new order still requires a new EUR 0.89 payment after its confirmed lock. Raw records, bank IDs, the destination, private seed and owner inputs remain outside Git.
+RPC token events and before/after balance reads confirm exactly 1 USDC moved from escrow to the buyer, leaving escrow at zero. The on-chain payment-used marker is true. Canonical `reconcileRelease` completed at 09:54:58 UTC and marked the durable payment record settled. **Payment release gate: CLEARED for order 0.**
 
-The replacement machine is `830d12add66258`; the previous machine `85e769b4196298` is stopped, with public routes removed, and retained for rollback. Live image: `sha256:cff4e4fcce3a01b3251ccc41708364580118089f13de4b7c8047629b7bc4df64`. It reuses the pinned verifier binary and WASM from the prior image. The current extension is unchanged. Deployment state, policy authorizations, replay history and transaction journals use persistent storage.
+## Execution and source
 
-Checks: 383 JavaScript tests passed in the complete suite, with 36 prepared-artifact checks skipped. A subsequent gateway run with the existing pinned assets passed all 22 cases (18 additional cases); the complete operator startup/origin/key-approval test also passed. Eight preparation checks and canonical protocol synchronization passed. Syntax checks covered 144 modules/inline scripts. The contract artifact was unchanged and not rebuilt. Initial sandbox listener failures were rerun with loopback permission; one stale staged-page mismatch was resolved by using the current page source with the unchanged binary artifacts.
+Work runs on Vijay's Mac mini; wallet and bank approvals happened on his MacBook Pro. The Documents checkout remains inaccessible under macOS privacy controls and was untouched. Active worktree: `/private/tmp/pactlane-mainnet-live-20261026`, branch `codex/pactlane-mainnet-live`. The trade ran on application source `b82c42d`, followed by evidence commit `8171faf`. Current edits update the result, simplify copy and correct the payment-check error message; the publication receipt records their final source and serving versions.
 
-Public cutover is complete. The Worker `66f37f12-7c6d-4cf6-ae24-f2586e369531` sends the same-origin API to the new machine. Chrome checked the setup page and live/demo modes without signing or bank activity. Next: the owner is following the `/setup` wallet instructions. The upload is prepared but unsigned at 19.735636 XLM, and its canonical 64-character hash was reconciled with the actual RPC before handoff. Each deployment transaction requires the seller’s wallet signature and is checked against the exact prepared hash and the remaining fee cap. Unknown outcomes must reconcile before any new transaction. After deployment: fund, reserve, lock, new bank payment, authenticated complete-record proof, policy acceptance, wallet-signed release, and receipt/balance reconciliation. **Release gate: NOT_CLEARED.**
+The application repository is private: `vmichalik/stellar-p2p`. The extension repository is public. No wallet key, bank cookie, raw bank response or private policy seed belongs in Git. The owner approved this one 1 USDC trade and a combined 25 XLM deployment cap. Deployment actually cost **17.2118712 XLM**. Further trades require fresh terms and wallet approval.
 
-Previous website/source publication record follows.
+## Deployment
 
----
+- Public app: `https://pactlane.io/`; Demo mode remains available through its toggle or `?demo=1`.
+- Proof service: `https://stellar-p2p-proof-vijay.fly.dev`.
+- Escrow: `CAKZENBU32SNOAQQ34T2VATTZJYI5BPQW3WZVUVYIXWVTG5Q5R6TOHO5` on Stellar mainnet.
+- Circle USDC contract: `CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75`.
+- Serving Fly machine: `830d12add66258`, cdg. Encrypted 1 GB volume: `vol_vz80xl0nk9wy5xjv`, mounted at `/data`.
+- Trade image: `sha256:4e63deb155e8799d488bca10069011200c5f165ec9912c778f11f56c256ff7f4`; Worker at trade time: `66f37f12-7c6d-4cf6-ae24-f2586e369531`.
+- Old machine `85e769b4196298` is stopped with public routes removed. Do not restore old routing or replace durable state to roll back application code.
 
-# Project handoff
+Private owner inputs, bank binding, policy seed, deployment journal, authorization/replay databases and exchange journals are under `/data/pactlane/operator`. Accepted normalized records are under `/data/pactlane/evidence`. Four proof records represent two unique bank payments: the historical identity anchor and the new EUR 0.89 payment. Duplicate proofs did not create another eligible payment.
 
-## Current wallet step — 09:29 UTC
+## Checks and observations
 
-The live image is now `sha256:4e63deb155e8799d488bca10069011200c5f165ec9912c778f11f56c256ff7f4`, source `b82c42d`. The first owner-signed upload reached submission but was never included. Its response was not preserved by the initial bootstrap; that diagnostic gap is repaired. After its validity window plus 30 seconds, RPC returned NOT_FOUND, Horizon returned 404, and the source sequence remained unconsumed. The expired attempt is archived in the private journal; no deployment fee was charged. No pending transaction remains from that attempt.
+The operator implementation passed 383 JavaScript tests, eight preparation checks and protocol synchronization. The subsequent pinned-asset gateway run passed 22 cases; the operator startup/origin/key-approval test passed. The fee/submission correction passed 33 focused tests. Those runs preceded the successful real-wallet trade; the final copy/error-message checks are recorded with publication.
 
-Current Soroban inclusion-fee statistics showed a 200-stroop median/p95; the first draft used 100. The next upload uses 200 (a 0.00001 XLM increase), with the same 25 XLM combined cap and five-minute validity. The cause of the first rejection is not established. The new code preserves signed envelopes and RPC outcomes privately, shows fixed rejection codes, and keeps rejected/unknown attempts fenced. Thirty-three focused tests passed after this correction. The owner is following the refreshed setup instructions; do not submit or sign on their behalf.
+The first code-upload attempt expired without inclusion. RPC, Horizon and the unchanged source sequence were reconciled before the owner retried. The fixed bootstrap preserves RPC outcomes and privately retains signed envelopes; unknown submissions remain fenced. No fee was charged for the expired attempt.
 
-## Objective and source
+One browser payment-policy lookup failed before a wallet signature and displayed misleading transaction-pending copy. No release transaction existed at that point. The canonical server policy subsequently accepted the same record; the owner refreshed, signed the release and received USDC. The first lookup's cause was not established. The UI correction distinguishes a failed payment lookup from an unknown transaction and clears stale displayed authorization.
 
-Make Pactlane easy for users and HackMeridian judges to understand: a clear buyer/supplier story, realistic product demo, readable implementation docs and directly linked evidence.
+The mainnet proof used the existing extension and pinned verifier. No new bank payment, bank proof or extension build is needed to finish this trade. After a future payment lock, recovery still requires valid payment proof or both wallets' approval.
 
-Execution host: Vijay's Mac mini. Owner browser: MacBook Pro. Review checkout: `/private/tmp/pactlane-judge-review-20261025`, branch `codex/pactlane-judge-review`. Integrated base `421dcfc` combines mainnet/proof source `abcd980` and published website source `890b336`. Reviewed source `8b9d653fcde4a12811e697418d77b11d4b51df87` is published on GitHub main and serves the website. The following documentation commit records publication; it changes no deployed application bytes. The Documents checkout remains untouched because macOS denies access on this host.
+## Remaining submission work
 
-The application repository remains private. The extension repository remains public. No bank request, wallet signature or fund movement was performed by this review.
+The README, evidence index and submission answers now lead with the completed mainnet trade. The film's evidence card uses its confirmed amounts and receipt; product scenes use the app's sample trade. Repeated version/demo badges and development captions are removed. Owner-browser screenshots may replace the sample screens if desired, with private bank details cropped out.
 
-## Changes
-
-The README, pitch, submission answers and architecture now lead with the user and one trade. Old coordination essays link to the current record. The criteria guide maps the product to the official rubric. The operator runbooks preserve exact configuration, payment-lock, disclosure, retry and recovery requirements.
-
-The demo uses normal product copy with a visible Demo mode switch. Only funded offers are shown. The live host now serves the shared mode entry, navigation module, stylesheet and required assets; demo mode blocks connections even when mobile relays are configured. Live mode never falls back to sample balances or offers.
-
-The new 90-second film uses fresh product captures and a current evidence card. The accepted Revolut record and separate PLTEST testnet transactions retain their actual scope. Editable source is in `design/demo`; [the shot list](demo/shot-list.md) identifies morning replacements.
-
-## Checks
-
-- Combined suite: 401 JavaScript tests passed, 11 extension-watchdog cases skipped because the separate prepared package is absent; 8 Python checks passed.
-- Syntax: 138 module/inline scripts passed before the final media addition.
-- Browser: complete sample funding/reservation/lock/verification/receipt; recovery with two approvals; live/demo isolation; mobile widths 320, 390, 760, 1024, 1440; no page errors.
-- Live host: shared entry, asset loading and demo toggle passed. Architecture overview passed at 320, 390 and 1440 pixels.
-- Video: 18 composition snapshots, no clipped text or external requests, deterministic random-access seeking. The export fully decoded and its public hash matches the reviewed file.
-- Documentation:current relative file links resolve. Review diff and publication receipts for the final source/hash.
-
-The unchanged escrow was not rebuilt. The recorded testnet release and recovery were freshly queried through RPC and both returned `SUCCESS` at their recorded ledgers. [Verification](verification.md).
-
-## Publication and next action
-
-Published 25 October 2026 at 23:55 UTC: the existing Worker `pactlane-demo` runs `489d13e2-2889-40d7-931b-e26ef7447d13` at 100%. Public browser verification matched all 42 asset hashes, including the new 90-second film, and found no page errors. [Publication receipt](../evidence/release/judge-review-publication.json). Rollback version: `c7154099-63c9-4c7b-987d-cb0b7f706aa4`.
-
-GitHub main now contains the integrated source and reviewed docs. Extension docs are published at `0ccef53` on its existing default branch, and the Pactlane.2 release notes are updated. Its ZIP digest remains `9a27e54c24a2a80a64661f47bac6eeb2d7876c08ea89126f33f5e67da3d80be2`.
-
-The Fly proof image and extension binaries are unchanged. The film fully decoded: 1920×1080, 30fps, 2,700 frames, 90 seconds, no audio. Source and captures are tracked under `design/demo`; render output and local logs remain ignored under `.private/`. There are no outstanding source edits after the publication-record commit. The original worktrees are preserved.
-
-Next technical action: follow [the mainnet runbook](release/mainnet-test.md) to connect the durable operator, policy signer, wallet-to-bank bindings and public exchange API for the approved 1 USDC / EUR 0.89 trade. No mainnet receipt is available in this checkout; payment release remains `NOT_CLEARED`.
-
-Next submission action: check the portal fields and judge access, replace the specified screenshots with actual available evidence, and retain the submission receipt. [Judging guide](hackathon.md).
+Confirm the portal fields and judges' access to the private application repository, then submit and retain the portal receipt. No portal submission is recorded in this thread. Current assets and checks are linked from [submission media](release/submission-package.md).

@@ -16,7 +16,7 @@ Ana reserves Ben's offer and confirms the payment lock. Then she sees exactly wh
 After paying in Revolut, Ana reviews the transfer record and disclosure. Pactlane checks the amount, recipient, status, timing and reuse.
 
 00:39–00:49
-The verifier has accepted a real Revolut record. Separately, the Stellar testnet escrow completed release and recovery, and rejected replay. The repository links both results.
+Our first mainnet trade is complete: 89 cents paid through Revolut, verified with TLSNotary, and one USDC delivered to the buyer. The confirmed Stellar receipt is linked in the repository.
 
 00:49–00:58
 Ana receives her USDC and a clear receipt. Ben can follow the same trade from his side.

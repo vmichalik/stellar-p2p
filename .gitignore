@@ -12,6 +12,7 @@
 
 # Downloaded tools and generated files
 .toolchain/
+.hyperframes/
 node_modules/
 target/
 test_snapshots/

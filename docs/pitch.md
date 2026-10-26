@@ -10,7 +10,7 @@ Start with the user: “I have euros in Revolut. I want USDC in my Stellar walle
 
 Show the seller funding an offer. Switch to the buyer, show the exact quote and reserve it. Confirm the payment lock before showing the payment instructions. Review the transfer record, complete verification and show the receipt. Keep the Demo mode switch visible throughout this walkthrough.
 
-Then show two concrete engineering results: the accepted authenticated Revolut record and the Stellar testnet escrow release. The testnet run also rejected replay and completed a two-party recovery using PLTEST. Link each result to its evidence rather than filling the screen with logs.
+Then open the mainnet receipt: €0.89 paid through Revolut, verified with TLSNotary, and 1 USDC delivered to the buyer. Show the Stellar transaction and the empty escrow balance. The separate testnet run covers replay rejection and two-party recovery. [Mainnet result](release/mainnet-result.md).
 
 Close with the next product step: a small EUR corridor with repeat suppliers, measured for completion time, liquidity and repeat usage.
 
@@ -26,6 +26,6 @@ Close with the next product step: a small EUR corridor with repeat suppliers, me
 
 **What happens if verification fails?** The USDC stays held. A valid proof can complete the trade later, or both wallets can agree on a release, refund or split.
 
-**What can judges inspect?** The working browser flow, authenticated bank-record acceptance, testnet transaction evidence, contract tests and policy code. [Status](status.md) identifies the scope of each result.
+**What can judges inspect?** A completed Revolut-to-USDC mainnet trade, the working browser flow, testnet recovery, contract tests and policy code. [Status](status.md) links each result.
 
 **What is the ambition?** A marketplace connecting the payment apps people already use to the Stellar assets and apps they want, with liquidity supplied by other people.

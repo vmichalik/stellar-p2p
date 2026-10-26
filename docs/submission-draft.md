@@ -24,9 +24,9 @@ The proposed Genesis track is Stellar Composed. The implementation also demonstr
 
 ## Technical results
 
-The verifier accepted an authenticated completed Revolut transfer record. Separately, the reviewed escrow WASM was deployed and exercised on Stellar testnet with PLTEST: funding, reservation, payment lock, signed release, replay rejection and mutual recovery all passed. The public Demo mode walks through the product using sample payments.
+Pactlane completed a real mainnet trade on 26 October: the seller funded 1 USDC, the buyer locked the order and paid €0.89 through Revolut, TLSNotary authenticated the bank response, and the payment policy authorized release. The buyer received exactly 1 USDC at 09:52:33 UTC. The contract recorded the payment as used and the escrow balance returned to zero.
 
-[Verification evidence](verification.md) links each result to its source. [Current status](status.md) records the remaining mainnet connection; a new mainnet transaction receipt belongs there when available.
+The separate PLTEST testnet rehearsal covers replay rejection and mutual recovery. Demo mode lets judges explore the flow using sample payments. [Mainnet receipt](release/mainnet-result.md), [verification evidence](verification.md).
 
 ## Innovation
 
@@ -34,7 +34,7 @@ Pactlane applies the proof-based peer-to-peer exchange model to Stellar, inspire
 
 ## Progress during the event
 
-The Git history records preparation and hackathon work. Key milestones include the buyer/seller app, policy and compiled escrow integration; cloud proof verification; the Pactlane extension; accepted Revolut-response parsing; wallet and recovery services; testnet escrow execution; and the public website with separate demo and live modes.
+The Git history records preparation and hackathon work: the buyer/seller app, compiled escrow, cloud proof verification, Pactlane extension, Revolut response validation, wallet and recovery services, testnet execution, separate demo and live modes, and the completed mainnet trade.
 
 ## Adoption and continuation
 

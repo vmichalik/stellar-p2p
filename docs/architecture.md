@@ -52,4 +52,4 @@ After payment locks, a failed proof leaves tokens held. A later valid proof can 
 - [Data and privacy](architecture/privacy-and-data.md): who sees what.
 - [Operations](architecture/operations-and-readiness.md): deployment and durable state.
 
-[Verification](verification.md) links the accepted bank record and separate Stellar testnet results. [Status](status.md) records the mainnet connection.
+[Verification](verification.md) links the completed Revolut-to-USDC mainnet trade and the separate testnet recovery results.

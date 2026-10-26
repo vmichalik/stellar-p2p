@@ -58,7 +58,7 @@
         z-index: 20;
       }
       .brand-dot {
-        color: #ed7047;
+        color: #df6943;
         margin-left: -10px;
       }
       .brand-symbol {
@@ -131,30 +131,6 @@
       .support strong {
         color: #2d382e;
         font-weight: 650;
-      }
-      .mode {
-        position: absolute;
-        right: 80px;
-        top: 64px;
-        border: 1px solid #d9ddcd;
-        background: #eeeee4;
-        border-radius: 30px;
-        padding: 12px 22px;
-        font-size: 25px;
-        font-weight: 650;
-        line-height: 1.2;
-        color: #475443;
-        white-space: nowrap;
-      }
-      .mode.synthetic {
-        background: #fae4d8;
-        border-color: #edc7b5;
-        color: #904420;
-      }
-      .mode.rehearsal {
-        background: #e9efdf;
-        border-color: #ccd8bd;
-        color: #385b3e;
       }
       .photo-slot {
         position: absolute;
@@ -544,7 +520,6 @@
         data-track-index="0"
         aria-label="Product introduction"
       >
-        <div class="mode">Demo mode</div>
         <div class="stage">
           <div class="lead">
             <p class="eyebrow">Your bank app. Your Stellar wallet.</p>
@@ -574,7 +549,6 @@
         data-track-index="0"
         aria-label="Seller funds escrow"
       >
-        <div class="mode">Demo mode</div>
         <div class="stage">
           <div class="lead">
             <p class="eyebrow">Ben · seller</p>
@@ -614,7 +588,6 @@
         data-track-index="0"
         aria-label="Reservation and payment lock"
       >
-        <div class="mode">Demo mode</div>
         <div class="stage">
           <div class="lead">
             <p class="eyebrow">Ana · buyer</p>
@@ -655,7 +628,6 @@
         data-track-index="0"
         aria-label="Payment record and policy checks"
       >
-        <div class="mode synthetic">Demo mode</div>
         <div class="stage">
           <div class="lead">
             <p class="eyebrow">Review your payment proof</p>
@@ -691,39 +663,36 @@
         data-start="39"
         data-duration="10"
         data-track-index="0"
-        aria-label="Verified bank record and Stellar testnet results"
+        aria-label="Completed Revolut to USDC trade on Stellar mainnet"
       >
-        <div class="mode rehearsal">Verified milestones · 25 Oct</div>
         <div class="stage">
           <div class="lead">
             <p class="eyebrow">Evidence you can inspect</p>
-            <h2>Bank proof meets Stellar escrow.</h2>
+            <h2>Euros paid. USDC received.</h2>
             <p class="support wasm-second">
-              <strong>Authenticated record. On-chain results.</strong>
+              <strong>One complete trade on mainnet.</strong>
             </p>
             <p class="support">
-              The verifier accepted a real Revolut transfer. A separate Stellar testnet run
-              exercised release and recovery.
+              A €0.89 Revolut payment was verified with TLSNotary. The buyer received 1 USDC from
+              the Stellar escrow.
             </p>
           </div>
           <div class="evidence-card">
-            <p class="evidence-kicker">Recorded results</p>
-            <p class="evidence-title">Two building blocks, checked.</p>
+            <p class="evidence-kicker">Trade 0 · Confirmed</p>
+            <p class="evidence-title">€0.89 → 1 USDC</p>
             <div class="evidence-row">
-              <span>Revolut transfer record</span><strong class="verified">Accepted</strong>
+              <span>Bank payment</span><strong class="verified">Verified</strong>
             </div>
             <div class="evidence-row">
-              <span>Testnet escrow release</span><strong class="verified">Confirmed</strong>
+              <span>Buyer received</span><strong class="verified">1 USDC</strong>
             </div>
             <div class="evidence-row">
-              <span>Payment replay</span><strong class="verified">Rejected</strong>
+              <span>Escrow balance</span><strong class="verified">0 USDC</strong>
             </div>
             <div class="evidence-row">
-              <span>Mutual recovery</span><strong class="verified">Confirmed</strong>
+              <span>Stellar ledger</span><strong class="verified">65,144,514</strong>
             </div>
-            <p class="evidence-caption">
-              Bank record and PLTEST testnet receipts are linked in the repository.
-            </p>
+            <p class="evidence-caption">26 Oct 2026 · 09:52 UTC · ec4220af…d1b9864</p>
           </div>
         </div>
         <div class="footer">
@@ -738,9 +707,8 @@
         data-start="49"
         data-duration="9"
         data-track-index="0"
-        aria-label="Synthetic product receipt"
+        aria-label="Product receipt"
       >
-        <div class="mode">Demo mode</div>
         <div class="stage">
           <div class="lead">
             <p class="eyebrow">Ana’s receipt</p>
@@ -757,8 +725,7 @@
           </div>
         </div>
         <div class="footer">
-          <span>Simulated receipt · separate from the local WASM run</span
-          ><span class="chapter">06 / 09 · Receipt</span>
+          <span>Your payment. Your receipt.</span><span class="chapter">06 / 09 · Receipt</span>
         </div>
       </section>
 
@@ -770,7 +737,6 @@
         data-track-index="0"
         aria-label="Second trade with two-party recovery"
       >
-        <div class="mode rehearsal">Demo mode</div>
         <div class="stage">
           <div class="lead">
             <p class="eyebrow">A second trade · funds held</p>
@@ -792,7 +758,7 @@
         </div>
         <p class="note">Both wallets approve the same allocation before funds move.</p>
         <div class="footer">
-          <span>Actual browser and host · mocked wallet and chain</span
+          <span>Agree together. Settle together.</span
           ><span class="chapter">07 / 09 · Recover together</span>
         </div>
       </section>
@@ -805,7 +771,6 @@
         data-track-index="0"
         aria-label="Two approvals and exact recovery outcome"
       >
-        <div class="mode rehearsal">Demo mode</div>
         <div class="stage">
           <div class="lead">
             <p class="eyebrow">Second trade · agreed recovery</p>
@@ -857,7 +822,6 @@
         data-track-index="0"
         aria-label="Pactlane invitation"
       >
-        <div class="mode">Pactlane</div>
         <div class="stage">
           <div class="closing">
             <p class="eyebrow">Pactlane · built for a fair exchange</p>

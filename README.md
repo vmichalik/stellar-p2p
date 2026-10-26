@@ -4,7 +4,9 @@ Buy USDC on Stellar with the bank app you already use.
 
 Pactlane connects people who want USDC with people who supply it. The seller sets a price and funds escrow. The buyer pays them through Revolut, then verifies the payment to release the USDC to their Stellar wallet.
 
-[Try the demo](https://pactlane.io/?demo=1) · [Watch 90 seconds](https://pactlane.io/demo.mp4) · [How it works](docs/architecture.md) · [Build and verification](docs/status.md) · [Chrome extension](https://github.com/vmichalik/pactlane-tlsnotary)
+[Open Pactlane](https://pactlane.io/) · [Try the demo](https://pactlane.io/?demo=1) · [How it works](docs/architecture.md) · [Chrome extension](https://github.com/vmichalik/pactlane-tlsnotary)
+
+On 26 October 2026, Pactlane completed its first mainnet trade: a buyer paid **€0.89 through Revolut**, verified the transfer with TLSNotary and received **1 USDC** from escrow. [View the Stellar transaction](https://stellar.expert/explorer/public/tx/ec4220af4056b185d242977385484066789824a2a274f57b3439e1e4dd1b9864).
 
 ## Why this is useful
 
@@ -31,11 +33,12 @@ This builds on the proof-based peer-to-peer model pioneered by [ZKP2P](https://g
 
 ## Evidence you can inspect
 
+- [Completed mainnet trade](docs/release/mainnet-result.md): the matched Revolut payment, all six Stellar transactions, exact USDC movement and payment replay protection.
 - [Authenticated Revolut record](evidence/release/complete-record-accepted.json): a completed outgoing transfer was accepted by the verifier.
 - [Stellar testnet rehearsal](evidence/release/testnet-rehearsal-2026-10-25.json): escrow deployment, release, replay rejection and mutual recovery using the PLTEST test asset.
 - [Browser flow](evidence/release/demo-mode-browser-2026-10-25.json): funding through receipt, mode separation and mobile navigation.
 
-[Current status](docs/status.md) keeps these results and the remaining mainnet connection in one place.
+[Current status](docs/status.md) links the implementation and its verified results.
 
 ## Run locally
 

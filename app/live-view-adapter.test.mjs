@@ -238,6 +238,43 @@ test('an unknown transaction never unlocks instructions and resumes the original
   assert.equal(f.adapter.snapshot().instructions, null);
 });
 
+test('a failed payment lookup never implies a submitted release or keeps stale authorization', async () => {
+  const f = await connected();
+  await f.adapter.reserve('0');
+  await f.adapter.beginPayment('0');
+  const normal = f.client.command;
+  f.client.command = async (action, args) =>
+    action === 'getPolicyStatus'
+      ? {
+          operationId: 'verified-check',
+          result: { orderId: '0', status: 'verified', authorization: 'opaque' },
+        }
+      : normal(action, args);
+  await f.adapter.checkVerification('0');
+  assert.equal(f.adapter.snapshot().policy.status, 'verified');
+  f.client.command = async () => {
+    throw Object.assign(new Error('SERVICE_UNAVAILABLE'), {
+      code: 'SERVICE_UNAVAILABLE',
+      outcome: 'unknown',
+      operationId: 'failed-check',
+    });
+  };
+  await assert.rejects(f.adapter.checkVerification('0'), {
+    code: 'PAYMENT_STATUS_UNAVAILABLE',
+    outcome: 'failed',
+  });
+  const state = f.adapter.snapshot();
+  assert.equal(state.pending, null);
+  assert.equal(state.policy, null);
+  assert.equal(state.view.ownerOrders[0].state, 'Paying');
+  assert.match(state.error.message, /No release transaction was submitted/);
+  await assert.rejects(f.adapter.release('0'), { code: 'PAYMENT_VERIFICATION_UNAVAILABLE' });
+  assert.equal(
+    f.calls.some(([action]) => action === 'release'),
+    false,
+  );
+});
+
 test('malformed confirmation cannot become a successful lock; failed instruction lookup retains held state', async () => {
   const f = await connected();
   await f.adapter.reserve('0');

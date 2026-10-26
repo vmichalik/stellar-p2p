@@ -1,0 +1,135 @@
+{
+  "checkedAt": "2026-10-26T09:54:58.680Z",
+  "sourceCommit": "b82c42d",
+  "network": "mainnet",
+  "networkPassphrase": "Public Global Stellar Network ; September 2015",
+  "orderId": "0",
+  "orderState": "Released",
+  "contract": "CAKZENBU32SNOAQQ34T2VATTZJYI5BPQW3WZVUVYIXWVTG5Q5R6TOHO5",
+  "asset": {
+    "code": "USDC",
+    "issuer": "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+    "contract": "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75",
+    "decimals": 7
+  },
+  "trade": {
+    "tokenAtoms": "10000000",
+    "fiatMinor": "89",
+    "currency": "EUR",
+    "rail": "revolut"
+  },
+  "transactions": [
+    {
+      "method": "upload",
+      "hash": "b19f5ecb60f33285c551d17b1cd19395f60d14903673fdaabafb3cdacdfd69a3",
+      "successful": true,
+      "ledger": 65144252,
+      "createdAt": "2026-10-26T09:30:43Z",
+      "feeChargedStroops": "171613443"
+    },
+    {
+      "method": "deploy",
+      "hash": "4da4c1b436f837ffa9c30e6eda8f5afcc989a9974f1057ab18f76fb944272daf",
+      "successful": true,
+      "ledger": 65144291,
+      "createdAt": "2026-10-26T09:33:58Z",
+      "feeChargedStroops": "505269"
+    },
+    {
+      "method": "fund",
+      "hash": "6b5b1f141b9fb7718119d2ce82322c2bf758e72d8d67312c4fdac122dc1492c9",
+      "successful": true,
+      "ledger": 65144314,
+      "createdAt": "2026-10-26T09:35:53Z",
+      "feeChargedStroops": "1428598"
+    },
+    {
+      "method": "reserve",
+      "hash": "efee5f08b5abb2a754dcee0f90012e52f46a0e78c0554b8926b1d7187d7afdda",
+      "successful": true,
+      "ledger": 65144329,
+      "createdAt": "2026-10-26T09:37:08Z",
+      "feeChargedStroops": "72214"
+    },
+    {
+      "method": "begin_payment",
+      "hash": "ad3ea44c19333f1849fee7737f05290874be3941f8b83c6b37ac4a4c9759ef77",
+      "successful": true,
+      "ledger": 65144333,
+      "createdAt": "2026-10-26T09:37:28Z",
+      "feeChargedStroops": "5389"
+    },
+    {
+      "method": "release",
+      "hash": "ec4220af4056b185d242977385484066789824a2a274f57b3439e1e4dd1b9864",
+      "successful": true,
+      "ledger": 65144514,
+      "createdAt": "2026-10-26T09:52:33Z",
+      "feeChargedStroops": "226222"
+    }
+  ],
+  "tokenTransferEvents": [
+    {
+      "method": "fund",
+      "hash": "6b5b1f141b9fb7718119d2ce82322c2bf758e72d8d67312c4fdac122dc1492c9",
+      "status": "SUCCESS",
+      "ledger": 65144314,
+      "transfers": [
+        {
+          "from": "GDZ4LKS32TOEY3CFK3OEP5TL4R45VPCYFLIZYFRDAGK5RZLSS5AHBMXT",
+          "to": "CAKZENBU32SNOAQQ34T2VATTZJYI5BPQW3WZVUVYIXWVTG5Q5R6TOHO5",
+          "amountAtoms": "10000000"
+        }
+      ]
+    },
+    {
+      "method": "release",
+      "hash": "ec4220af4056b185d242977385484066789824a2a274f57b3439e1e4dd1b9864",
+      "status": "SUCCESS",
+      "ledger": 65144514,
+      "transfers": [
+        {
+          "from": "CAKZENBU32SNOAQQ34T2VATTZJYI5BPQW3WZVUVYIXWVTG5Q5R6TOHO5",
+          "to": "GBW56ZVWMH42DR7NOXATQKABOHLF6KRD66MACZHVVMAKMRS32CYGVZDJ",
+          "amountAtoms": "10000000"
+        }
+      ]
+    }
+  ],
+  "paymentVerification": {
+    "authenticatedRecordAccepted": true,
+    "payerMatches": true,
+    "recipientMatches": true,
+    "amountMatches": true,
+    "currencyMatches": true,
+    "completedAfterLock": true,
+    "completedBeforeDeadline": true,
+    "uniqueMatchingPayments": 1,
+    "historicalPaymentExcluded": true,
+    "policyAccepted": true,
+    "syntheticOnly": false
+  },
+  "settlement": {
+    "buyerReceivedAtoms": "10000000",
+    "sellerReturnedAtoms": "0",
+    "escrowBalanceBeforeAtoms": "10000000",
+    "escrowBalanceAfterAtoms": "0",
+    "balanceReadLedgerBefore": 65144416,
+    "balanceReadLedgerAfter": 65144521,
+    "paymentUsedOnChain": true,
+    "paymentUsedReadLedger": 65144532,
+    "durablePolicyReconciliation": "RELEASE_CONFIRMED"
+  },
+  "deploymentFees": {
+    "approvedCapStroops": "250000000",
+    "actualChargedStroops": "172118712"
+  },
+  "paymentReleaseGate": "CLEARED",
+  "scope": "The completed owner-approved mainnet trade, order 0.",
+  "observations": [
+    "An initial browser payment-policy lookup failed before a wallet release signature. No release transaction was submitted by that check.",
+    "The existing server policy subsequently accepted the same payment. The owner refreshed, signed once and received the confirmed release. The original lookup failure cause was not established.",
+    "Canonical policy reconciliation marked the durable payment record settled after confirming Released state and the on-chain one-use marker."
+  ],
+  "privacy": "No bank identifiers, raw responses, cookies, policy keys or wallet secrets are included."
+}

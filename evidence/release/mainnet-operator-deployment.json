@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-26T09:30:48.137599+00:00",
+  "checkedAt": "2026-10-26T09:54:58.680Z",
   "sourceCommit": "b82c42d",
   "application": "stellar-p2p-proof-vijay",
   "machine": "830d12add66258",
@@ -23,7 +23,7 @@
     "trafficPercent": 100,
     "assetSourceCommit": "8f3ec08",
     "apiStatus": 200,
-    "configured": false
+    "configured": true
   },
   "setup": {
     "url": "https://stellar-p2p-proof-vijay.fly.dev/setup",
@@ -41,7 +41,27 @@
       "feeChargedStroops": "0",
       "submissionResponse": "not preserved by initial implementation; corrected before retry"
     },
-    "nextAction": "Owner repeats wallet-reviewed upload with observed 200-stroop inclusion fee; cap unchanged"
+    "status": "DEPLOYED",
+    "contract": "CAKZENBU32SNOAQQ34T2VATTZJYI5BPQW3WZVUVYIXWVTG5Q5R6TOHO5",
+    "completedTransactions": [
+      {
+        "method": "upload",
+        "hash": "b19f5ecb60f33285c551d17b1cd19395f60d14903673fdaabafb3cdacdfd69a3",
+        "successful": true,
+        "ledger": 65144252,
+        "createdAt": "2026-10-26T09:30:43Z",
+        "feeChargedStroops": "171613443"
+      },
+      {
+        "method": "deploy",
+        "hash": "4da4c1b436f837ffa9c30e6eda8f5afcc989a9974f1057ab18f76fb944272daf",
+        "successful": true,
+        "ledger": 65144291,
+        "createdAt": "2026-10-26T09:33:58Z",
+        "feeChargedStroops": "505269"
+      }
+    ],
+    "actualChargedStroops": "172118712"
   },
   "browser": {
     "desktopWidth": 1440,
@@ -50,5 +70,6 @@
     "pageErrors": 0,
     "demoModeChecked": true
   },
-  "paymentReleaseGate": "NOT_CLEARED"
+  "paymentReleaseGate": "CLEARED",
+  "tradeEvidence": "mainnet-trade-2026-10-26.json"
 }

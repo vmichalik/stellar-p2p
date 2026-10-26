@@ -8,7 +8,7 @@ Judges should understand the user, try one trade and find the implementation evi
 | ---------------------------- | ------ | ---------------------------------------------------------------------------------------- |
 | Track / ecosystem alignment  | 20%    | Stellar escrow, token transfer and Freighter composed with authenticated bank evidence.  |
 | User value                   | 20%    | A Revolut user acquiring Stellar USDC; a supplier setting the price and receiving euros. |
-| Technical execution          | 15%    | The working flow, accepted bank record, testnet transactions and replay checks.          |
+| Technical execution          | 15%    | The completed Revolut-to-USDC mainnet trade, exact token events and replay protection.   |
 | Innovation                   | 15%    | Payment-to-order binding and explicit recovery in a Stellar peer-to-peer trade.          |
 | Hackathon progress           | 10%    | Dated commits and evidence showing what changed during the event.                        |
 | Market / ecosystem potential | 10%    | One focused EUR pilot, repeat suppliers and clear usage measures.                        |
@@ -20,7 +20,7 @@ Weights and categories are from the [published rubric](https://www.hackmeridian.
 
 1. [README](../README.md): the problem, product and demo.
 2. [Architecture](architecture.md): how payment evidence reaches the escrow.
-3. [Verification](verification.md): bank-record and testnet results, with links.
+3. [Mainnet receipt](release/mainnet-result.md): the real payment, verified release and transaction links.
 4. [Concept](concept.md): the first audience and pilot.
 
 ## Before noon

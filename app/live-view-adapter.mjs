@@ -197,6 +197,8 @@ export function friendlyError(error) {
     HOST_DEPLOYMENT_INVALID: 'The exchange network or asset configuration could not be verified.',
     PAYMENT_VERIFICATION_UNAVAILABLE:
       'Payment verification is unavailable. Keep your funds in escrow and do not send a bank payment yet.',
+    PAYMENT_STATUS_UNAVAILABLE:
+      'The payment check could not finish. No release transaction was submitted. Refresh and check payment verification again.',
     PAYMENT_INSTRUCTIONS_LOCKED:
       'Payment details are available only after a confirmed lock and before the payment deadline.',
     PAYMENT_DESTINATION_UNAVAILABLE:
@@ -598,6 +600,13 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
       return reply.result;
     } catch (error) {
       if (generation !== epoch) return;
+      // A policy lookup can issue an authorization, but cannot submit a wallet
+      // transaction. Keep transaction uncertainty specific to transaction calls.
+      if (action === 'getPolicyStatus') {
+        state.policy = null;
+        if (error?.outcome === 'unknown')
+          Object.assign(error, { code: 'PAYMENT_STATUS_UNAVAILABLE', outcome: 'failed' });
+      }
       if (error?.outcome === 'unknown')
         state.pending = {
           action,

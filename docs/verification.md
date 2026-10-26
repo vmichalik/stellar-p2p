@@ -1,5 +1,11 @@
 # Verification
 
+## Completed mainnet trade
+
+On 26 October 2026 at 09:52:33 UTC, order 0 released **1 Circle USDC** to the buyer after an authenticated **EUR 0.89 Revolut payment** matched the locked order. The release succeeded in ledger 65144514. RPC token events and before/after balance reads confirm the buyer received exactly 1 USDC and escrow now holds zero. The payment's on-chain one-use marker is set, and the durable policy record is settled.
+
+[Release transaction](https://stellar.expert/explorer/public/tx/ec4220af4056b185d242977385484066789824a2a274f57b3439e1e4dd1b9864) · [Readable receipt](release/mainnet-result.md) · [Sanitized evidence](../evidence/release/mainnet-trade-2026-10-26.json).
+
 ## Bank proof
 
 The complete-record check accepted an authenticated completed outgoing Revolut transfer at 23:08:23.290 UTC on 25 October 2026. The receiver checked the TLS source, response context, transfer semantics, exact integer cents and bank identity fields. [Sanitized acceptance](../evidence/release/complete-record-accepted.json).
@@ -19,7 +25,7 @@ The current integrated review passed **401 JavaScript tests**, eight Python stag
 
 The published mode-toggle build passed 102 app/release tests and a full browser trade, including funding visibility, reservation removal, mode isolation and mobile layouts. [Browser evidence](../evidence/release/demo-mode-browser-2026-10-25.json), [published assets](../evidence/release/demo-mode-live-2026-10-25.json).
 
-Run the current combined suites with `npm run test:all` and `npm run check` after [setup](setup.md). The review handoff records the latest actual run. The remaining end-to-end mainnet result belongs in [status](status.md), with its transaction receipt.
+Run the current combined suites with `npm run test:all` and `npm run check` after [setup](setup.md). The review handoff records the latest actual run; [status](status.md) includes the completed mainnet trade.
 
 The review also completed a fresh sample recovery with both approvals, the integrated live-host browser check and 18 video composition snapshots with deterministic seeking. [Current review receipt](../evidence/release/judge-review-checks.json).
 

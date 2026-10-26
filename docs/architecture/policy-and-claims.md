@@ -62,3 +62,16 @@ The policy store must span every network/deployment served. Chain checkpoints ad
 The contract's used-nullifier mapping prevents reuse on that deployment. The policy registry prevents reuse across deployments. Both are necessary; neither is a substitute for the other.
 
 A reconciliation hold prevents new policy issuance. It cannot revoke a signature that has already left the signer. An existing claim remains usable until its expiry while the order still satisfies the contract rules. The short claim lifetime limits that interval; a terminal order cannot release again.
+
+## Future: ZK-verified settlement
+
+Design notes only; not implemented.
+
+- **Evidence:** authenticate bank data and bind its commitment to the circuit. Proving operator-supplied JSON or its signature leaves operator trust intact.
+- **Circuit:** privately check source/account binding, completed outgoing payment, amount/currency, recipient commitment and payment window. Bind the proof to the order, buyer, network and escrow; derive a stable payment nullifier.
+- **Stellar:** deploy a new escrow version with a pinned proof verifier replacing the policy signer. Candidate: Groth16/BLS12-381. Atomically check current order state, expiry and a shared nullifier registry before releasing.
+- **Before launch:** audit the circuit and source authentication; validate setup/key provenance, proving time and Soroban costs.
+
+This removes discretionary policy signing only if the operator cannot forge the authenticated evidence. Any bank/notary and proof-system assumptions remain; wrapping a notary signature in ZK cannot remove notary trust. Stellar transactions remain public.
+
+References: [Stellar Groth16 example](https://stellar.org/blog/ecosystem/prototyping-privacy-pools-on-stellar), [TLSNotary commitments and trust model](https://tlsnotary.org/docs/faq/).

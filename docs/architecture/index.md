@@ -9,7 +9,7 @@ Pactlane is a fixed-offer EUR/Revolut-to-USDC escrow prototype. The public app i
 - [Standalone architecture study](study.html) — an illustrated, phone-readable walkthrough with inline diagrams and the current evidence boundary.
 - [System map and trust boundaries](system-map.md) — components, data flow, and where each assertion comes from.
 - [Escrow contract and lifecycle](escrow-contract.md) — storage, states, callers, deadlines, token movement, and recovery.
-- [Policy, signatures, and replay protection](policy-and-claims.md) — the frozen XDR protocol, recipient commitment, payment nullifier, and durable issuance registry.
+- [Policy, signatures, and replay protection](policy-and-claims.md) — the frozen XDR protocol, recipient commitment, payment nullifier, durable issuance registry, and [future ZK upgrade](policy-and-claims.md#future-zk-verified-settlement).
 - [TLSNotary and payment evidence](tlsnotary-evidence.md) — what MPC-TLS proves, what an operator still decides, and why the live adapter is blocked.
 - [Privacy, authentication, and data handling](privacy-and-data.md) — visible data, private data, authentication boundaries, and logging risks.
 - [Operations, diagnostics, and readiness](operations-and-readiness.md) — host services, evidence matrix, common failure interpretation, and what is still needed.

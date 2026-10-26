@@ -1,0 +1,105 @@
+{
+  "checkedAt": "2026-10-26T11:52:27.416Z",
+  "results": [
+    {
+      "width": 1440,
+      "demo": false,
+      "playback": {
+        "duration": 90,
+        "currentTime": 45.324932,
+        "playing": true,
+        "controls": true,
+        "playsInline": true,
+        "error": null,
+        "width": 706,
+        "height": 397.125
+      },
+      "geometry": {
+        "viewport": 1440,
+        "page": 1440,
+        "cspErrors": []
+      },
+      "pageErrors": [],
+      "urlUnchanged": true,
+      "mediaPolicy": true
+    },
+    {
+      "width": 1440,
+      "demo": true,
+      "playback": {
+        "duration": 90,
+        "currentTime": 45.308035,
+        "playing": true,
+        "controls": true,
+        "playsInline": true,
+        "error": null,
+        "width": 706,
+        "height": 397.125
+      },
+      "geometry": {
+        "viewport": 1440,
+        "page": 1440,
+        "cspErrors": []
+      },
+      "pageErrors": [],
+      "urlUnchanged": true,
+      "mediaPolicy": true
+    },
+    {
+      "width": 390,
+      "demo": false,
+      "playback": {
+        "duration": 90,
+        "currentTime": 45.317466,
+        "playing": true,
+        "controls": true,
+        "playsInline": true,
+        "error": null,
+        "width": 292,
+        "height": 164.25
+      },
+      "geometry": {
+        "viewport": 390,
+        "page": 390,
+        "cspErrors": []
+      },
+      "pageErrors": [],
+      "urlUnchanged": true,
+      "mediaPolicy": true
+    },
+    {
+      "width": 390,
+      "demo": true,
+      "playback": {
+        "duration": 90,
+        "currentTime": 45.315864,
+        "playing": true,
+        "controls": true,
+        "playsInline": true,
+        "error": null,
+        "width": 292,
+        "height": 164.25
+      },
+      "geometry": {
+        "viewport": 390,
+        "page": 390,
+        "cspErrors": []
+      },
+      "pageErrors": [],
+      "urlUnchanged": true,
+      "mediaPolicy": true
+    }
+  ],
+  "sourceCommit": "8bf6a70f88cda4ba7bdcb8a99247f2bbc3fd0e2b",
+  "origin": "https://pactlane.io",
+  "section": "Why Pactlane",
+  "workerVersion": "e56bfb99-7491-4f62-9572-f59c06ed89ce",
+  "releaseTestsPassed": 17,
+  "video": {
+    "path": "/demo.mp4",
+    "bytes": 3674730,
+    "sha256": "6740d2829ff2caf93f1fb0eabc3fcec33560844d24aa9445b310b6ce2a592779",
+    "footageChanged": false
+  },
+  "scope": "Website player and media delivery only; no backend, bank or wallet operation."
+}

@@ -178,9 +178,11 @@ export function createMainnetBootstrap({
                 ],
               });
         const account = await server.getAccount(owner);
-        const expires = clock() + 900;
+        const expires = clock() + 300;
         const transaction = new TransactionBuilder(account, {
-          fee: '100',
+          // Mainnet Soroban inclusion fees observed at 200 stroops (26 Oct).
+          // Resource fees are added by simulation and checked against the cap.
+          fee: '200',
           networkPassphrase: Networks.PUBLIC,
         })
           .addOperation(operation)

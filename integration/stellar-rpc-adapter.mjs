@@ -144,7 +144,7 @@ export function createStellarServices({
   async function transaction(method, args, account) {
     const source = await remote.getAccount(account);
     return new TransactionBuilder(source, {
-      fee: BASE_FEE,
+      fee: cfg.network === 'mainnet' ? '200' : BASE_FEE,
       networkPassphrase: cfg.networkPassphrase,
     })
       .addOperation(new Contract(cfg.contract).call(method, ...args))
@@ -156,7 +156,7 @@ export function createStellarServices({
     await network();
     const source = await remote.getAccount(readerAccount);
     const tx = new TransactionBuilder(source, {
-      fee: BASE_FEE,
+      fee: cfg.network === 'mainnet' ? '200' : BASE_FEE,
       networkPassphrase: cfg.networkPassphrase,
     })
       .addOperation(new Contract(contract).call(method, ...args))

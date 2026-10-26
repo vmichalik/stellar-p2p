@@ -112,9 +112,14 @@ test('bundle audit rejects missing or altered discovery files', async (t) => {
   await assert.rejects(auditDemo({ output: paths.output }), /Output file missing/);
 });
 
-test('preview serves discovery files with correct content types and keeps private paths unavailable', async (t) => {
+test('preview serves discovery files, seekable media and keeps private paths unavailable', async (t) => {
   const paths = await fixture(t);
-  await buildDemo(paths);
+  const mediaDirectory = join(paths.source, 'reviewed-media');
+  await mkdir(mediaDirectory);
+  const video = Buffer.from('0000ftypSYNTHETIC');
+  await writeFile(join(mediaDirectory, 'demo.mp4'), video);
+  await writeFile(join(mediaDirectory, 'demo-script.txt'), 'Synthetic script');
+  await buildDemo({ ...paths, mediaDirectory });
   const server = await createDemoPreview({ root: paths.output });
   t.after(() => new Promise((resolve) => server.close(resolve)));
   await new Promise((resolve, reject) => {
@@ -138,6 +143,21 @@ test('preview serves discovery files with correct content types and keeps privat
     assert.equal((await fetch(origin + path)).status, 404);
   assert.equal((await fetch(`${origin}/api/view`)).status, 503);
   assert.equal((await fetch(`${origin}/llms.txt`, { method: 'POST' })).status, 405);
+  for (const [range, expected] of [
+    ['bytes=4-7', 'ftyp'],
+    ['bytes=8-', 'SYNTHETIC'],
+    ['bytes=-4', 'ETIC'],
+  ]) {
+    const response = await fetch(`${origin}/demo.mp4`, { headers: { Range: range } });
+    assert.equal(response.status, 206);
+    assert.equal(response.headers.get('accept-ranges'), 'bytes');
+    assert.equal(await response.text(), expected);
+  }
+  for (const range of ['bytes=999-', 'bytes=8-4', 'bytes=-0', 'bytes=0-1,4-5']) {
+    const response = await fetch(`${origin}/demo.mp4`, { headers: { Range: range } });
+    assert.equal(response.status, 416);
+    assert.equal(response.headers.get('content-range'), `bytes */${video.length}`);
+  }
 });
 
 test('demo build rejects unexpected existing output without deleting or publishing it', async (t) => {

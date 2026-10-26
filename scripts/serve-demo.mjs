@@ -62,13 +62,48 @@ export async function createDemoPreview({
       }
       const bytes = await readFile(resolve(root, '.' + file));
       const headers = { ...SECURITY_HEADERS, 'Content-Type': types[extname(file)] };
-      if (file === '/demo.mp4' && manifest.mediaIncluded)
+      if (['/index.html', '/demo.mp4'].includes(file) && manifest.mediaIncluded)
         headers['Content-Security-Policy'] += "; media-src 'self'";
       if (url.searchParams.get('demo') === '1')
         headers['Content-Security-Policy'] = headers['Content-Security-Policy'].replace(
           "connect-src 'self'",
           "connect-src 'none'",
         );
+      if (file === '/demo.mp4') {
+        headers['Accept-Ranges'] = 'bytes';
+        const range = request.headers.range;
+        if (range) {
+          const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+          const start = match?.[1]
+            ? Number(match[1])
+            : Math.max(0, bytes.length - Number(match?.[2]));
+          const end =
+            match?.[1] && match[2]
+              ? Math.min(Number(match[2]), bytes.length - 1)
+              : bytes.length - 1;
+          if (
+            !match ||
+            (!match[1] && !match[2]) ||
+            !Number.isSafeInteger(start) ||
+            !Number.isSafeInteger(end) ||
+            start >= bytes.length ||
+            end < start
+          ) {
+            response
+              .writeHead(416, { ...headers, 'Content-Range': `bytes */${bytes.length}` })
+              .end();
+            return;
+          }
+          const part = bytes.subarray(start, end + 1);
+          response.writeHead(206, {
+            ...headers,
+            'Content-Range': `bytes ${start}-${end}/${bytes.length}`,
+            'Content-Length': part.length,
+          });
+          response.end(request.method === 'HEAD' ? undefined : part);
+          return;
+        }
+      }
       response.writeHead(200, headers);
       response.end(request.method === 'HEAD' ? undefined : bytes);
     } catch {

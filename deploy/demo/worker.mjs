@@ -53,9 +53,11 @@ export default {
     return secured(response, {
       demo: url.searchParams.get('demo') === '1',
       media:
-        url.pathname === '/demo.mp4' &&
         [200, 206].includes(response.status) &&
-        response.headers.get('Content-Type')?.startsWith('video/mp4'),
+        ((url.pathname === '/demo.mp4' &&
+          response.headers.get('Content-Type')?.startsWith('video/mp4')) ||
+          (['/', '/index.html'].includes(url.pathname) &&
+            response.headers.get('Content-Type')?.startsWith('text/html'))),
     });
   },
 };

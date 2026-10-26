@@ -101,18 +101,24 @@ test('unknown hosts and writes fail closed rather than becoming a proxy', async 
   assertSecured(response);
 });
 
-test('same-origin playback is allowed only for the present exact MP4 asset', async () => {
-  for (const [path, status, enabled] of [
-    ['/demo.mp4', 200, true],
-    ['/demo.mp4', 404, false],
-    ['/other.mp4', 200, false],
+test('same-origin playback is allowed on the app document and exact MP4 asset', async () => {
+  for (const [path, status, type, enabled] of [
+    ['/demo.mp4', 200, 'video/mp4', true],
+    ['/demo.mp4', 206, 'video/mp4', true],
+    ['/demo.mp4', 404, 'video/mp4', false],
+    ['/other.mp4', 200, 'video/mp4', false],
+    ['/', 200, 'text/html', true],
+    ['/?demo=1', 200, 'text/html', true],
+    ['/index.html', 200, 'text/html', true],
+    ['/', 404, 'text/html', false],
+    ['/', 200, 'application/json', false],
   ]) {
     const response = await worker.fetch(new Request('https://pactlane.io' + path), {
       ASSETS: {
         fetch: async () =>
           new Response('synthetic media fixture', {
             status,
-            headers: { 'Content-Type': 'video/mp4' },
+            headers: { 'Content-Type': type },
           }),
       },
     });
@@ -120,7 +126,11 @@ test('same-origin playback is allowed only for the present exact MP4 asset', asy
       response.headers.get('Content-Security-Policy').includes("media-src 'self'"),
       enabled,
     );
-    assert.match(response.headers.get('Content-Security-Policy'), /connect-src 'self'/);
+    assert.ok(
+      response.headers
+        .get('Content-Security-Policy')
+        .includes(path.includes('demo=1') ? "connect-src 'none'" : "connect-src 'self'"),
+    );
   }
 });
 

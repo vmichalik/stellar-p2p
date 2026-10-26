@@ -91,6 +91,15 @@
   max-width: 780px;
   padding: 36px;
 }
+.demo-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--ink);
+}
 .why-page h2 {
   font-size: 21px;
   margin: 30px 0 10px;

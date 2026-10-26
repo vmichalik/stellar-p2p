@@ -174,6 +174,15 @@ function publicRecovery(value, owner, deployment) {
   };
 }
 function publicResult(action, result, owner, args, deployment) {
+  if (action === 'createOffer') {
+    const terms = publicTerms(result?.publicTerms);
+    check(
+      terms.seller === owner &&
+        terms.token_amount === args.tokenAmount &&
+        terms.fiat_minor === args.fiatMinor,
+    );
+    return { id: text(result.id, 80), publicTerms: terms };
+  }
   if (action === 'connectWallet') {
     check(result?.account === owner && result.networkPassphrase === deployment.networkPassphrase);
     return { account: owner, ...readDeploymentDomain(deployment) };
@@ -216,6 +225,11 @@ function publicResult(action, result, owner, args, deployment) {
 function command(body, owner, deployment) {
   keys(body, ['action', 'args']);
   const { action, args } = body;
+  if (action === 'createOffer') {
+    keys(args, ['tokenAmount', 'fiatMinor']);
+    check(BigInt(uint(args.tokenAmount, 127)) > 0n && BigInt(uint(args.fiatMinor, 127)) > 0n);
+    return [action, args, [args]];
+  }
   if (action === 'connectWallet') {
     keys(args, ['party']);
     check(['buyer', 'seller'].includes(args.party));
@@ -264,6 +278,10 @@ function command(body, owner, deployment) {
   fail('ACTION_UNAVAILABLE');
 }
 const SERVICE_ERRORS = new Set([
+  'OFFER_CREATION_UNAVAILABLE',
+  'INVALID_OFFER_AMOUNT',
+  'INVALID_OFFER_PRICE',
+  'OFFER_AMOUNT_LIMIT',
   'RECEIVING_ACCOUNT_MISSING',
   'RECEIVING_TRUSTLINE_MISSING',
   'RECEIVING_ASSET_UNAUTHORIZED',
@@ -653,6 +671,13 @@ export function createBrowserBridge({
         offers,
         ownerOrders,
         sellerDrafts,
+        capabilities: {
+          createOffers: Boolean(owner && value.capabilities?.createOffers === true),
+          maximumOfferUSDC:
+            value.capabilities?.maximumOfferUSDC == null
+              ? null
+              : text(value.capabilities.maximumOfferUSDC, 48),
+        },
         recoveryRequests,
         balances:
           owner && value.balances ? { tokenAtoms: uint(value.balances.tokenAtoms, 127) } : null,

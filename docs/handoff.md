@@ -10,7 +10,7 @@ RPC token events and before/after balance reads confirm exactly 1 USDC moved fro
 
 ## Execution and source
 
-Work runs on Vijay's Mac mini; wallet and bank approvals happened on his MacBook Pro. The Documents checkout remains inaccessible under macOS privacy controls and was untouched. Active worktree: `/private/tmp/pactlane-mainnet-live-20261026`, branch `codex/pactlane-mainnet-live`. The trade ran on application source `b82c42d`, followed by evidence commit `8171faf`. Current edits update the result, simplify copy and correct the payment-check error message; the publication receipt records their final source and serving versions.
+Work runs on Vijay's Mac mini; wallet and bank approvals happened on his MacBook Pro. The Documents checkout remains inaccessible under macOS privacy controls and was untouched. Active worktree: `/private/tmp/pactlane-mainnet-live-20261026`, branch `codex/pactlane-mainnet-live`. The trade ran on application source `b82c42d`, followed by evidence commit `8171faf`. Subsequent source `c5f1d9a` published the completion copy and film; `a568b19` switched static capability metadata to the live API. The current repair adds durable seller-created drafts and public discovery files. The publication receipt records the final source and serving versions.
 
 The application repository is private: `vmichalik/stellar-p2p`. The extension repository is public. No wallet key, bank cookie, raw bank response or private policy seed belongs in Git. The owner approved this one 1 USDC trade and a combined 25 XLM deployment cap. Deployment actually cost **17.2118712 XLM**. Further trades require fresh terms and wallet approval.
 
@@ -41,3 +41,11 @@ The mainnet proof used the existing extension and pinned verifier. No new bank p
 The README, evidence index and submission answers now lead with the completed mainnet trade. The film's evidence card uses its confirmed amounts and receipt; product scenes use the app's sample trade. Repeated version/demo badges and development captions are removed. Owner-browser screenshots may replace the sample screens if desired, with private bank details cropped out.
 
 Confirm the portal fields and judges' access to the private application repository, then submit and retain the portal receipt. No portal submission is recorded in this thread. Current assets and checks are linked from [submission media](release/submission-package.md).
+
+## Offer creation and website discovery
+
+The original live operator configuration contained one prepared draft and no creation action. After the first trade, its seller had no new offer to fund; the buyer wallet also correctly had no seller draft. The repair adds an authenticated `createOffer` action, private durable draft storage and a seller form. Only the bound seller may create; other wallets get a switch-wallet action. Server-derived recipient details and the existing 1 USDC offer ceiling remain in force. Each new price is matched against confirmed on-chain terms, while payment identity and replay checks remain unchanged. Funding still requires a separate wallet signature, and only confirmed funded offers enter the marketplace. No further real trade was executed during this repair.
+
+153 app, focused integration and release tests passed. Independent subagents reviewed the host/payment changes and exercised the live UI with synthetic API data at 390px and 1440px: two private drafts, no funding commands, no public offers, no JavaScript errors or overflow. Persistence, same-second identical quotes, wallet isolation, amount mismatch and cross-order replay checks passed. The existing 64-entry catalog limit remains.
+
+The website build now includes `/llms.txt`, `/robots.txt` and `/sitemap.xml`, with canonical root indexing and crawler exclusions for API/setup/proof paths. The final publication receipt records live checks. After publication, the next owner action is to refresh Pactlane, select seller wallet ending BMXT, choose Sell USDC and create an offer. Only fund it after reviewing its terms in the wallet.

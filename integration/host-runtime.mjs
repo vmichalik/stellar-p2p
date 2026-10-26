@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { chmodSync, mkdirSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
@@ -193,6 +193,16 @@ export function createHostRuntime({
       'PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000; CREATE TABLE IF NOT EXISTS known_orders(domain TEXT NOT NULL, id TEXT NOT NULL, PRIMARY KEY(domain,id)); CREATE TABLE IF NOT EXISTS fund_slots(domain TEXT NOT NULL, terms_hash TEXT NOT NULL, order_id TEXT, PRIMARY KEY(domain,terms_hash)); CREATE TABLE IF NOT EXISTS confirmed_receipts(domain TEXT NOT NULL, order_id TEXT NOT NULL, state TEXT NOT NULL, metadata TEXT NOT NULL, PRIMARY KEY(domain,order_id));',
     );
     const domainKey = cfg.deploymentId;
+    catalog.exec(
+      'CREATE TABLE IF NOT EXISTS seller_drafts(domain TEXT NOT NULL, id TEXT NOT NULL, terms TEXT NOT NULL, PRIMARY KEY(domain,id));',
+    );
+    const allDrafts = () => [
+      ...drafts,
+      ...catalog
+        .prepare('SELECT id, terms FROM seller_drafts WHERE domain=? ORDER BY rowid')
+        .all(domainKey)
+        .map((row) => ({ id: row.id, publicTerms: JSON.parse(row.terms) })),
+    ];
     const atomic = (run) => {
       catalog.exec('BEGIN IMMEDIATE');
       try {
@@ -408,7 +418,7 @@ export function createHostRuntime({
                 .map(withReceipt)
             : [],
           sellerDrafts: account
-            ? drafts
+            ? allDrafts()
                 .filter(
                   (draft) =>
                     draft.publicTerms.seller === account &&
@@ -423,6 +433,10 @@ export function createHostRuntime({
                 }))
             : [],
           balances,
+          capabilities: {
+            createOffers: Boolean(account && paymentSupport?.canCreateOffer(account)),
+            maximumOfferUSDC: paymentSupport?.maximumOfferUSDC ?? null,
+          },
           unavailableReasons: reasons,
           readiness: {
             paymentProof: paymentReady && !reasons.includes('CHAIN_UNAVAILABLE'),
@@ -479,10 +493,40 @@ export function createHostRuntime({
           async getOrder(orderId) {
             return (await reader.readSnapshot({ orderId: id(orderId) })).order;
           },
+          async createOffer(input) {
+            check(paymentSupport?.canCreateOffer(account), 'OFFER_CREATION_UNAVAILABLE');
+            check(
+              input &&
+                Object.keys(input).length === 2 &&
+                Object.hasOwn(input, 'tokenAmount') &&
+                Object.hasOwn(input, 'fiatMinor'),
+              'INVALID_OFFER_AMOUNT',
+            );
+            return atomic(() => {
+              check(capacity() < 64 && allDrafts().length < 64, 'CATALOG_LIMIT');
+              // Distinct expiries also make identical quotes distinct on chain and
+              // in the funding journal, including clicks within one clock second.
+              let expiry = BigInt(clock()) + 21600n;
+              for (const draft of allDrafts()) {
+                const previous = BigInt(draft.publicTerms.offer_expires_at);
+                if (previous >= expiry) expiry = previous + 1n;
+              }
+              const publicTerms = paymentSupport.createOfferTerms({
+                account,
+                ...input,
+                offerExpiresAt: expiry.toString(),
+              });
+              const draft = { id: randomUUID(), publicTerms };
+              catalog
+                .prepare('INSERT INTO seller_drafts VALUES (?,?,?)')
+                .run(domainKey, draft.id, JSON.stringify(publicTerms));
+              return draft;
+            });
+          },
           async fund(terms) {
             check(
               terms.seller === account &&
-                drafts.some((draft) => sameTerms(terms, draft.publicTerms)),
+                allDrafts().some((draft) => sameTerms(terms, draft.publicTerms)),
               'OFFER_NOT_APPROVED',
             );
             await preflight();

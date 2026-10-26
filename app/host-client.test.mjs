@@ -195,6 +195,27 @@ test('authenticates exact account/network challenge and converts the typed Freig
   assert.equal(await f.client.session(), null);
 });
 
+test('creating a private offer sends exact amounts without requesting a transaction signature', async () => {
+  const draft = {
+    id: 'new-offer',
+    publicTerms: { seller: ACCOUNT, token_amount: '10000000', fiat_minor: '89' },
+  };
+  const f = fixture({ job: () => ({ operationId: ID, status: 'completed', result: draft }) });
+  await f.client.authenticate();
+  const result = await f.client.command('createOffer', {
+    tokenAmount: '10000000',
+    fiatMinor: '89',
+  });
+  assert.deepEqual(result.result, draft);
+  const request = f.state.requests.find((item) => item.path === '/api/commands');
+  assert.equal(request.body.action, 'createOffer');
+  assert.deepEqual(request.body.args, { tokenAmount: '10000000', fiatMinor: '89' });
+  assert.equal(
+    f.state.walletCalls.some((item) => ['signTransaction', 'signAuthEntry'].includes(item.name)),
+    false,
+  );
+});
+
 test('refuses a tampered challenge before opening a message-signing prompt', async () => {
   const f = fixture({
     intercept: ({ path, response, state }) =>

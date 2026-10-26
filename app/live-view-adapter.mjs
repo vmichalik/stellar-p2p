@@ -117,7 +117,28 @@ export function parseTokenUnits(value) {
   return atoms.toString();
 }
 
+export function parseOfferAmounts({ tokenAmount, fiatAmount }) {
+  const parse = (value, decimals, code) => {
+    check(
+      typeof value === 'string' &&
+        value.length <= 40 &&
+        new RegExp(`^(0|[1-9][0-9]*)(?:\\.[0-9]{1,${decimals}})?$`).test(value),
+      code,
+    );
+    const [whole, fraction = ''] = value.split('.');
+    const amount = BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction.padEnd(decimals, '0'));
+    check(amount > 0n && amount < 1n << 127n, code);
+    return amount.toString();
+  };
+  return {
+    tokenAmount: parse(tokenAmount, 7, 'INVALID_OFFER_AMOUNT'),
+    fiatMinor: parse(fiatAmount, 2, 'INVALID_OFFER_PRICE'),
+  };
+}
+
 export function friendlyError(error) {
+  if (error?.code === 'OFFER_CREATION_PENDING')
+    return 'Your offer is still being saved. Check this operation before creating another. No funds have moved.';
   if (error?.code === 'RECOVERY_RESPONSE_UNKNOWN')
     return 'Seller approval could not be confirmed. Refresh the trade before doing anything else; do not sign this request again.';
   if (error?.outcome === 'unknown')
@@ -132,6 +153,11 @@ export function friendlyError(error) {
     TRANSACTION_PREPARATION_RETRYABLE:
       'The transaction could not be prepared. Nothing was submitted; refresh before trying again.',
     OFFER_NOT_APPROVED: 'This offer is no longer available for this wallet.',
+    OFFER_CREATION_UNAVAILABLE:
+      'Offer creation is unavailable for this wallet. Connect your seller wallet and try again.',
+    INVALID_OFFER_AMOUNT: 'Enter a USDC amount greater than zero, with up to seven decimal places.',
+    INVALID_OFFER_PRICE: 'Enter a euro payment greater than zero, with up to two decimal places.',
+    OFFER_AMOUNT_LIMIT: 'Enter an amount within the offer limit shown above.',
     CATALOG_LIMIT: 'The exchange cannot accept another offer right now.',
     RECOVERY_UNAVAILABLE: 'Both-wallet recovery is not available for this trade yet.',
     RECOVERY_REQUEST_INVALID:
@@ -235,6 +261,23 @@ function cleanView(raw, expectedAccount) {
     'INVALID_HOST_RESPONSE',
   );
   check((raw.account ?? null) === expectedAccount, 'SESSION_CHANGED');
+  const capabilities = { createOffers: false, maximumOfferUSDC: null };
+  if (raw.capabilities !== undefined) {
+    check(typeof raw.capabilities?.createOffers === 'boolean', 'INVALID_HOST_RESPONSE');
+    if (raw.capabilities.maximumOfferUSDC != null) {
+      try {
+        parseOfferAmounts({ tokenAmount: raw.capabilities.maximumOfferUSDC, fiatAmount: '1' });
+      } catch {
+        check(false, 'INVALID_HOST_RESPONSE');
+      }
+      capabilities.maximumOfferUSDC = raw.capabilities.maximumOfferUSDC;
+    }
+    check(
+      !raw.capabilities.createOffers || (expectedAccount && capabilities.maximumOfferUSDC),
+      'INVALID_HOST_RESPONSE',
+    );
+    capabilities.createOffers = raw.capabilities.createOffers;
+  }
   const deployment = raw.configured ? readDeployment(raw.deployment) : null;
   check(raw.configured || raw.deployment === null, 'INVALID_HOST_RESPONSE');
   const ownerOrders = raw.ownerOrders.map((value) => {
@@ -299,6 +342,7 @@ function cleanView(raw, expectedAccount) {
     offers,
     ownerOrders,
     sellerDrafts,
+    capabilities,
     recoveryRequests,
     serverTime: integer(raw.serverTime, 64),
     balances:
@@ -432,6 +476,22 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
   }
 
   function acceptResult(action, args, result) {
+    if (action === 'createOffer') {
+      check(
+        typeof result?.id === 'string' && result.id.length > 0 && result.id.length <= 128,
+        'INVALID_HOST_RESPONSE',
+      );
+      const publicTerms = terms(result.publicTerms);
+      check(publicTerms.seller === state.account, 'SESSION_CHANGED');
+      check(
+        publicTerms.token_amount === args.tokenAmount && publicTerms.fiat_minor === args.fiatMinor,
+        'INVALID_HOST_RESPONSE',
+      );
+      state.view.sellerDrafts = [
+        ...state.view.sellerDrafts.filter((draft) => draft.id !== result.id),
+        { id: result.id, publicTerms },
+      ];
+    }
     if (MUTATIONS.has(action)) {
       const value = order(result?.order),
         tx = transaction(result?.transaction, state.view.deployment);
@@ -590,16 +650,18 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
         check(reply && Object.hasOwn(reply, 'result'), 'INVALID_HOST_RESPONSE');
         acceptResult(action, args, reply.result);
       } catch (error) {
-        if (MUTATIONS.has(action))
+        if (MUTATIONS.has(action) || action === 'createOffer')
           Object.assign(error, { outcome: 'unknown', operationId: state.pending.operationId });
         throw error;
       }
       state.pending = null;
       emit();
-      if (MUTATIONS.has(action)) await refresh();
+      if (MUTATIONS.has(action) || action === 'createOffer') await refresh();
       return reply.result;
     } catch (error) {
       if (generation !== epoch) return;
+      if (action === 'createOffer' && error?.outcome === 'unknown')
+        error.code = 'OFFER_CREATION_PENDING';
       // A policy lookup can issue an authorization, but cannot submit a wallet
       // transaction. Keep transaction uncertainty specific to transaction calls.
       if (action === 'getPolicyStatus') {
@@ -732,6 +794,27 @@ export function createLiveViewAdapter({ client, clock = () => Date.now() }) {
       } finally {
         await refresh();
       }
+    },
+    async createOffer({ tokenAmount, fiatMinor }) {
+      ready('seller');
+      check(state.view.capabilities.createOffers, 'OFFER_CREATION_UNAVAILABLE');
+      for (const [value, code] of [
+        [tokenAmount, 'INVALID_OFFER_AMOUNT'],
+        [fiatMinor, 'INVALID_OFFER_PRICE'],
+      ])
+        check(
+          typeof value === 'string' &&
+            /^[1-9][0-9]*$/.test(value) &&
+            value.length <= 39 &&
+            BigInt(value) < 1n << 127n,
+          code,
+        );
+      const maximum = parseOfferAmounts({
+        tokenAmount: state.view.capabilities.maximumOfferUSDC,
+        fiatAmount: '1',
+      }).tokenAmount;
+      check(BigInt(tokenAmount) <= BigInt(maximum), 'OFFER_AMOUNT_LIMIT');
+      return execute('createOffer', { tokenAmount, fiatMinor });
     },
     async fund(draftId) {
       ready('seller', true);

@@ -21,7 +21,7 @@ export function siteMetadata(html) {
   const clean = html
     .replace(/<title\b[^>]*>[\s\S]*?<\/title>/gi, '')
     .replace(
-      /<meta\b(?=[^>]*\b(?:name|property)=["'](?:description|theme-color|og:[^"']+|twitter:[^"']+)["'])[^>]*>/gi,
+      /<meta\b(?=[^>]*\b(?:name|property)=["'](?:description|theme-color|robots|og:[^"']+|twitter:[^"']+)["'])[^>]*>/gi,
       '',
     )
     .replace(/<link\b(?=[^>]*\brel=["'](?:canonical|icon|help)["'])[^>]*>/gi, '');
@@ -31,6 +31,7 @@ export function siteMetadata(html) {
     `<title>${escape(SITE.title)}</title>`,
     `<meta name="description" content="${escape(SITE.description)}" />`,
     `<meta name="theme-color" content="${SITE.themeColor}" />`,
+    '<meta name="robots" content="index, follow" />',
     `<link rel="canonical" href="${SITE.appOrigin}/" />`,
     '<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />',
     `<link rel="help" href="${SITE.proofDomainVerified ? SITE.proofOrigin : SITE.operationalProofOrigin}/extension-check/" />`,

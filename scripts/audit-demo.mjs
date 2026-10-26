@@ -2,105 +2,119 @@ import { createHash } from 'node:crypto';
 import { lstat, readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, relative } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { DEMO_FILES, MEDIA_FILES, DEMO_HEADERS } from './build-demo.mjs';
+import { fileURLToPath } from 'node:url';
+import { DEMO_FILES, MEDIA_FILES, DEMO_HEADERS, DISCOVERY_FILES } from './build-demo.mjs';
 import { SITE } from '../deploy/demo/site.mjs';
 
 const root = resolve(import.meta.dirname, '..');
-const output = resolve(root, 'dist/demo');
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const check = (value, message) => {
   if (!value) throw new Error(message);
 };
-const manifestBytes = await readFile(resolve(output, 'manifest.json'));
-const manifest = JSON.parse(manifestBytes);
-check(
-  manifest.mode === 'live-and-demo' &&
-    manifest.liveCapabilitiesSource === '/api/view' &&
-    !Object.hasOwn(manifest, 'liveSettlement') &&
-    !Object.hasOwn(manifest, 'livePaymentVerification'),
-  'Only the reviewed live-and-demo site bundle may be audited',
-);
-const expectedAssets = [...DEMO_FILES, ...(manifest.mediaIncluded ? MEDIA_FILES : [])];
-check(
-  JSON.stringify(manifest.files.map((row) => row.path)) === JSON.stringify(expectedAssets),
-  'Manifest asset allowlist differs',
-);
-const expectedFiles = new Set([
-  ...expectedAssets,
-  'manifest.json',
-  '_headers',
-  'robots.txt',
-  'sitemap.xml',
-]);
-const files = [];
-async function walk(directory) {
-  for (const entry of await readdir(directory)) {
-    const path = resolve(directory, entry);
-    const info = await lstat(path);
-    check(!info.isSymbolicLink(), 'Output symlink is not permitted');
-    if (info.isDirectory()) await walk(path);
-    else {
-      check(info.isFile(), 'Output special file is not permitted');
-      const name = relative(output, path).split('\\').join('/');
-      check(expectedFiles.has(name), 'Unexpected output file');
-      const bytes = await readFile(path);
-      files.push({ path: name, sha256: digest(bytes), bytes: bytes.length });
+export async function auditDemo({ output = resolve(root, 'dist/demo') } = {}) {
+  const manifestBytes = await readFile(resolve(output, 'manifest.json'));
+  const manifest = JSON.parse(manifestBytes);
+  check(
+    manifest.mode === 'live-and-demo' &&
+      manifest.liveCapabilitiesSource === '/api/view' &&
+      !Object.hasOwn(manifest, 'liveSettlement') &&
+      !Object.hasOwn(manifest, 'livePaymentVerification'),
+    'Only the reviewed live-and-demo site bundle may be audited',
+  );
+  const expectedAssets = [...DEMO_FILES, ...(manifest.mediaIncluded ? MEDIA_FILES : [])];
+  check(
+    JSON.stringify(manifest.files.map((row) => row.path)) === JSON.stringify(expectedAssets),
+    'Manifest asset allowlist differs',
+  );
+  const expectedFiles = new Set([
+    ...expectedAssets,
+    'manifest.json',
+    '_headers',
+    ...Object.keys(DISCOVERY_FILES),
+  ]);
+  const files = [];
+  async function walk(directory) {
+    for (const entry of await readdir(directory)) {
+      const path = resolve(directory, entry);
+      const info = await lstat(path);
+      check(!info.isSymbolicLink(), 'Output symlink is not permitted');
+      if (info.isDirectory()) await walk(path);
+      else {
+        check(info.isFile(), 'Output special file is not permitted');
+        const name = relative(output, path).split('\\').join('/');
+        check(expectedFiles.has(name), 'Unexpected output file');
+        const bytes = await readFile(path);
+        files.push({ path: name, sha256: digest(bytes), bytes: bytes.length });
+      }
     }
   }
-}
-await walk(output);
-check(files.length === expectedFiles.size, 'Output file missing');
-for (const asset of manifest.files) {
-  const actual = files.find((row) => row.path === asset.path);
+  await walk(output);
+  check(files.length === expectedFiles.size, 'Output file missing');
+  for (const [name, expected] of Object.entries(DISCOVERY_FILES))
+    check(
+      (await readFile(resolve(output, name), 'utf8')) === expected,
+      'Discovery content differs',
+    );
+  for (const asset of manifest.files) {
+    const actual = files.find((row) => row.path === asset.path);
+    check(
+      actual.sha256 === asset.sha256 && actual.bytes === asset.bytes,
+      'Output asset hash differs',
+    );
+  }
+  const headers = await readFile(resolve(output, '_headers'), 'utf8');
   check(
-    actual.sha256 === asset.sha256 && actual.bytes === asset.bytes,
-    'Output asset hash differs',
+    headers ===
+      (manifest.mediaIncluded
+        ? DEMO_HEADERS.replace("connect-src 'self';", "connect-src 'self'; media-src 'self';")
+        : DEMO_HEADERS),
+    'Output security headers differ',
+  );
+  const html = await readFile(resolve(output, 'index.html'), 'utf8');
+  check(
+    html.includes(`rel="canonical" href="${SITE.appOrigin}/"`) &&
+      html.includes('src="./entry.mjs"') &&
+      html.includes('<meta name="robots" content="index, follow" />') &&
+      !/noindex|nofollow/i.test(html),
+    'Canonical metadata or mode entry missing',
+  );
+  const sourcePaths = [
+    'app',
+    'deploy/demo',
+    'scripts/build-demo.mjs',
+    'scripts/audit-demo.mjs',
+    'wrangler.jsonc',
+  ];
+  const git = (args) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+  const revision = git(['rev-parse', 'HEAD']);
+  const status = git(['status', '--porcelain', '--', ...sourcePaths]);
+  check(revision.status === 0 && status.status === 0, 'Source revision unavailable');
+  const report = {
+    kind: 'SITE_BUNDLE_AUDIT',
+    observedAt: new Date().toISOString(),
+    sourceRevision: revision.stdout.trim(),
+    sourceDirty: Boolean(status.stdout.trim()),
+    packagingValid: true,
+    livePaymentGate: 'NOT_CLEARED',
+    deployed: false,
+    mediaIncluded: manifest.mediaIncluded,
+    intendedOrigins: manifest.intendedOrigins,
+    manifestSha256: digest(manifestBytes),
+    files: files.sort((a, b) => a.path.localeCompare(b.path)),
+  };
+  return report;
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const report = await auditDemo();
+  if (process.argv.includes('--record')) {
+    await mkdir(resolve(root, '.private/release'), { recursive: true, mode: 0o700 });
+    await writeFile(
+      resolve(root, '.private/release/domain-bundle.json'),
+      JSON.stringify(report, null, 2) + '\n',
+    );
+  }
+  console.log(
+    `Audited ${report.files.length} exact files; live frontend with explicit demo mode; source ${report.sourceRevision}${report.sourceDirty ? ' (source dirty)' : ''}. No deployment performed.`,
   );
 }
-const headers = await readFile(resolve(output, '_headers'), 'utf8');
-check(
-  headers ===
-    (manifest.mediaIncluded
-      ? DEMO_HEADERS.replace("connect-src 'self';", "connect-src 'self'; media-src 'self';")
-      : DEMO_HEADERS),
-  'Output security headers differ',
-);
-const html = await readFile(resolve(output, 'index.html'), 'utf8');
-check(
-  html.includes(`rel="canonical" href="${SITE.appOrigin}/"`) && html.includes('src="./entry.mjs"'),
-  'Canonical metadata or mode entry missing',
-);
-const sourcePaths = [
-  'app',
-  'deploy/demo',
-  'scripts/build-demo.mjs',
-  'scripts/audit-demo.mjs',
-  'wrangler.jsonc',
-];
-const git = (args) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
-const revision = git(['rev-parse', 'HEAD']);
-const status = git(['status', '--porcelain', '--', ...sourcePaths]);
-check(revision.status === 0 && status.status === 0, 'Source revision unavailable');
-const report = {
-  kind: 'SITE_BUNDLE_AUDIT',
-  observedAt: new Date().toISOString(),
-  sourceRevision: revision.stdout.trim(),
-  sourceDirty: Boolean(status.stdout.trim()),
-  packagingValid: true,
-  livePaymentGate: 'NOT_CLEARED',
-  deployed: false,
-  mediaIncluded: manifest.mediaIncluded,
-  intendedOrigins: manifest.intendedOrigins,
-  manifestSha256: digest(manifestBytes),
-  files: files.sort((a, b) => a.path.localeCompare(b.path)),
-};
-if (process.argv.includes('--record')) {
-  await mkdir(resolve(root, '.private/release'), { recursive: true, mode: 0o700 });
-  await writeFile(
-    resolve(root, '.private/release/domain-bundle.json'),
-    JSON.stringify(report, null, 2) + '\n',
-  );
-}
-console.log(
-  `Audited ${files.length} exact files; live frontend with explicit demo mode; source ${report.sourceRevision}${report.sourceDirty ? ' (source dirty)' : ''}. No deployment performed.`,
-);

@@ -7,6 +7,7 @@ import {
   createLiveViewAdapter,
   formatUnits,
   friendlyError,
+  parseOfferAmounts,
   parseTokenUnits,
 } from './live-view-adapter.mjs';
 
@@ -25,6 +26,7 @@ let route = 'buy',
   toastTimer,
   lastTemporalKey;
 const recoveryDrafts = new Map();
+const offerDrafts = new Map();
 const esc = (value) =>
   String(value ?? '').replace(
     /[&<>"']/g,
@@ -129,12 +131,44 @@ function market(state) {
   );
 }
 
+function offerForm(state) {
+  const draft = offerDrafts.get(state.account) ?? { tokenAmount: '', fiatAmount: '', error: '' };
+  return `<section class="panel live-draft seller-offer-panel"><h2>Create an offer</h2><form id="live-offer-form" novalidate>
+    <label class="money-field" for="offer-token-amount"><span>You sell · up to ${esc(state.view.capabilities.maximumOfferUSDC)} USDC</span><span class="money-input"><input id="offer-token-amount" data-offer-input="tokenAmount" inputmode="decimal" autocomplete="off" value="${esc(draft.tokenAmount)}" placeholder="0.00" aria-describedby="offer-error" ${!enabled(state, 'seller') ? 'disabled' : ''}><span class="currency-label"><span class="usdc-disc">$</span> USDC</span></span></label>
+    <div class="exchange-divider">${icon('sell')}</div>
+    <label class="money-field" for="offer-fiat-amount"><span>Buyer pays</span><span class="money-input"><input id="offer-fiat-amount" data-offer-input="fiatAmount" inputmode="decimal" autocomplete="off" value="${esc(draft.fiatAmount)}" placeholder="0.00" aria-describedby="offer-error" ${!enabled(state, 'seller') ? 'disabled' : ''}><span class="currency-label"><span class="currency-disc">€</span> EUR</span></span></label>
+    <div class="quote-details">${row('Payment method', 'Revolut · EUR')}</div><p class="field-error" id="offer-error" role="status">${esc(draft.error)}</p><button class="button primary" type="submit" ${!enabled(state, 'seller') ? 'disabled' : ''}>Create offer ${icon('arrow')}</button>
+  </form></section>`;
+}
+
 function seller(state) {
   const drafts = state.view?.sellerDrafts ?? [];
   const own = state.view?.ownerOrders.filter((value) => value.terms.seller === state.account) ?? [];
+  const creation = !state.account
+    ? empty(
+        'Connect your seller wallet',
+        'Connect the wallet you want to sell from.',
+        'wallet',
+        connect(state, 'seller'),
+      )
+    : !state.view?.capabilities.createOffers
+      ? empty(
+          'Connect the seller wallet to create an offer',
+          'Switch wallets to continue.',
+          'wallet',
+          button('Switch wallet', 'logout', { disabled: isBusy(state) }),
+        )
+      : !state.roles.includes('seller')
+        ? empty(
+            'Create your next offer',
+            'Use your connected wallet to sell USDC.',
+            'sell',
+            connect(state, 'seller'),
+          )
+        : offerForm(state);
   return (
     heading('Sell USDC', 'Fund an offer to make it available to buyers.', 'SELLER WORKSPACE') +
-    `<div class="trade-layout"><div class="live-drafts">${!state.account || !state.roles.includes('seller') ? empty('Connect your seller wallet', 'Connect the wallet you want to sell from.', 'wallet', connect(state, 'seller')) : drafts.length ? drafts.map((draft) => `<section class="panel live-draft">${pill('Ready to fund', 'orange')}<h2>${token(draft.publicTerms.token_amount, state)}</h2>${row('Buyer pays exactly', euros(draft.publicTerms.fiat_minor))}${row('Payment method', 'Revolut · EUR')}${row('Seller wallet', esc(short(draft.publicTerms.seller)))}<div class="live-actions">${button(`Fund escrow ${icon('lock')}`, 'fund', { id: draft.id, disabled: !enabled(state, 'seller', true) })}</div><p class="small-note">Recipient details stay private until a buyer’s payment lock is confirmed.</p></section>`).join('') : empty('Your offers will appear here', 'No draft offers for this wallet.', 'sell')}
+    `<div class="trade-layout"><div class="live-drafts">${creation}${drafts.map((draft) => `<section class="panel live-draft">${pill('Ready to fund', 'orange')}<h2>${token(draft.publicTerms.token_amount, state)}</h2>${row('Buyer pays exactly', euros(draft.publicTerms.fiat_minor))}${row('Payment method', 'Revolut · EUR')}${row('Seller wallet', esc(short(draft.publicTerms.seller)))}<div class="live-actions">${button(`Fund escrow ${icon('lock')}`, 'fund', { id: draft.id, disabled: !enabled(state, 'seller', true) })}</div></section>`).join('')}
     ${own.length ? `<section><div class="section-title"><h2>Your trades</h2><span>${own.length}</span></div>${orderList(own, state)}</section>` : ''}</div><aside class="panel live-info-panel"><h2>Your wallet</h2><div class="live-balance">${formatUnits(state.view?.balances?.tokenAtoms)}</div><p>${esc(tokenLabel(state))} on ${esc(networkLabel(state))}</p>${row('Account', esc(short(state.account)))}${deploymentDetails(state)}${row('Balance', !state.view?.balances ? 'Unavailable' : state.status === 'ready' ? 'Confirmed read' : 'Last confirmed read')}<div class="escrow-note">${icon('shield')}<p>After payment is locked, funds stay held until verified release or an agreement authorized by both wallets.</p></div></aside></div>`
   );
 }
@@ -255,9 +289,12 @@ function render() {
   const focus = active?.dataset?.action
     ? { action: active.dataset.action, id: active.dataset.id }
     : null;
+  const focusedOfferInput = active?.dataset?.offerInput
+    ? { name: active.dataset.offerInput, start: active.selectionStart, end: active.selectionEnd }
+    : null;
   const currentRole = route === 'sell' ? 'seller' : 'buyer';
   const progress = state.pending
-    ? `<div class="live-progress" role="status"><div class="progress-line">${state.pending.status === 'unknown' ? icon('clock') : '<span class="spinner" aria-hidden="true"></span>'}<span>${state.pending.status === 'unknown' ? 'Confirmation pending. Your transaction may still complete.' : state.pending.status === 'wallet' ? 'Confirm the request in your wallet.' : 'Waiting for the exchange to confirm this operation.'}</span></div>${state.pending.status === 'unknown' && state.pending.operationId ? `<div class="live-actions">${button('Check pending operation', 'resume', { secondary: true })}</div>` : ''}</div>`
+    ? `<div class="live-progress" role="status"><div class="progress-line">${state.pending.status === 'unknown' ? icon('clock') : '<span class="spinner" aria-hidden="true"></span>'}<span>${state.pending.action === 'createOffer' ? (state.pending.status === 'unknown' ? 'Checking whether your offer was saved.' : 'Saving your offer.') : state.pending.status === 'unknown' ? 'Confirmation pending. Your transaction may still complete.' : state.pending.status === 'wallet' ? 'Confirm the request in your wallet.' : 'Waiting for the exchange to confirm this operation.'}</span></div>${state.pending.status === 'unknown' && state.pending.operationId ? `<div class="live-actions">${button('Check pending operation', 'resume', { secondary: true })}</div>` : ''}</div>`
     : '';
   const alert =
     state.error && (state.view?.configured || !['buy', 'why'].includes(route))
@@ -303,6 +340,13 @@ function render() {
           !element.disabled,
       )
       ?.focus({ preventScroll: true });
+  if (focusedOfferInput) {
+    const input = root.querySelector(`[data-offer-input="${focusedOfferInput.name}"]`);
+    if (input && !input.disabled) {
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(focusedOfferInput.start, focusedOfferInput.end);
+    }
+  }
 }
 
 function toast(message) {
@@ -331,11 +375,35 @@ async function action(name, id) {
     else if (name === 'refresh') await adapter.refresh();
     else if (name === 'logout') {
       recoveryDrafts.clear();
+      offerDrafts.clear();
       await adapter.logout();
       await freighter.disconnect();
     } else if (name === 'reserve') {
       await adapter.reserve(id);
       route = 'trade';
+    } else if (name === 'create-offer') {
+      const account = adapter.snapshot().account;
+      const draft = offerDrafts.get(account) ?? { tokenAmount: '', fiatAmount: '' };
+      offerDrafts.set(account, { ...draft, error: '' });
+      let amounts;
+      try {
+        amounts = parseOfferAmounts({
+          tokenAmount: draft.tokenAmount.trim(),
+          fiatAmount: draft.fiatAmount.trim(),
+        });
+        const maximum = parseOfferAmounts({
+          tokenAmount: adapter.snapshot().view.capabilities.maximumOfferUSDC,
+          fiatAmount: '1',
+        }).tokenAmount;
+        if (BigInt(amounts.tokenAmount) > BigInt(maximum)) throw { code: 'OFFER_AMOUNT_LIMIT' };
+      } catch (error) {
+        offerDrafts.set(account, { ...draft, error: friendlyError(error) });
+        render();
+        return;
+      }
+      await adapter.createOffer(amounts);
+      offerDrafts.delete(account);
+      toast('Your offer is ready. Fund escrow to make it available to buyers.');
     } else if (name === 'fund') {
       await adapter.fund(id);
       route = 'trade';
@@ -360,6 +428,17 @@ async function action(name, id) {
   }
 }
 root.addEventListener('input', (event) => {
+  if (event.target.matches('[data-offer-input]')) {
+    const account = adapter.snapshot().account;
+    const draft = offerDrafts.get(account) ?? { tokenAmount: '', fiatAmount: '', error: '' };
+    offerDrafts.set(account, {
+      ...draft,
+      [event.target.dataset.offerInput]: event.target.value,
+      error: '',
+    });
+    root.querySelector('#offer-error').textContent = '';
+    return;
+  }
   if (!event.target.matches('[data-recovery-input]')) return;
   const state = adapter.snapshot();
   const value = state.view.ownerOrders.find((item) => item.id === event.target.dataset.id);
@@ -370,6 +449,11 @@ root.addEventListener('input', (event) => {
     : '<p class="field-error">Enter an amount within the escrow, with up to seven decimal places.</p>';
   const submit = root.querySelector('[data-action="recovery-propose"]');
   if (submit) submit.disabled = !amount || !enabled(state, 'buyer', true);
+});
+root.addEventListener('submit', (event) => {
+  if (event.target.id !== 'live-offer-form') return;
+  event.preventDefault();
+  if (enabled(adapter.snapshot(), 'seller')) void action('create-offer');
 });
 root.addEventListener('click', (event) => {
   const target = event.target.closest('button[data-action]');

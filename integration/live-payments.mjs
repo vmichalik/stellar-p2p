@@ -15,6 +15,13 @@ export const isLivePaymentSupport = (value) => instances.has(value);
 const check = (ok, code = 'PAYMENT_VERIFICATION_UNAVAILABLE') => {
   if (!ok) throw Error(code);
 };
+const positiveAmount = (value) =>
+  typeof value === 'string' && /^[1-9][0-9]{0,38}$/.test(value) && BigInt(value) < 1n << 127n;
+const usdcUnits = (atoms) => {
+  const value = BigInt(atoms);
+  const fraction = (value % 10000000n).toString().padStart(7, '0').replace(/0+$/, '');
+  return `${value / 10000000n}${fraction ? `.${fraction}` : ''}`;
+};
 
 // Constructed by the operator from an owner-reviewed bank/wallet association.
 // No HTTP request may supply these bindings, a signer, or a readiness flag.
@@ -36,7 +43,7 @@ export function createLivePaymentSupport({
   );
   check(/^@[a-zA-Z0-9._]{3,30}$/.test(fixed.destination));
   check(/^[a-f0-9]{64}$/.test(fixed.recipientSalt) && !/^0+$/.test(fixed.recipientSalt));
-  check(/^[1-9][0-9]*$/.test(fixed.tokenAmount) && /^[1-9][0-9]*$/.test(fixed.fiatMinor));
+  check(positiveAmount(fixed.tokenAmount) && positiveAmount(fixed.fiatMinor));
   const commitment = recipientCommitment({
     recipient_id: fixed.recipientId,
     recipient_salt: fixed.recipientSalt,
@@ -73,8 +80,9 @@ export function createLivePaymentSupport({
     check(
       order.terms.seller === fixed.seller &&
         order.terms.recipient === commitment &&
-        order.terms.token_amount === fixed.tokenAmount &&
-        order.terms.fiat_minor === fixed.fiatMinor &&
+        positiveAmount(order.terms.token_amount) &&
+        BigInt(order.terms.token_amount) <= BigInt(fixed.tokenAmount) &&
+        positiveAmount(order.terms.fiat_minor) &&
         order.terms.currency === 'EUR' &&
         order.terms.rail === 'revolut',
       'ORDER_BINDING_MISMATCH',
@@ -82,6 +90,34 @@ export function createLivePaymentSupport({
   };
   const support = Object.freeze({
     recipientCommitment: commitment,
+    maximumOfferUSDC: usdcUnits(fixed.tokenAmount),
+    canCreateOffer(account) {
+      return !closed && account === fixed.seller;
+    },
+    createOfferTerms({ account, tokenAmount, fiatMinor, offerExpiresAt }) {
+      check(!closed && account === fixed.seller, 'OFFER_CREATION_UNAVAILABLE');
+      bindingRecord();
+      check(positiveAmount(tokenAmount), 'INVALID_OFFER_AMOUNT');
+      check(BigInt(tokenAmount) <= BigInt(fixed.tokenAmount), 'OFFER_AMOUNT_LIMIT');
+      check(positiveAmount(fiatMinor), 'INVALID_OFFER_PRICE');
+      check(
+        typeof offerExpiresAt === 'string' &&
+          /^[1-9][0-9]{0,19}$/.test(offerExpiresAt) &&
+          BigInt(offerExpiresAt) < 1n << 64n &&
+          BigInt(offerExpiresAt) > BigInt(clock()),
+        'INVALID_OFFER_EXPIRY',
+      );
+      return {
+        seller: fixed.seller,
+        token_amount: tokenAmount,
+        fiat_minor: fiatMinor,
+        currency: 'EUR',
+        rail: 'revolut',
+        recipient: commitment,
+        offer_expires_at: offerExpiresAt,
+        reservation_seconds: '3600',
+      };
+    },
     assertBuyer(account) {
       check(account === fixed.buyer, 'BUYER_WALLET_MISMATCH');
     },

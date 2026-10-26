@@ -2,7 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readDeploymentDomain } from './host-client.mjs';
 import { NETWORKS } from './network.mjs';
-import { createLiveViewAdapter, formatUnits, parseTokenUnits } from './live-view-adapter.mjs';
+import {
+  createLiveViewAdapter,
+  formatUnits,
+  parseOfferAmounts,
+  parseTokenUnits,
+  friendlyError,
+} from './live-view-adapter.mjs';
 
 const TESTNET = 'Test SDF Network ; September 2015';
 const buyer = 'G' + 'A'.repeat(55),
@@ -95,6 +101,7 @@ function fixture({ configured = true, signedIn = true, paymentProof = true } = {
       : [],
     ownerOrders: [],
     sellerDrafts: [],
+    capabilities: { createOffers: signedIn && configured, maximumOfferUSDC: '1' },
     readiness: { submission: configured, paymentProof, recovery: false },
     unavailableReasons: [],
   };
@@ -104,11 +111,13 @@ function fixture({ configured = true, signedIn = true, paymentProof = true } = {
     authenticate: async () => {
       calls.push(['authenticate']);
       view.account = buyer;
+      view.capabilities.createOffers = true;
       return { account: buyer, ...readDeploymentDomain(view.deployment) };
     },
     view: async () => structuredClone(view),
     logout: async () => {
       view.account = null;
+      view.capabilities.createOffers = false;
       view.ownerOrders = [];
       view.sellerDrafts = [];
     },
@@ -423,6 +432,106 @@ test('funding uses approved terms only and lets the authenticated host supply th
   assert.equal(f.adapter.snapshot().view.ownerOrders[0].state, 'Funded');
   assert.equal(f.adapter.snapshot().view.ownerOrders[0].terms.seller, buyer);
   assert.deepEqual(f.adapter.snapshot().receipts, {});
+});
+
+test('seller can create another private draft after a completed trade without funding or publishing it', async () => {
+  const f = await connected();
+  f.view().ownerOrders = [
+    { ...chainOrder('Released'), terms: { ...terms, seller: buyer }, buyer: seller },
+  ];
+  f.view().offers = [];
+  await f.adapter.connect('seller');
+  const previous = f.client.command;
+  const draft = {
+    id: 'next-offer',
+    publicTerms: { ...terms, seller: buyer, token_amount: '10000000', fiat_minor: '89' },
+  };
+  f.client.command = async (action, args) => {
+    if (action !== 'createOffer') return previous(action, args);
+    f.calls.push([action, structuredClone(args)]);
+    assert.deepEqual(args, { tokenAmount: '10000000', fiatMinor: '89' });
+    f.view().sellerDrafts.push(draft);
+    return { operationId: 'create-next-offer', result: draft };
+  };
+  const created = await f.adapter.createOffer(
+    parseOfferAmounts({ tokenAmount: '1', fiatAmount: '0.89' }),
+  );
+  assert.deepEqual(created, draft);
+  assert.deepEqual(f.adapter.snapshot().view.sellerDrafts, [draft]);
+  assert.deepEqual(f.adapter.snapshot().view.offers, []);
+  assert.equal(f.adapter.snapshot().view.ownerOrders[0].state, 'Released');
+  assert.equal(
+    f.calls.some(([action]) => action === 'fund'),
+    false,
+  );
+  assert.equal(f.adapter.snapshot().pending, null);
+});
+
+test('offer amounts preserve exact units and reject zero, rounding and noncanonical command values', async () => {
+  assert.deepEqual(parseOfferAmounts({ tokenAmount: '1.0000001', fiatAmount: '0.89' }), {
+    tokenAmount: '10000001',
+    fiatMinor: '89',
+  });
+  for (const tokenAmount of ['0', '-1', '1e3', '1.00000001', '01', '', '9'.repeat(40)])
+    assert.throws(() => parseOfferAmounts({ tokenAmount, fiatAmount: '1' }), {
+      code: 'INVALID_OFFER_AMOUNT',
+    });
+  for (const fiatAmount of ['0', '0.001', '-0.89', '1,00', '1e2', ''])
+    assert.throws(() => parseOfferAmounts({ tokenAmount: '1', fiatAmount }), {
+      code: 'INVALID_OFFER_PRICE',
+    });
+  const f = await connected();
+  await f.adapter.connect('seller');
+  for (const tokenAmount of ['0', '01', '1.0', '1e7', (1n << 127n).toString()])
+    await assert.rejects(f.adapter.createOffer({ tokenAmount, fiatMinor: '89' }), {
+      code: 'INVALID_OFFER_AMOUNT',
+    });
+  await assert.rejects(f.adapter.createOffer({ tokenAmount: '10000000', fiatMinor: '0' }), {
+    code: 'INVALID_OFFER_PRICE',
+  });
+  await assert.rejects(f.adapter.createOffer({ tokenAmount: '10000001', fiatMinor: '89' }), {
+    code: 'OFFER_AMOUNT_LIMIT',
+  });
+  assert.equal(
+    f.calls.some(([action]) => action === 'createOffer'),
+    false,
+  );
+});
+
+test('offer creation requires the server seller capability and fails closed when it is absent', async () => {
+  const f = await connected();
+  await f.adapter.connect('seller');
+  for (const capabilities of [{ createOffers: false, maximumOfferUSDC: '1' }, undefined]) {
+    f.view().capabilities = capabilities;
+    await f.adapter.refresh();
+    assert.equal(f.adapter.snapshot().view.capabilities.createOffers, false);
+    await assert.rejects(f.adapter.createOffer({ tokenAmount: '10000000', fiatMinor: '89' }), {
+      code: 'OFFER_CREATION_UNAVAILABLE',
+    });
+  }
+  assert.equal(
+    f.calls.some(([action]) => action === 'createOffer'),
+    false,
+  );
+});
+
+test('mismatched draft response remains fenced and never creates a funded offer', async () => {
+  const f = await connected();
+  await f.adapter.connect('seller');
+  f.client.command = async () => ({
+    operationId: 'create-uncertain',
+    result: { id: 'bad-draft', publicTerms: { ...terms, seller: buyer } },
+  });
+  await assert.rejects(f.adapter.createOffer({ tokenAmount: '10000000', fiatMinor: '89' }), {
+    code: 'OFFER_CREATION_PENDING',
+  });
+  assert.deepEqual(f.adapter.snapshot().view.sellerDrafts, []);
+  assert.equal(f.adapter.snapshot().pending.status, 'unknown');
+  assert.equal(f.adapter.snapshot().pending.operationId, 'create-uncertain');
+  assert.match(friendlyError(f.adapter.snapshot().error), /No funds have moved/);
+  await assert.rejects(f.adapter.createOffer({ tokenAmount: '10000000', fiatMinor: '89' }), {
+    code: 'OPERATION_PENDING',
+  });
 });
 
 test('recovery decimal input keeps exact atoms and rejects rounding, exponent notation and out-of-range splits', async () => {

@@ -20,4 +20,4 @@ The historical bank transfer anchored the owner-reviewed identity binding. It wa
 
 ## Current review
 
-The judge-facing documentation and demo are consolidated on `codex/pactlane-judge-review`. [Handoff](handoff.md) records the final commit, checks and publication receipt. [Verification](verification.md) is the short evidence index.
+The current application and publication work is on `codex/pactlane-mainnet-live`. Seller-created private drafts, wallet-switch guidance and public discovery files are covered by the latest focused checks. [Handoff](handoff.md) records the final commit, checks and publication receipt. [Verification](verification.md) is the short evidence index.

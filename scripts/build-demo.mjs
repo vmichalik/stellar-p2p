@@ -35,7 +35,46 @@ export const DEMO_FILES = [
   'assets/favicon.svg',
   ...SOCIAL_FILES,
 ];
-const GENERATED = ['manifest.json', '_headers', 'robots.txt', 'sitemap.xml'];
+export const DISCOVERY_FILES = Object.freeze({
+  'robots.txt': `User-agent: *
+Allow: /
+Disallow: /api
+Disallow: /setup
+Disallow: /wallet
+Disallow: /payment-check
+Disallow: /response-check
+Disallow: /field-check
+Disallow: /benchmark
+Sitemap: ${SITE.appOrigin}/sitemap.xml
+`,
+  'sitemap.xml': `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${SITE.appOrigin}/</loc></url>
+</urlset>
+`,
+  'llms.txt': `# Pactlane
+
+> Buy USDC from another person using your bank app and receive it in your Stellar wallet.
+
+Pactlane connects a bank payment with Stellar escrow. A seller chooses a price and funds an offer with USDC. A buyer reserves the offer, confirms the payment lock and pays through Revolut. TLSNotary verifies the bank response; the payment policy checks the transfer against the trade before authorizing release. The buyer signs to receive the USDC.
+
+## Live app and demo
+
+The website opens in live mode. The Demo toggle switches to a simulated trade flow without making bank payments or submitting wallet transactions. Only funded offers appear in the live marketplace.
+
+## Completed mainnet trade
+
+On 26 October 2026, a buyer paid EUR 0.89 through Revolut and received 1 Circle USDC from Pactlane escrow on Stellar mainnet. The transfer was verified with TLSNotary and the release was confirmed on-chain.
+
+## Links
+
+- [Pactlane](${SITE.appOrigin}/): Open the live app.
+- [Demo](${SITE.appOrigin}/?demo=1): Explore the simulated flow.
+- [Pactlane for Chrome](https://github.com/vmichalik/pactlane-tlsnotary/releases/tag/v0.1.0.1501-pactlane.2): Install the TLSNotary extension used for payment verification.
+- [Confirmed mainnet release](https://stellar.expert/explorer/public/tx/ec4220af4056b185d242977385484066789824a2a274f57b3439e1e4dd1b9864): View the completed 1 USDC trade.
+`,
+});
+const GENERATED = ['manifest.json', '_headers', ...Object.keys(DISCOVERY_FILES)];
 export const MEDIA_FILES = ['demo.mp4', 'demo-script.txt'];
 export const DEMO_HEADERS = STATIC_HEADERS;
 
@@ -169,14 +208,8 @@ export async function buildDemo({
       ? DEMO_HEADERS.replace("connect-src 'self';", "connect-src 'self'; media-src 'self';")
       : DEMO_HEADERS,
   );
-  await writeFile(
-    join(output, 'robots.txt'),
-    `User-agent: *\nAllow: /\nSitemap: ${SITE.appOrigin}/sitemap.xml\n`,
-  );
-  await writeFile(
-    join(output, 'sitemap.xml'),
-    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE.appOrigin}/</loc></url></urlset>\n`,
-  );
+  for (const [name, content] of Object.entries(DISCOVERY_FILES))
+    await writeFile(join(output, name), content);
   return manifest;
 }
 

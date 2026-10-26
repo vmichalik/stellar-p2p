@@ -494,6 +494,56 @@ test('dispatches exact allowed inputs, forces the session account and strips pri
   assert.deepEqual(reserved, ['7', alice.publicKey()]);
 });
 
+test('offer creation accepts only exact amounts and returns only the authenticated seller draft', async (t) => {
+  let calls = 0;
+  const f = await fixture(t, {
+    createServices: ({ account }) => ({
+      createOffer: async ({ tokenAmount, fiatMinor }) => {
+        calls++;
+        return {
+          id: 'new-offer',
+          privateKey: 'PRIVATE',
+          publicTerms: {
+            ...order().terms,
+            seller: account,
+            token_amount: tokenAmount,
+            fiat_minor: fiatMinor,
+            recipientSalt: 'PRIVATE',
+          },
+        };
+      },
+    }),
+  });
+  const cookie = await f.login();
+  for (const args of [
+    { tokenAmount: '10000000', fiatMinor: '89', seller: bob.publicKey() },
+    { tokenAmount: '10000000', fiatMinor: '89', recipient: '00'.repeat(32) },
+    { tokenAmount: '0', fiatMinor: '89' },
+    { tokenAmount: '1e7', fiatMinor: '89' },
+    { tokenAmount: '10000000', fiatMinor: '089' },
+  ])
+    assert.equal(
+      (
+        await f.request('/api/commands', {
+          method: 'POST',
+          cookie,
+          body: { action: 'createOffer', args },
+        })
+      ).status,
+      400,
+    );
+  assert.equal(calls, 0);
+  const result = await f.poll(
+    cookie,
+    await f.start(cookie, 'createOffer', { tokenAmount: '10000000', fiatMinor: '89' }),
+  );
+  assert.equal(result.status, 'completed');
+  assert.equal(result.result.publicTerms.seller, alice.publicKey());
+  assert.equal(result.result.publicTerms.token_amount, '10000000');
+  assert.doesNotMatch(JSON.stringify(result), /PRIVATE|recipientSalt|privateKey/);
+  assert.equal(calls, 1);
+});
+
 test('sanitizes service errors and wallet refusals without trusting completion or private error text', async (t) => {
   const f = await fixture(t, {
     createServices: ({ wallet }) => ({

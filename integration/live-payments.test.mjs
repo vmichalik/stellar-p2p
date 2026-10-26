@@ -13,7 +13,7 @@ import {
 } from '../policy/src/index.mjs';
 import { normalizedVerifiedPayment } from '../policy/src/tlsn-store.mjs';
 import { payload, now, transaction } from '../policy/test/fixtures/tlsn-record.mjs';
-function fixture(t) {
+function fixture(t, { paymentAmount = 123 } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'pactlane-live-payments-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const evidence = createTlsnEvidenceStore({
@@ -24,7 +24,9 @@ function fixture(t) {
   t.after(() => evidence.close());
   const receipt = evidence.ingest({
     authorization: 'Bearer ' + 'ab'.repeat(32),
-    payload: payload(),
+    payload: payload({
+      payment: { ...transaction(), amount: -paymentAmount, amountWithCharges: -paymentAmount },
+    }),
   });
   const record = normalizedVerifiedPayment(evidence.reader.readVerifiedRecord(receipt.evidenceId));
   const key = Keypair.random();
@@ -186,7 +188,7 @@ test('unhealthy verifier, mismatched signer, altered terms and fake readiness ca
   await assert.rejects(
     f.support.assertLock({
       deployment: f.cfg,
-      order: { ...f.order, terms: { ...f.order.terms, fiat_minor: '124' } },
+      order: { ...f.order, terms: { ...f.order.terms, recipient: 'ff'.repeat(32) } },
       account: f.binding.buyer,
     }),
     /ORDER_BINDING_MISMATCH/,
@@ -203,4 +205,89 @@ test('unhealthy verifier, mismatched signer, altered terms and fake readiness ca
   );
   assert.throws(() => f.support.assertBuyer(f.binding.seller), /BUYER_WALLET_MISMATCH/);
   assert.equal(f.signCount(), 0);
+});
+
+test('only the bound seller creates capped public terms without exposing bank identity', (t) => {
+  const f = fixture(t);
+  const args = {
+    account: f.binding.seller,
+    tokenAmount: '5000000',
+    fiatMinor: '45',
+    offerExpiresAt: String(now / 1000 + 3600),
+  };
+  assert.equal(f.support.maximumOfferUSDC, '1');
+  assert.equal(f.support.canCreateOffer(f.binding.seller), true);
+  assert.equal(f.support.canCreateOffer(f.binding.buyer), false);
+  assert.equal(f.support.canCreateOffer(null), false);
+  const terms = f.support.createOfferTerms(args);
+  assert.deepEqual(terms, {
+    seller: f.binding.seller,
+    token_amount: '5000000',
+    fiat_minor: '45',
+    currency: 'EUR',
+    rail: 'revolut',
+    recipient: f.support.recipientCommitment,
+    offer_expires_at: args.offerExpiresAt,
+    reservation_seconds: '3600',
+  });
+  assert.doesNotMatch(JSON.stringify(terms), /recipientSalt|recipientId|payerScope|destination/);
+  assert.throws(
+    () => f.support.createOfferTerms({ ...args, account: f.binding.buyer }),
+    /OFFER_CREATION_UNAVAILABLE/,
+  );
+  for (const tokenAmount of ['0', '-1', '01', '1e7', (1n << 127n).toString()])
+    assert.throws(
+      () => f.support.createOfferTerms({ ...args, tokenAmount }),
+      /INVALID_OFFER_AMOUNT/,
+    );
+  assert.throws(
+    () => f.support.createOfferTerms({ ...args, tokenAmount: '10000001' }),
+    /OFFER_AMOUNT_LIMIT/,
+  );
+  for (const fiatMinor of ['0', '-1', '01', '0.89', (1n << 127n).toString()])
+    assert.throws(() => f.support.createOfferTerms({ ...args, fiatMinor }), /INVALID_OFFER_PRICE/);
+  assert.throws(
+    () => f.support.createOfferTerms({ ...args, offerExpiresAt: String(now / 1000) }),
+    /INVALID_OFFER_EXPIRY/,
+  );
+  f.support.close();
+  assert.equal(f.support.canCreateOffer(f.binding.seller), false);
+  assert.throws(() => f.support.createOfferTerms(args), /OFFER_CREATION_UNAVAILABLE/);
+});
+
+test('new wallet-funded amounts use exact chain fiat and token terms in the signed claim', async (t) => {
+  const f = fixture(t, { paymentAmount: 124 });
+  f.order.terms.token_amount = '5000000';
+  f.order.terms.fiat_minor = '124';
+  await f.support.assertLock({ deployment: f.cfg, order: f.order, account: f.binding.buyer });
+  const policy = await f.support.policyFor(f.context);
+  const status = await policy.readStatus('1');
+  assert.equal(status.status, 'verified');
+  const signed = await policy.readAuthorization({
+    orderId: '1',
+    authorization: status.authorization,
+  });
+  assert.equal(signed.claim.token_amount, '5000000');
+  assert.equal(signed.claim.fiat_minor, '124');
+});
+
+test('a payment with a different amount cannot authorize changed chain terms', async (t) => {
+  const f = fixture(t);
+  f.order.terms.fiat_minor = '124';
+  const policy = await f.support.policyFor(f.context);
+  assert.deepEqual(await policy.readStatus('1'), { orderId: '1', status: 'pending' });
+  assert.equal(f.signCount(), 0);
+  f.order.terms.token_amount = '10000001';
+  await assert.rejects(policy.readStatus('1'), /ORDER_BINDING_MISMATCH/);
+  assert.equal(f.signCount(), 0);
+});
+
+test('an issued bank payment cannot authorize a second order, including after restart', async (t) => {
+  const f = fixture(t);
+  const policy = await f.support.policyFor(f.context);
+  assert.equal((await policy.readStatus('1')).status, 'verified');
+  f.order.id = '2';
+  const resumed = await f.restart().policyFor(f.context);
+  await assert.rejects(resumed.readStatus('2'), /PAYMENT_ALREADY_BOUND/);
+  assert.equal(f.signCount(), 1);
 });

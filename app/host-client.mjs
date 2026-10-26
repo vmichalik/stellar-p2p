@@ -5,6 +5,7 @@ export const TESTNET_PASSPHRASE = NETWORKS.testnet.passphrase;
 const ACTIONS = new Set([
   'connectWallet',
   'getOrder',
+  'createOffer',
   'fund',
   'reserve',
   'beginPayment',
@@ -35,6 +36,10 @@ const SAFE_FAILURES = new Set([
   'HOST_NOT_CONFIGURED',
   'PAYMENT_VERIFICATION_UNAVAILABLE',
   'OFFER_NOT_APPROVED',
+  'OFFER_CREATION_UNAVAILABLE',
+  'INVALID_OFFER_AMOUNT',
+  'INVALID_OFFER_PRICE',
+  'OFFER_AMOUNT_LIMIT',
   'CATALOG_LIMIT',
   'DEPLOYMENT_UNAVAILABLE',
   'TESTNET_SUBMISSION_NOT_AUTHORIZED',

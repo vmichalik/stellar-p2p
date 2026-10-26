@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-26T10:28:12Z",
+  "tests": {
+    "passed": 153,
+    "failed": 0,
+    "scope": "app, host-runtime, browser-bridge, live-payments, live-operator and release"
+  },
+  "browser": [
+    {
+      "width": 390,
+      "privateDrafts": 2,
+      "publicOffers": 0,
+      "createCommands": 2,
+      "fundCommands": 0,
+      "geometry": {
+        "width": 390,
+        "scrollWidth": 390
+      },
+      "pageErrors": [],
+      "ineligibleWalletFormHidden": true
+    },
+    {
+      "width": 1440,
+      "privateDrafts": 2,
+      "publicOffers": 0,
+      "createCommands": 2,
+      "fundCommands": 0,
+      "geometry": {
+        "width": 1440,
+        "scrollWidth": 1440
+      },
+      "pageErrors": [],
+      "ineligibleWalletFormHidden": true
+    }
+  ],
+  "realTransactionsSubmitted": 0,
+  "realBankRequests": 0,
+  "offerCapUSDC": "1",
+  "discoveryFiles": ["llms.txt", "robots.txt", "sitemap.xml"]
+}

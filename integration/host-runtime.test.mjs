@@ -4,6 +4,10 @@ import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { Keypair, Networks, TransactionBuilder } from '@stellar/stellar-sdk';
 import { createHostRuntime, unconfiguredView } from './host-runtime.mjs';
+import { createLivePaymentSupport } from './live-payments.mjs';
+import { createEd25519SigningAdapter, createTlsnEvidenceStore } from '../policy/src/index.mjs';
+import { normalizedVerifiedPayment } from '../policy/src/tlsn-store.mjs';
+import { payload, now } from '../policy/test/fixtures/tlsn-record.mjs';
 import {
   fixture,
   alice,
@@ -13,6 +17,95 @@ import {
   terms,
   order,
 } from './test-fixtures/host-runtime.mjs';
+
+test('seller creates distinct durable private drafts; funding visibility and wallet boundaries survive restart', async (t) => {
+  const key = Keypair.random();
+  const signer = createEd25519SigningAdapter({
+    publicKeyHex: Buffer.from(key.rawPublicKey()).toString('hex'),
+    signDigest: async (digest) => key.sign(digest),
+  });
+  const cfg = { ...deployment, policySignerPublicKeyHex: signer.publicKeyHex };
+  const f = fixture(t, { deployment: cfg });
+  const evidence = createTlsnEvidenceStore({
+    path: join(f.storageDirectory, '..', 'evidence.sqlite'),
+    ingressSecret: 'ab'.repeat(32),
+    clock: () => now,
+  });
+  const receipt = evidence.ingest({
+    authorization: 'Bearer ' + 'ab'.repeat(32),
+    payload: payload(),
+  });
+  const record = normalizedVerifiedPayment(evidence.reader.readVerifiedRecord(receipt.evidenceId));
+  const support = createLivePaymentSupport({
+    binding: {
+      network: 'testnet',
+      token: cfg.token,
+      seller: alice,
+      buyer: bob,
+      recipientId: record.recipientId,
+      payerScope: record.payerScope,
+      recipientSalt: '33'.repeat(32),
+      destination: '@synthetic',
+      evidenceId: receipt.evidenceId,
+      tokenAmount: '10000000',
+      fiatMinor: '89',
+    },
+    evidenceReader: evidence.reader,
+    signer,
+    authorizationPath: join(f.storageDirectory, '..', 'authorizations.sqlite'),
+    proofHealth: async () => true,
+    clock: () => '1010',
+  });
+  t.after(() => {
+    support.close();
+    evidence.close();
+  });
+  const options = {
+    paymentSupport: support,
+    offerReader: undefined,
+    replayStorePath: join(f.storageDirectory, '..', 'replay.sqlite'),
+    sellerDrafts: [],
+    orderIds: [],
+  };
+  let runtime = f.create(options);
+  const seller = await runtime.createServices({ account: alice, wallet: f.wallet });
+  const buyer = await runtime.createServices({ account: bob, wallet: f.wallet });
+  const args = { tokenAmount: '10000000', fiatMinor: '89' };
+  await assert.rejects(buyer.createOffer(args), /OFFER_CREATION_UNAVAILABLE/);
+  await assert.rejects(seller.createOffer({ ...args, seller: bob }), /INVALID_OFFER_AMOUNT/);
+  await assert.rejects(
+    seller.createOffer({ ...args, tokenAmount: '10000001' }),
+    /OFFER_AMOUNT_LIMIT/,
+  );
+  const first = await seller.createOffer(args);
+  const second = await seller.createOffer(args);
+  assert.notEqual(first.id, second.id);
+  assert.notEqual(first.publicTerms.offer_expires_at, second.publicTerms.offer_expires_at);
+  assert.equal(first.publicTerms.seller, alice);
+  assert.equal(first.publicTerms.recipient, support.recipientCommitment);
+  assert.deepEqual((await runtime.readView()).offers, []);
+  assert.deepEqual((await runtime.readView({ account: bob })).sellerDrafts, []);
+  assert.equal((await runtime.readView({ account: bob })).capabilities.createOffers, false);
+  assert.equal((await runtime.readView({ account: alice })).capabilities.createOffers, true);
+  runtime.close();
+  runtime = f.create(options);
+  assert.deepEqual((await runtime.readView({ account: alice })).sellerDrafts, [first, second]);
+  const resumed = await runtime.createServices({ account: alice, wallet: f.wallet });
+  await assert.rejects(
+    resumed.fund({ ...first.publicTerms, recipient: '00'.repeat(32) }),
+    /OFFER_NOT_APPROVED/,
+  );
+  assert.equal(f.counts.sign, 0);
+  assert.equal(f.counts.submit, 0);
+  runtime.close();
+  f.orders.set('4', { ...order('4', 'Funded', alice), terms: first.publicTerms });
+  runtime = f.create({ ...options, orderIds: ['4'] });
+  assert.deepEqual((await runtime.readView({ account: alice })).sellerDrafts, [second]);
+  assert.deepEqual(
+    (await runtime.readView()).offers.map((offer) => offer.id),
+    ['4'],
+  );
+});
 
 test('unconfigured runtime exposes empty unavailable state and never creates a service', async () => {
   const runtime = createHostRuntime();

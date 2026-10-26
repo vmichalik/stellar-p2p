@@ -15,8 +15,9 @@ const manifestBytes = await readFile(resolve(output, 'manifest.json'));
 const manifest = JSON.parse(manifestBytes);
 check(
   manifest.mode === 'live-and-demo' &&
-    manifest.liveSettlement === false &&
-    manifest.livePaymentVerification === false,
+    manifest.liveCapabilitiesSource === '/api/view' &&
+    !Object.hasOwn(manifest, 'liveSettlement') &&
+    !Object.hasOwn(manifest, 'livePaymentVerification'),
   'Only the reviewed live-and-demo site bundle may be audited',
 );
 const expectedAssets = [...DEMO_FILES, ...(manifest.mediaIncluded ? MEDIA_FILES : [])];

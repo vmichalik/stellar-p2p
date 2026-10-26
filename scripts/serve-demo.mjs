@@ -7,8 +7,9 @@ const root = resolve(import.meta.dirname, '../dist/demo');
 const manifest = JSON.parse(await readFile(resolve(root, 'manifest.json'), 'utf8'));
 if (
   manifest.mode !== 'live-and-demo' ||
-  manifest.liveSettlement ||
-  manifest.livePaymentVerification
+  manifest.liveCapabilitiesSource !== '/api/view' ||
+  Object.hasOwn(manifest, 'liveSettlement') ||
+  Object.hasOwn(manifest, 'livePaymentVerification')
 )
   throw new Error('Only the reviewed site bundle may be previewed');
 const allowed = new Set([

@@ -40,8 +40,9 @@ test('site build copies only allowlisted assets and records actual capabilities'
   assert.equal(result.mode, 'live-and-demo');
   assert.equal(result.defaultMode, 'live');
   assert.equal(result.demoQuery, 'demo=1');
-  assert.equal(result.livePaymentVerification, false);
-  assert.equal(result.liveSettlement, false);
+  assert.equal(result.liveCapabilitiesSource, '/api/view');
+  assert.equal(Object.hasOwn(result, 'livePaymentVerification'), false);
+  assert.equal(Object.hasOwn(result, 'liveSettlement'), false);
   assert.equal(result.revision, 'fixture-revision');
   assert.deepEqual(
     result.files.map((file) => file.path),

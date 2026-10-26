@@ -134,6 +134,34 @@ test('same-origin playback is allowed on the app document and exact MP4 asset', 
   }
 });
 
+test('video seeking works when the asset binding ignores Range and rejects unsatisfiable ranges', async () => {
+  for (const [range, status, body] of [
+    ['bytes=4-7', 206, 'ftyp'],
+    ['bytes=8-', 206, 'SYNTHETIC'],
+    ['bytes=-4', 206, 'ETIC'],
+    ['bytes=999-', 416, ''],
+    ['bytes=8-4', 416, ''],
+    ['bytes=0-1,4-5', 416, ''],
+  ]) {
+    const response = await worker.fetch(
+      new Request('https://pactlane.io/demo.mp4', { headers: { Range: range } }),
+      {
+        ASSETS: {
+          fetch: async () =>
+            new Response('0000ftypSYNTHETIC', {
+              headers: { 'Content-Type': 'video/mp4', 'Content-Length': '17' },
+            }),
+        },
+      },
+    );
+    assert.equal(response.status, status);
+    assert.equal(response.headers.get('Accept-Ranges'), 'bytes');
+    assert.equal(await response.text(), body);
+    if (status === 206) assert.equal(Number(response.headers.get('Content-Length')), body.length);
+    else assert.equal(response.headers.get('Content-Range'), 'bytes */17');
+  }
+});
+
 test('deployment disables alternate public URLs and contains only static asset binding', async () => {
   // This comment-free JSONC file permits the formatter's trailing commas.
   const cfg = JSON.parse(

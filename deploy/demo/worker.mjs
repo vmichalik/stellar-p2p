@@ -3,6 +3,36 @@ import { SITE } from './site.mjs';
 
 const hosts = new Set(['pactlane.io', 'www.pactlane.io', 'app.pactlane.io']);
 
+async function videoResponse(request, response) {
+  const headers = new Headers(response.headers);
+  headers.set('Accept-Ranges', 'bytes');
+  const range = request.method === 'GET' && request.headers.get('Range');
+  if (range && response.status === 200) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+    const start = match?.[1] ? Number(match[1]) : Math.max(0, bytes.length - Number(match?.[2]));
+    const end =
+      match?.[1] && match[2] ? Math.min(Number(match[2]), bytes.length - 1) : bytes.length - 1;
+    if (
+      !match ||
+      (!match[1] && !match[2]) ||
+      !Number.isSafeInteger(start) ||
+      !Number.isSafeInteger(end) ||
+      start >= bytes.length ||
+      end < start
+    ) {
+      headers.delete('Content-Length');
+      headers.set('Content-Range', `bytes */${bytes.length}`);
+      return new Response(null, { status: 416, headers });
+    }
+    const part = bytes.subarray(start, end + 1);
+    headers.set('Content-Range', `bytes ${start}-${end}/${bytes.length}`);
+    headers.set('Content-Length', String(part.length));
+    return new Response(part, { status: 206, headers });
+  }
+  return new Response(response.body, { status: response.status, headers });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -49,7 +79,13 @@ export default {
     if (url.pathname === '/wallet-config.json')
       return secured(Response.json({ enabled: false, projectId: '', appUrl: SITE.appOrigin }));
     // Static presentation stays separate from the authenticated exchange API.
-    const response = await env.ASSETS.fetch(request);
+    let response = await env.ASSETS.fetch(request);
+    if (
+      url.pathname === '/demo.mp4' &&
+      [200, 206].includes(response.status) &&
+      response.headers.get('Content-Type')?.startsWith('video/mp4')
+    )
+      response = await videoResponse(request, response);
     return secured(response, {
       demo: url.searchParams.get('demo') === '1',
       media:
